@@ -1,0 +1,6 @@
+source-id: "maria-01"
+from:
+  host: "127.0.0.1"
+  user: "tidb-dm"
+  password: "MyPassw0rd!"    # In production environments, it is recommended to use a password encrypted with dmctl.
+  port: 3306

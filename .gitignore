@@ -1,0 +1,27 @@
+# --- macOS cruft ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+*.icloud
+
+# --- Windows cruft ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- Linux/FUSE leftovers ---
+.fuse_hidden*
+.nfs*
+
+# --- Generic temp files ---
+*.swp
+*.swo
+*~
+*.tmp
+*.bak
+*.orig
