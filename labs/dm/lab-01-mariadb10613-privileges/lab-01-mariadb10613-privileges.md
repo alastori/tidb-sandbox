@@ -18,6 +18,8 @@ Based on: [Quick Start with TiDB Data Migration](https://docs.pingcap.com/tidb/s
 tiup playground v8.5.2 --dm-master 1 --dm-worker 1 --tiflash 0 --without-monitor
 ```
 
+Keep this terminal running.
+
 ## Step 2: Create Source MariaDB (Docker)
 
 - Create `my.cnf`:
@@ -227,7 +229,7 @@ SELECT * FROM hello_tidb;
 
 - By examining the output, you can confirm that the errors (`"severity": "fail"`) are limited to the three known issues: `source db replication privilege checker`, `source db dump privilege checker`, and `dumper_conn_number_checker`.
 
-- To fix this, create a new file `cat` with `ignore-checking-items: ["all"]`:
+- To fix this, create a new file `tiup-playground-task-fixed.yaml` with `ignore-checking-items: ["all"]`:
 
     ```yaml
     # Task
