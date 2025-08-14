@@ -1,6 +1,7 @@
 # Task
 name: tiup-playground-task
 task-mode: "all"  # Execute all phases - full data migration and incremental sync.
+ignore-checking-items: ["all"]  # Workaround to prevent pre-check errors with MariaDB 10.6.13.
 
 # Source (MariaDB)
 mysql-instances:

@@ -128,7 +128,106 @@ SELECT * FROM hello_tidb;
 
 ## Step 7: Configure and start the DM task
 
-- `tiup-playground-task.yaml` (with the `ignore-checking-items` workaround):
+- `tiup-playground-task.yaml`:
+
+    ```yaml
+    # Task
+    name: tiup-playground-task
+    task-mode: "all"  # Execute all phases - full data migration and incremental sync.
+
+    # Source (MariaDB)
+    mysql-instances:
+      - source-id: "maria-01"
+
+    # Target (TiDB)
+    target-database:
+      host: "127.0.0.1"
+      port: 4000
+      user: "root"
+      password: ""  # If the password is not empty, it is recommended to use a password encrypted with dmctl.
+    ```
+
+- Check the task:
+
+    ```bash
+    tiup dmctl --master-addr 127.0.0.1:8261 check-task tiup-playground-task
+    ```
+
+- Due to a [known issue in DM](https://github.com/pingcap/tiflow/issues/12207), it is expected to see the following errors:
+
+    ```json
+    {
+        "result": false,
+        "msg": "[code=26005:class=dm-master:scope=internal:level=medium], Message: fail to check synchronization configuration with type: check was failed, please see detail
+            detail: {
+                    "results": [
+                            {
+                                    "id": 9,
+                                    "name": "source db replication privilege checker",
+                                    "desc": "check replication privileges of source DB",
+                                    "state": "fail",
+                                    "errors": [
+                                            {
+                                                    "severity": "fail",
+                                                    "short_error": "line 1 column 64 near \"MONITOR, REPLICATION SLAVE ADMIN, REPLICATION MASTER ADMIN ON *.* TO `tidb-dm`@`%` IDENTIFIED BY PASSWORD '*F140AD44180E4713D0DDC2FE46ADF5DBBACA16EE'\" "
+                                            }
+                                    ],
+                                    "extra": "address of db instance - 127.0.0.1:3306"
+                            },
+                            {
+                                    "id": 4,
+                                    "name": "source db dump privilege checker",
+                                    "desc": "check dump privileges of source DB",
+                                    "state": "fail",
+                                    "errors": [
+                                            {
+                                                    "severity": "fail",
+                                                    "short_error": "line 1 column 64 near \"MONITOR, REPLICATION SLAVE ADMIN, REPLICATION MASTER ADMIN ON *.* TO `tidb-dm`@`%` IDENTIFIED BY PASSWORD '*F140AD44180E4713D0DDC2FE46ADF5DBBACA16EE'\" "
+                                            }
+                                    ],
+                                    "extra": "address of db instance - 127.0.0.1:3306"
+                            },
+                            {
+                                    "id": 3,
+                                    "name": "mysql_version",
+                                    "desc": "check whether mysql version is satisfied",
+                                    "state": "warn",
+                                    "errors": [
+                                            {
+                                                    "severity": "warn",
+                                                    "short_error": "Migrating from MariaDB is still experimental."
+                                            }
+                                    ],
+                                    "instruction": "It is recommended that you upgrade MariaDB to 10.1.2 or a later version.",
+                                    "extra": "address of db instance - 127.0.0.1:3306"
+                            },
+                            {
+                                    "id": 0,
+                                    "name": "dumper_conn_number_checker",
+                                    "desc": "check if connetion concurrency exceeds database's maximum connection limit",
+                                    "state": "fail",
+                                    "errors": [
+                                            {
+                                                    "severity": "fail",
+                                                    "short_error": "line 1 column 64 near \"MONITOR, REPLICATION SLAVE ADMIN, REPLICATION MASTER ADMIN ON *.* TO `tidb-dm`@`%` IDENTIFIED BY PASSWORD '*F140AD44180E4713D0DDC2FE46ADF5DBBACA16EE'\" "
+                                            }
+                                    ]
+                            }
+                    ],
+                    "summary": {
+                            "passed": false,
+                            "total": 13,
+                            "successful": 9,
+                            "failed": 3,
+                            "warning": 1
+                    }
+            }"
+    }
+    ```
+
+- By examining the output, you can confirm that the errors (`"severity": "fail"`) are limited to the three known issues: `source db replication privilege checker`, `source db dump privilege checker`, and `dumper_conn_number_checker`.
+
+- To fix this, create a new file `cat` with `ignore-checking-items: ["all"]`:
 
     ```yaml
     # Task
@@ -148,32 +247,19 @@ SELECT * FROM hello_tidb;
       password: ""  # If the password is not empty, it is recommended to use a password encrypted with dmctl.
     ```
 
-- Check the task:
+    > **Note:**
+    > It is possible to skip the first two with `ignore-checking-items: ["replication_privilege", "dump_privilege"]`, but `dumper_conn_number_checker` isn’t skippable, so we had to fall back to `ignore-checking-items: ["all"]`.
+
+- Run the task with the fixed configuration:
 
     ```bash
-    tiup dmctl --master-addr 127.0.0.1:8261 check-task tiup-playground-task.yaml
+    tiup dmctl --master-addr 127.0.0.1:8261 start-task tiup-playground-task-fixed.yaml --remove-meta
     ```
 
 - Output:
 
     ```bash
-    Starting component dmctl: /Users/airton/.tiup/components/dmctl/v8.5.2/dmctl/dmctl --master-addr 127.0.0.1:8261 check-task tiup-playground-task.yaml
-    {
-        "result": true,
-        "msg": ""
-    }
-    ```
-
-- Run the task:
-
-    ```bash
-    tiup dmctl --master-addr 127.0.0.1:8261 start-task tiup-playground-task.yaml
-    ```
-
-- Output:
-
-    ```bash
-    Starting component dmctl: /Users/airton/.tiup/components/dmctl/v8.5.2/dmctl/dmctl --master-addr 127.0.0.1:8261 start-task tiup-playground-task.yaml
+    Starting component dmctl: /Users/airton/.tiup/components/dmctl/v8.5.2/dmctl/dmctl --master-addr 127.0.0.1:8261 start-task tiup-playground-task-fixed.yaml
     {
         "result": true,
         "msg": "",
@@ -219,13 +305,13 @@ SELECT * FROM hello_tidb;
 - Check the subtask:
 
     ```bash
-    tiup dmctl --master-addr 127.0.0.1:8261 query-status tiup-playground-task.yaml
+    tiup dmctl --master-addr 127.0.0.1:8261 query-status tiup-playground-task
     ```
 
 - Output:
 
     ```bash
-    Starting component dmctl: /Users/airton/.tiup/components/dmctl/v8.5.2/dmctl/dmctl --master-addr 127.0.0.1:8261 query-status tiup-playground-task
+    Starting component dmctl: /Users/airton/.tiup/components/dmctl/v8.5.2/dmctl/dmctl --master-addr 127.0.0.1:8261 query-status tiup-playground-task-fixed
     {
         "result": true,
         "msg": "",
