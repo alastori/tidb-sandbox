@@ -1,0 +1,7 @@
+/*!40101 SET NAMES binary*/;
+SET FOREIGN_KEY_CHECKS=0;
+CREATE TABLE `strings_ucs2` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `note` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

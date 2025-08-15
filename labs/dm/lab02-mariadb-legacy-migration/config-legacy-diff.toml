@@ -1,0 +1,33 @@
+# --- Datasources ---
+[data-sources]
+
+[data-sources.maria1]  # Source MariaDB
+host = "host.docker.internal"  # Use instead of 127.0.0.1 for Docker
+port = 3306
+user = "root"
+password = "MyPassw0rd!"  # Password used when starting MariaDB container
+
+[data-sources.tidb0]  # Target TiDB (Playground)
+host = "host.docker.internal"
+port = 4000
+user = "root"
+password = ""
+
+# --- Task ---
+[task]
+output-dir = "./output_legacy_diff"  # Directory for logs and results
+source-instances = ["maria1"]        # Source instance alias
+target-instance  = "tidb0"           # Target instance alias
+
+# Tables from 'legacy' databases to check.
+# Exclude those modified during DM workaround (commented out).
+target-check-tables = [
+    # "legacy_ucs2.strings_ucs2",  # Excluded due to UCS2 charset handling
+    "legacy_utf8.text_mb3",
+    "legacy.nopk_orders",
+    # "legacy.places",             # Excluded due to geometry column type change
+    "legacy.products",
+    "legacy.metrics",
+    "legacy.orders",
+    "legacy.myisam_illusion"
+]

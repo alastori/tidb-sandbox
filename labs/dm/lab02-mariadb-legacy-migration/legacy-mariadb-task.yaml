@@ -1,0 +1,14 @@
+# Task
+name: legacy-mariadb-task
+task-mode: "all"   # full + incremental
+
+# Source
+mysql-instances:
+  - source-id: "maria-legacy"
+
+# Target
+target-database:
+  host: "127.0.0.1"
+  port: 4000
+  user: "root"
+  password: ""

@@ -1,0 +1,15 @@
+# Task
+name: legacy-mariadb-task
+task-mode: "all"   # full + incremental
+ignore-checking-items: ["all"]  # Workaround to prevent pre-check errors with MariaDB 10.6.13.
+
+# Source
+mysql-instances:
+  - source-id: "maria-legacy"
+
+# Target
+target-database:
+  host: "127.0.0.1"
+  port: 4000
+  user: "root"
+  password: ""

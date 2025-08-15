@@ -1,0 +1,6 @@
+source-id: "maria-legacy"
+from:
+  host: "127.0.0.1"
+  user: "tidb-dm"
+  password: "MyPassw0rd!"   # use encrypted secret in prod
+  port: 3306

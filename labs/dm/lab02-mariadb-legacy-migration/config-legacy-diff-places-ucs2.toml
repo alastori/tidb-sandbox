@@ -1,0 +1,41 @@
+# --- Global ---
+# Compare data only — skip structure parsing to avoid errors on UCS2 and geometry columns
+check-data-only = true
+
+# --- Datasources ---
+[data-sources]
+
+[data-sources.maria1]  # Source MariaDB
+host = "host.docker.internal"  # Use instead of 127.0.0.1 for Docker
+port = 3306
+user = "root"
+password = "MyPassw0rd!"  # Password used when starting MariaDB container
+
+[data-sources.tidb0]  # Target TiDB (Playground)
+host = "host.docker.internal"
+port = 4000
+user = "root"
+password = ""
+
+# --- Task ---
+[task]
+output-dir = "./output_legacy_places_ucs2_diff"  # Directory for logs and results
+source-instances = ["maria1"]
+target-instance  = "tidb0"
+
+# Only the two tables that require special handling
+target-check-tables = [
+    "legacy.places",            # Geometry column changed to VARBINARY
+    "legacy_ucs2.strings_ucs2"  # UCS2 charset unsupported by TiDB parser
+]
+
+# --- Table-specific ---
+[table-configs.legacy-places]
+schema = "legacy"
+table  = "places"
+ignore-columns = ["loc"]  # Ignore geometry column 'loc' due to type change
+
+[table-configs.legacy-ucs2-strings]
+schema = "legacy_ucs2"
+table  = "strings_ucs2"
+# No special column handling; data-only mode avoids UCS2 DDL parsing
