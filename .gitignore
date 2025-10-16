@@ -25,3 +25,23 @@ $RECYCLE.BIN/
 *.tmp
 *.bak
 *.orig
+
+# --- env ---
+.env
+
+# --- Python venv ---
+.venv/
+venv/
+ENV/
+env/
+.pyenv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+.tox/
+.nox/
+.cache/
+.ipynb_checkpoints/
