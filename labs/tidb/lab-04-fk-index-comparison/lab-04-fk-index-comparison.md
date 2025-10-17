@@ -6,8 +6,8 @@ This lab compares how MySQL and TiDB handle foreign keys and their supporting in
 
 - **A:** Single-column FK: parent PK (names differ) **→ should succeed in both**
 - **B:** Composite FK: parent UNIQUE (names differ) **→ should succeed in both**
-- **C (Divergence):** Parent index is **NON-UNIQUE** on referenced columns  
-  - **MySQL 8.4:** **DDL rejected** (no FK created).  
+- **C (Divergence):** Parent index is **NON-UNIQUE** on referenced columns
+  - **MySQL 8.4:** **DDL rejected** (no FK created).
   - **TiDB 8.5.x:** **DDL accepted** (FK present) and **DML checks enforced** (bad child rejected; parent delete/update blocked).
 - **D (FAIL):** Column **order mismatch** between FK and parent UNIQUE **→ rejected in both**.
 
@@ -20,6 +20,18 @@ This lab compares how MySQL and TiDB handle foreign keys and their supporting in
 | C        | ❌ DDL rejected | ✅ DDL accepted; **DML enforced** | TiDB allows FK over non-unique parent index; MySQL does not. |
 | D        | ❌ error   | ❌ error   | Column order must match. |
 
+**Observed error codes (from reruns):**
+
+- **MySQL 8.4**
+
+  - Scenario **C**: `ERROR 6125` (“Missing unique key … in the referenced table …”).
+  - Scenario **D**: `ERROR 6125` (same reason on mismatched order).
+
+- **TiDB 8.5.3**
+
+  - Scenario **C**: **FK present** (metadata shows `fk_invites_to_accounts_nonuniq`); DML enforcement works.
+  - Scenario **D**: `ERROR 1822` (“Missing index for constraint … in the referenced table …”).
+
 ## How to Run
 
 ### MySQL 8.4 (Docker)
@@ -29,6 +41,7 @@ docker run -d --name mysql84 -e MYSQL_ROOT_PASSWORD=MyPassw0rd! -p 33061:3306 my
 ```
 
 ```shell
+# Use --force so the client continues after expected errors (C, D).
 docker exec -i mysql84 mysql -uroot -pMyPassw0rd! --force --verbose < fk_lab_mysql_tidb.sql
 ```
 
@@ -90,4 +103,4 @@ ROLLBACK;
 ## Notes
 
 - For cross-engine parity and predictable enforcement, define a **UNIQUE** (or **PRIMARY**) key on referenced columns for FKs.
-- FK/index **names** as cosmetic; compare **columns+order**, **actions**, and check **parent key uniqueness**. 
+- FK/index **names are cosmetic**; compare **columns+order**, **actions**, and check **parent key uniqueness**.
