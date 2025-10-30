@@ -26,6 +26,11 @@ $RECYCLE.BIN/
 *.bak
 *.orig
 
+# --- Gradle build outputs (labs/tidb lab-05) ---
+labs/tidb/lab-05-hibernate-tidb-ci/test-hibernate-tidb-ci/.gradle/
+labs/tidb/lab-05-hibernate-tidb-ci/test-hibernate-tidb-ci/build/
+labs/tidb/lab-05-hibernate-tidb-ci/test-hibernate-tidb-ci/artifacts/
+
 # --- env ---
 .env
 

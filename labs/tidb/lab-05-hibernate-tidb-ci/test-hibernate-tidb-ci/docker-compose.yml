@@ -1,0 +1,30 @@
+services:
+  pd:
+    image: pingcap/pd:${TIDB_TAG:-nightly}
+    command: [
+      "--name=pd",
+      "--data-dir=/data/pd",
+      "--client-urls=http://0.0.0.0:2379",
+      "--peer-urls=http://0.0.0.0:2380",
+      "--advertise-client-urls=http://pd:2379",
+      "--advertise-peer-urls=http://pd:2380"
+    ]
+    ports: ["2379:2379"]
+  tikv:
+    image: pingcap/tikv:${TIDB_TAG:-nightly}
+    depends_on: [pd]
+    command: [
+      "--addr=0.0.0.0:20160",
+      "--advertise-addr=tikv:20160",
+      "--pd=pd:2379",
+      "--data-dir=/data/tikv"
+    ]
+  tidb:
+    image: pingcap/tidb:${TIDB_TAG:-nightly}
+    depends_on: [pd, tikv]
+    command: [
+      "--store=tikv",
+      "--path=pd:2379",
+      "--advertise-address=tidb"
+    ]
+    ports: ["4000:4000"]
