@@ -71,11 +71,21 @@ This log captures the key compatibility observations with the latest runner impl
     --db-bootstrap-sql "SET GLOBAL tidb_skip_isolation_level_check=1;" \
     --db-bootstrap-sql "SET SESSION tidb_skip_isolation_level_check=1;"
   ```
+  
 - `--db-bootstrap-sql` accepts repeated statements; the harness applies them sequentially during the bootstrap connection. Setting the variable globally ensures new TiDB sessions inherit the relaxed isolation check, while the session-scoped statement guarantees the bootstrap connection itself picks up the value immediately.
 
 - **Outcome**
-  - Gradle completed early modules (Agroal, Core, etc.) before Envers triggered failures; cumulative Gradle XML counters show `tests=127`, `failures=10`, `skipped=44` across executed modules (no errors recorded).
-  - Envers fails during schema setup once parallel DDL collides. Typical failure:
+  - Gradle completed early modules (Agroal, Core, etc.) before Envers triggered failures; cumulative Gradle XML counters show `tests=176`, `failures=4`, `skipped=49` across executed modules (no errors recorded).
+  - Envers’s `BasicWhereJoinTable` suite hits TiDB when seeding audit rows:
+
+    ```log
+    jakarta.persistence.RollbackException: Error while committing the transaction
+    [JDBC exception executing SQL [Table 'hibernate_orm_test_2.wa1_0' doesn't exist]
+    [select ... from wjte_ite_join_AUD ... for update of wa1_0]]
+    ```
+
+    The follow-up assertions fail because the expected revision rows never materialise (`IllegalArgumentException: id to load is required`, `Primary key cannot be null`).
+  - MySQL completes the same workflow; TiDB’s asynchronous DDL plus schema lease checks cause drop/create races to abort. Potential follow-ups: bump `tidb_max_delta_schema_count`, increase schema lease, or throttle Gradle parallelism during DDL-heavy suites.
 
     ```log
     Caused by: java.sql.SQLException: Information schema is out of date:

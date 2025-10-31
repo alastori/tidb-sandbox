@@ -150,10 +150,10 @@ Upstream scripts also honour `gradle/databases/*.properties`; `generate-config.s
 
 ## Open items / next steps
 
-1. Flesh out `collect-logs.sh` and add smoke verification across macOS/Linux hosts.
-2. Explore minimal Gradle properties required for TiDB vs. MySQL and codify them as defaults.
-3. Investigate Gradle filters or module excludes to shorten the typical feedback loop.
-4. Design an allowlist/diff process for recurring failures so nightly drift stays manageable.
-5. Integrate with CI (GitHub Actions/Buildkite) once the manual flow stabilises, uploading artefacts per run.
+1. Diagnose the `BasicWhereJoinTable` audit failures (TiDB drops `wjte_ite_join_AUD` mid-run) and determine if schema lease tuning or schema-seeding fixes the gap.
+2. Prototype TiDB tuning for full-suite stability (e.g., `tidb_max_delta_schema_count`, schema refresh interval) and document recommended settings.
+3. Teach the runner to summarise Gradle XML results (per-module counts and failures) so Findings can be refreshed automatically after each run.
+4. Tighten default logging knobs (`--fail-fast`, stacktrace level, heartbeat interval) to keep long runs readable without losing signal.
+5. Integrate with CI (GitHub Actions/Buildkite) once the manual flow stabilises, uploading trimmed artefacts per run.
 
 Contributions are welcome—treat this README as the living guide and backlog for the full-suite harness.

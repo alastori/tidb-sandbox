@@ -30,6 +30,9 @@ $RECYCLE.BIN/
 labs/tidb/lab-05-hibernate-tidb-ci/test-hibernate-tidb-ci/.gradle/
 labs/tidb/lab-05-hibernate-tidb-ci/test-hibernate-tidb-ci/build/
 labs/tidb/lab-05-hibernate-tidb-ci/test-hibernate-tidb-ci/artifacts/
+labs/tidb/lab-05-hibernate-tidb-ci/hibernate-tidb-ci-runner/workspace/
+labs/tidb/lab-05-hibernate-tidb-ci/hibernate-tidb-ci-runner/artifacts/*
+!labs/tidb/lab-05-hibernate-tidb-ci/hibernate-tidb-ci-runner/artifacts/.gitkeep
 
 # --- env ---
 .env
