@@ -23,11 +23,12 @@ Sometimes you may want to reproduce behaviour using Hibernate's own orchestratio
 
    This creates a container named `mysql` bound to `127.0.0.1:3306` and seeds the `hibernate_orm_test_*` schemas.
 
-3. Launch the tests in an Eclipse Temurin JDK container so we don't need a JDK on the host. We reuse the Gradle wrapper from the repo.
+3. Launch the tests in an Eclipse Temurin JDK container so we don't need a JDK on the host. We reuse the Gradle wrapper from the repo (adjust the JVM heap if you plan to run the full suite).
 
    ```bash
    docker run --rm \
      --network container:mysql \
+     -e GRADLE_OPTS="-Xmx4g" \
      -v "$PWD":/workspace \
      -w /workspace \
      eclipse-temurin:21-jdk \
@@ -35,6 +36,7 @@ Sometimes you may want to reproduce behaviour using Hibernate's own orchestratio
    ```
 
    `--network container:mysql` shares networking with the MySQL container, so the Gradle JVM can reach `localhost:3306` just like the host.
+   Drop `--fail-fast` if you want the entire suite.
 
 4. After the run, stop the MySQL container:
 
@@ -44,8 +46,8 @@ Sometimes you may want to reproduce behaviour using Hibernate's own orchestratio
 
 ## Observations from our run
 
-- The same Envers `BasicWhereJoinTable` failures appear, confirming they are independent of TiDB.
-- `PackagedEntityManagerTest#testOverriddenPar` occasionally fails with `CommunicationsException` because the bootstrap container connects to MySQL while `docker_db.sh` is still bringing it up. Re-running usually passes; if not, add a short sleep before launching Gradle.
-- Running the entire suite in Docker may hit the Gradle worker memory limit. For `--fail-fast` the run completed about ~7 minutes before a worker exit (code 137). Increase container memory or pass `-Dorg.gradle.jvmargs="-Xmx3g"` if you need the full suite.
+- With the upstream script (which starts MySQL with `--character-set-server=utf8mb4`, `--collation-server=utf8mb4_0900_as_cs`, `--log-bin-trust-function-creators=1`, `--lower_case_table_names=2` and seeds per-worker schemas), the Envers `BasicWhereJoinTable` tests pass on MySQL. Earlier failures in our CI runner were traced back to missing server options, not to Hibernate itself.
+- `PackagedEntityManagerTest#testOverriddenPar` also passes once the database is up. The `docker_db.sh` helper waits until MySQL responds to `mysqladmin ping`, so no additional sleeps were required.
+- The full `mysql_ci` suite is resource-intensive. When running inside a container, bump the heap (`GRADLE_OPTS="-Xmx4g -XX:MaxMetaspaceSize=1g"`) or allocate more container memory to avoid the Gradle worker exiting with code 137.
 
-These steps mirror Hibernate's own documentation but avoid installing MySQL or JDK locally.
+These steps mirror Hibernate's own documentation while keeping the host machine free of extra dependencies.

@@ -233,6 +233,23 @@ docker compose up -d core-pd core-tikv core-tidb
 
 wait_for_port "$HOST_WAIT_ADDR" "$TIDB_PORT" 300
 
+# Some backends (MySQL) need a little longer to accept SQL connections even
+# after the port is reachable. If `mysqladmin` is available in the container,
+# reuse it to block until the server responds.
+if docker compose exec core-tidb sh -c "command -v mysqladmin" >/dev/null 2>&1; then
+  echo "Waiting for MySQL to report readiness..."
+  for attempt in {1..30}; do
+    if docker compose exec core-tidb mysqladmin ping -u root --silent >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+    if (( attempt == 30 )); then
+      echo "Database did not become ready in time" >&2
+      exit 1
+    fi
+  done
+fi
+
 if [[ "$SKIP_BUILD" -ne 1 ]]; then
   docker compose build runner
 fi

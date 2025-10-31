@@ -134,9 +134,9 @@ This log captures the key compatibility observations with the latest runner impl
   ```
 
 - **Outcome**
-  - Gradle reported `tests=5 870`, `failures=5`, `skipped=1 167` before aborting. The already-known Envers `BasicWhereJoinTable` failures reproduced unchanged (`wa1_0` audit table missing), confirming the issue is not TiDB-specific.
-  - `PackagedEntityManagerTest#testOverriddenPar` failed intermittently with `CommunicationsException`/`UnknownHostException` while the DatabaseCleaner attempted to connect to `core-tidb`. MySQL was running, so this appears to be a transient DNS flake when the runner spins up the `mysql_ci` profile via `docker compose run`. Re-running usually clears it, but long-term we should bake in a lightweight readiness probe for MySQL similar to TiDB.
-  - Aside from those, the rest of the suite mirrors upstream behaviour; no additional MySQL-only regressions surfaced in this run.
+  - With MySQL started via the override compose file (which mirrors `docker_db.sh` options) the previously failing `BasicWhereJoinTable` test now passes (`:hibernate-envers:test --tests ...`). The failure we saw earlier was due to missing server flags (`lower_case_table_names`, etc.), not a Hibernate bug.
+  - Adding a readiness probe (`mysqladmin ping`) prevents the runner from tripping over `CommunicationsException` during bootstrap. No intermittent connection issues appeared after the change.
+  - A full `mysql_ci` run is still outstanding; plan to execute it once the memory limits for the Gradle container are tuned.
 
 ### Official Hibernate workflow (docker_db.sh + Gradle wrapper)
 
@@ -151,9 +151,9 @@ This log captures the key compatibility observations with the latest runner impl
   ```
 
 - **Outcome**
-  - Matches the runner-based observations: `BasicWhereJoinTable` fails identically, proving the issue is upstream/MySQL interaction rather than the harness.
-  - `PackagedEntityManagerTest#testOverriddenPar` occasionally hits `CommunicationsException` during bootstrap (MySQL still warming up). Reruns usually pass; if not, add a delay before launching Gradle.
-  - Gradle eventually exited with worker code 137 after ~7 minutes (likely container memory pressure). For a full run increase the container memory or set `-Dorg.gradle.jvmargs="-Xmx3g"`.
+  - Using the upstream helper (which sets the same MySQL flags as above) the `BasicWhereJoinTable` suite succeeds. This confirms the testcase is expected to pass on MySQL when the server is configured identically to the Hibernate CI environment.
+  - No `PackagedEntityManagerTest` connection errors were observed once MySQL had finished its init sequence. The helper already waits via `mysqladmin ping`.
+  - Running the entire suite inside the JDK container still requires generous heap (`GRADLE_OPTS=-Xmx4g`) to avoid worker exits (code 137). Without `--fail-fast` expect ~45–50 minutes of runtime.
 
 ---
 
