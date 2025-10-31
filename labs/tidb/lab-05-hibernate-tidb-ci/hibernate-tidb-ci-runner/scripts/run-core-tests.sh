@@ -311,6 +311,12 @@ if [[ -n "$HIBERNATE_VERSION_OVERRIDE" ]]; then
 fi
 DOCKER_ENVS+=( -e "GRADLE_STACKTRACE_MODE=$GRADLE_STACKTRACE_MODE" )
 
+if [[ -n "${GRADLE_OPTS:-}" ]]; then
+  DOCKER_ENVS+=( -e "GRADLE_OPTS=$GRADLE_OPTS" )
+else
+  DOCKER_ENVS+=( -e "GRADLE_OPTS=-Xmx4g -XX:MaxMetaspaceSize=1g" )
+fi
+
 set +e
 clean_runner_containers
 clear_gradle_cache_lock

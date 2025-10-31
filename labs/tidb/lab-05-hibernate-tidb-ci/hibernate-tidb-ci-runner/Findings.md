@@ -87,6 +87,7 @@ This log captures the key compatibility observations with the latest runner impl
     - The follow-up assertions fail because the expected revision rows never materialise (`IllegalArgumentException: id to load is required`, `Primary key cannot be null`).
 
   - TiDB eventually flags the schema lease drift (`java.sql.SQLException: Information schema is out of date [...]`); MySQL completes the same workflow. Follow-ups: bump `tidb_max_delta_schema_count`, increase the schema refresh interval, or throttle Gradle parallelism during DDL-heavy suites.
+  - Reducing Gradle workers (`--gradle-args "--max-workers=1"`) still failed with `wa1_0` missing, so simply serialising the suite is not sufficient—TiDB still loses the audit table definition mid-run. Further TiDB-side tuning is required.
 
 ### Targeted Envers run (fail-fast)
 

@@ -68,6 +68,8 @@ Each run stores reports under `artifacts/<YYYYMMDD-hhmmss>/` and leaves a machin
 - `--db-bootstrap-sql "<stmt;>"` – append extra SQL during bootstrap (repeatable); useful for toggling TiDB compatibility flags.
 - `--gradle-stacktrace <full|short|off>` – trim Gradle stack traces when you only need the failing frame.
 
+The runner injects `GRADLE_OPTS=-Xmx4g -XX:MaxMetaspaceSize=1g` by default; export `GRADLE_OPTS` before invoking the script if you need different JVM settings.
+
 Example: reproduce the upstream `mysql_ci` profile against TiDB nightly (compose-managed stack).
 
 ```bash
