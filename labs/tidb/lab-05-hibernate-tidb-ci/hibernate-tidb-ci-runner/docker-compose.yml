@@ -1,0 +1,57 @@
+services:
+  core-pd:
+    image: pingcap/pd:${TIDB_TAG:-nightly}
+    command: [
+      "--name=pd",
+      "--data-dir=/data/pd",
+      "--client-urls=http://0.0.0.0:2379",
+      "--peer-urls=http://0.0.0.0:2380",
+      "--advertise-client-urls=http://core-pd:2379",
+      "--advertise-peer-urls=http://core-pd:2380"
+    ]
+    ports:
+      - "2379:2379"
+    volumes:
+      - pd-data:/data/pd
+  core-tikv:
+    image: pingcap/tikv:${TIDB_TAG:-nightly}
+    depends_on: [core-pd]
+    command: [
+      "--addr=0.0.0.0:20160",
+      "--advertise-addr=core-tikv:20160",
+      "--pd=core-pd:2379",
+      "--data-dir=/data/tikv"
+    ]
+    volumes:
+      - tikv-data:/data/tikv
+  core-tidb:
+    image: pingcap/tidb:${TIDB_TAG:-nightly}
+    depends_on: [core-pd, core-tikv]
+    command: [
+      "--store=tikv",
+      "--path=core-pd:2379",
+      "--advertise-address=core-tidb"
+    ]
+    ports:
+      - "4000:4000"
+      - "10080:10080"
+  runner:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.runner
+    profiles: [runner]
+    environment:
+      GRADLE_USER_HOME: /cache/gradle
+    volumes:
+      - gradle-cache:/cache/gradle
+      - ./workspace:/workspace
+      - ./artifacts:/artifacts
+      - ./scripts:/scripts:ro
+    working_dir: /workspace
+    entrypoint: ["/bin/bash"]
+    command: ["-lc", "sleep infinity"]
+
+volumes:
+  pd-data:
+  tikv-data:
+  gradle-cache:
