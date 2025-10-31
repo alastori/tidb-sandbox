@@ -100,6 +100,24 @@ These statements are executed during bootstrap before Gradle starts.
 | `./docker_db.sh tidb` then `./gradlew test -Pdb=tidb` | `./scripts/run-core-tests.sh --gradle-task test --db-profile tidb --dialect tidb` | Mirrors the upstream Hibernate's TiDB configuration while leveraging this harness’s TiDB nightly stack. |
 | `./docker_db.sh mariadb` then `./gradlew test -Pdb=mariadb_ci` | _Not yet supported_ | MariaDB containers are not part of this compose project; add a dedicated service if coverage is required. |
 
+### Run against MySQL
+
+The same runner can exercise the upstream `mysql_ci` profile against a MySQL backend. A minimal override (`docker-compose.mysql.yml`) swaps TiDB for a single `mysql:8.4` service while leaving the runner unchanged. Example:
+
+```bash
+COMPOSE_FILE=docker-compose.yml:docker-compose.mysql.yml \
+  ./scripts/run-core-tests.sh \
+  --skip-build-runner \
+  --gradle-task test \
+  --gradle-args "--fail-fast" \
+  --db-profile mysql_ci \
+  --tidb-host core-tidb \
+  --tidb-port 3306 \
+  --idle-timeout 600
+```
+
+When targeting MySQL, skip TiDB-specific bootstrap SQL (e.g. `SET tidb_skip_isolation_level_check`). The runner still seeds `hibernate_orm_test` and `hibernate_orm_test_$worker` schemas automatically. If you need to reproduce the upstream workflow verbatim, see [Upstream mysql_ci runbook](../Upstream-mysql-ci.md).
+
 ## Reference
 
 ### Repository layout
@@ -150,10 +168,9 @@ Upstream scripts also honour `gradle/databases/*.properties`; `generate-config.s
 
 ## Open items / next steps
 
-1. Diagnose the `BasicWhereJoinTable` audit failures (TiDB drops `wjte_ite_join_AUD` mid-run) and determine if schema lease tuning or schema-seeding fixes the gap.
-2. Prototype TiDB tuning for full-suite stability (e.g., `tidb_max_delta_schema_count`, schema refresh interval) and document recommended settings.
-3. Teach the runner to summarise Gradle XML results (per-module counts and failures) so Findings can be refreshed automatically after each run.
-4. Tighten default logging knobs (`--fail-fast`, stacktrace level, heartbeat interval) to keep long runs readable without losing signal.
-5. Integrate with CI (GitHub Actions/Buildkite) once the manual flow stabilises, uploading trimmed artefacts per run.
+1. Pin down the `BasicWhereJoinTable` audit breakage—reproduce with diagnostic logging, verify TiDB schema lease behaviour, and decide on schema-seeding or TiDB-side tweaks.
+2. Capture a recommended TiDB tuning profile for full-suite runs (lease/DDL settings, isolation overrides) and bake it into the bootstrap scripts.
+3. Automate Gradle result summaries so Findings can be regenerated straight from the XML (module totals + key failures).
+4. Once the above stabilises, wire the runner into CI (GitHub Actions/Buildkite) and publish the trimmed artefacts per run.
 
 Contributions are welcome—treat this README as the living guide and backlog for the full-suite harness.

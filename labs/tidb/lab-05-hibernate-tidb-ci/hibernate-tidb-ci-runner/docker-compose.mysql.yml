@@ -1,0 +1,16 @@
+services:
+  core-pd:
+    image: alpine:3.20
+    command: ["sh", "-c", "sleep infinity"]
+  core-tikv:
+    image: alpine:3.20
+    command: ["sh", "-c", "sleep infinity"]
+  core-tidb:
+    image: mysql:8.4
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3306:3306"
+    depends_on: []
+    command: []

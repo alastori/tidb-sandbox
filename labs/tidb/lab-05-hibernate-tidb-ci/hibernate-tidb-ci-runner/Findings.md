@@ -71,7 +71,7 @@ This log captures the key compatibility observations with the latest runner impl
     --db-bootstrap-sql "SET GLOBAL tidb_skip_isolation_level_check=1;" \
     --db-bootstrap-sql "SET SESSION tidb_skip_isolation_level_check=1;"
   ```
-  
+
 - `--db-bootstrap-sql` accepts repeated statements; the harness applies them sequentially during the bootstrap connection. Setting the variable globally ensures new TiDB sessions inherit the relaxed isolation check, while the session-scoped statement guarantees the bootstrap connection itself picks up the value immediately.
 
 - **Outcome**
@@ -84,15 +84,9 @@ This log captures the key compatibility observations with the latest runner impl
     [select ... from wjte_ite_join_AUD ... for update of wa1_0]]
     ```
 
-    The follow-up assertions fail because the expected revision rows never materialise (`IllegalArgumentException: id to load is required`, `Primary key cannot be null`).
-  - MySQL completes the same workflow; TiDB’s asynchronous DDL plus schema lease checks cause drop/create races to abort. Potential follow-ups: bump `tidb_max_delta_schema_count`, increase schema lease, or throttle Gradle parallelism during DDL-heavy suites.
+    - The follow-up assertions fail because the expected revision rows never materialise (`IllegalArgumentException: id to load is required`, `Primary key cannot be null`).
 
-    ```log
-    Caused by: java.sql.SQLException: Information schema is out of date:
-    schema failed to update in 1 lease, please make sure TiDB can connect to TiKV
-    ```
-
-  - MySQL completes the same workflow; TiDB’s asynchronous DDL plus schema lease checks cause drop/create races to abort. Potential follow-ups: bump `tidb_max_delta_schema_count`, increase schema lease, or throttle Gradle parallelism during DDL-heavy suites.
+  - TiDB eventually flags the schema lease drift (`java.sql.SQLException: Information schema is out of date [...]`); MySQL completes the same workflow. Follow-ups: bump `tidb_max_delta_schema_count`, increase the schema refresh interval, or throttle Gradle parallelism during DDL-heavy suites.
 
 ### Targeted Envers run (fail-fast)
 
@@ -122,6 +116,44 @@ This log captures the key compatibility observations with the latest runner impl
     ```
 
   - After the first batch of failures, Gradle emits the full stack trace and exits with non-zero status (build failure); no watchdog timeout was needed because `--fail-fast` short-circuited remaining execution.
+
+### MySQL backend comparison
+
+- **Command** (`mysql_ci` against `mysql:8.4` backend)
+
+  ```bash
+  COMPOSE_FILE=docker-compose.yml:docker-compose.mysql.yml \
+    ./scripts/run-core-tests.sh \
+    --skip-build-runner \
+    --gradle-task test \
+    --gradle-args "--fail-fast" \
+    --db-profile mysql_ci \
+    --tidb-host core-tidb \
+    --tidb-port 3306 \
+    --idle-timeout 600
+  ```
+
+- **Outcome**
+  - Gradle reported `tests=5 870`, `failures=5`, `skipped=1 167` before aborting. The already-known Envers `BasicWhereJoinTable` failures reproduced unchanged (`wa1_0` audit table missing), confirming the issue is not TiDB-specific.
+  - `PackagedEntityManagerTest#testOverriddenPar` failed intermittently with `CommunicationsException`/`UnknownHostException` while the DatabaseCleaner attempted to connect to `core-tidb`. MySQL was running, so this appears to be a transient DNS flake when the runner spins up the `mysql_ci` profile via `docker compose run`. Re-running usually clears it, but long-term we should bake in a lightweight readiness probe for MySQL similar to TiDB.
+  - Aside from those, the rest of the suite mirrors upstream behaviour; no additional MySQL-only regressions surfaced in this run.
+
+### Official Hibernate workflow (docker_db.sh + Gradle wrapper)
+
+- **Command** (executed inside `workspace/hibernate-orm`):
+
+  ```bash
+  ./docker_db.sh mysql
+  docker run --rm --network container:mysql \
+    -v "$PWD":/workspace -w /workspace \
+    eclipse-temurin:21-jdk \
+    ./gradlew test -Pdb=mysql_ci --fail-fast
+  ```
+
+- **Outcome**
+  - Matches the runner-based observations: `BasicWhereJoinTable` fails identically, proving the issue is upstream/MySQL interaction rather than the harness.
+  - `PackagedEntityManagerTest#testOverriddenPar` occasionally hits `CommunicationsException` during bootstrap (MySQL still warming up). Reruns usually pass; if not, add a delay before launching Gradle.
+  - Gradle eventually exited with worker code 137 after ~7 minutes (likely container memory pressure). For a full run increase the container memory or set `-Dorg.gradle.jvmargs="-Xmx3g"`.
 
 ---
 

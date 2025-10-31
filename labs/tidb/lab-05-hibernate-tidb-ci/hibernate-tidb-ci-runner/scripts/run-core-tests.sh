@@ -231,7 +231,7 @@ cd "$ROOT_DIR"
 
 docker compose up -d core-pd core-tikv core-tidb
 
-wait_for_port "$HOST_WAIT_ADDR" 4000 300
+wait_for_port "$HOST_WAIT_ADDR" "$TIDB_PORT" 300
 
 if [[ "$SKIP_BUILD" -ne 1 ]]; then
   docker compose build runner
@@ -297,10 +297,13 @@ DOCKER_ENVS+=( -e "GRADLE_STACKTRACE_MODE=$GRADLE_STACKTRACE_MODE" )
 set +e
 clean_runner_containers
 clear_gradle_cache_lock
+RUN_CMD=(docker compose run --rm "${DOCKER_ENVS[@]}" runner /scripts/runner-inner.sh)
+LOGGED_CMD=$(printf '%q ' "${RUN_CMD[@]}")
+echo "COMMAND: ${LOGGED_CMD}" | tee -a "$RUN_ARTIFACT_DIR/runner.log" >/dev/null
 python3 "$ROOT_DIR/scripts/lib/idle_timeout_runner.py" \
   --timeout "$IDLE_TIMEOUT" \
   --log-file "$RUN_ARTIFACT_DIR/runner.log" \
-  -- docker compose run --rm "${DOCKER_ENVS[@]}" runner /scripts/runner-inner.sh
+  -- "${RUN_CMD[@]}"
 RUN_EXIT=$?
 set -e
 
