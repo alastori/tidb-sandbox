@@ -1,0 +1,8 @@
+--- Step 1: Setup Docker network and MySQL (mysql:8.0.44) ---
+0eb1f0af8bd2ccff2ee5a4dd577c0e6a91cefdfc72646c3addd1561ba531004c
+Waiting for MySQL to be ready...
+MySQL is unavailable - sleeping
+MySQL is unavailable - sleeping
+MySQL is unavailable - sleeping
+mysqld is alive
+MySQL is up and running.

@@ -1,0 +1,28 @@
+# Started dump at: 2025-12-05 23:27:07
+[config]
+quote-character = BACKTICK
+
+[myloader_session_variables]
+SQL_MODE='NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' /*!40101
+
+[source]
+# Channel_Name = '' # It can be use to setup replication FOR CHANNEL
+
+[`lab_mysqldump_sim`.`departments`]
+real_table_name=departments
+rows = 2
+
+[`lab_mysqldump_sim`.`employees`]
+real_table_name=employees
+rows = 4
+
+[`lab_mysqldump_sim`.`v_employee_details`]
+real_table_name=v_employee_details
+rows = 0
+
+[`lab_mysqldump_sim`.`v_management_roster`]
+real_table_name=v_management_roster
+rows = 0
+[config]
+max-statement-size = 434
+# Finished dump at: 2025-12-05 23:27:07

@@ -1,0 +1,18 @@
+--- Step 5: Dump with dumpling (pingcap/dumpling:v7.5.1) ---
+[2025/12/05 23:27:07.668 +00:00] [INFO] [versions.go:54] ["Welcome to dumpling"] ["Release Version"=v7.5.1] ["Git Commit Hash"=7d16cc79e81bbf573124df3fd9351c26963f3e70] ["Git Branch"=heads/refs/tags/v7.5.1] ["Build timestamp"="2024-02-27 02:22:14"] ["Go Version"="go version go1.21.6 linux/arm64"]
+[2025/12/05 23:27:07.671 +00:00] [WARN] [version.go:327] ["select tidb_version() failed, will fallback to 'select version();'"] [error="Error 1046 (3D000): No database selected"]
+[2025/12/05 23:27:07.671 +00:00] [INFO] [version.go:434] ["detect server version"] [type=MySQL] [version=8.0.44]
+[2025/12/05 23:27:07.673 +00:00] [INFO] [dump.go:151] ["begin to run Dump"] [conf="{\"s3\":{\"endpoint\":\"\",\"region\":\"\",\"storage-class\":\"\",\"sse\":\"\",\"sse-kms-key-id\":\"\",\"acl\":\"\",\"access-key\":\"\",\"secret-access-key\":\"\",\"session-token\":\"\",\"provider\":\"\",\"force-path-style\":true,\"use-accelerate-endpoint\":false,\"role-arn\":\"\",\"external-id\":\"\",\"object-lock-enabled\":false},\"gcs\":{\"endpoint\":\"\",\"storage-class\":\"\",\"predefined-acl\":\"\",\"credentials-file\":\"\"},\"azblob\":{\"endpoint\":\"\",\"account-name\":\"\",\"account-key\":\"\",\"access-tier\":\"\",\"sas-token\":\"\",\"encryption-scope\":\"\",\"encryption-key\":\"\"},\"SpecifiedTables\":false,\"AllowCleartextPasswords\":false,\"SortByPk\":true,\"NoViews\":false,\"NoSequences\":true,\"NoHeader\":false,\"NoSchemas\":false,\"NoData\":false,\"CompleteInsert\":false,\"TransactionalConsistency\":true,\"EscapeBackslash\":true,\"DumpEmptyDatabase\":true,\"PosAfterConnect\":false,\"CompressType\":0,\"Host\":\"mysql-server\",\"Port\":3306,\"Threads\":4,\"User\":\"root\",\"Security\":{\"CAPath\":\"\",\"CertPath\":\"\",\"KeyPath\":\"\"},\"LogLevel\":\"info\",\"LogFile\":\"\",\"LogFormat\":\"text\",\"OutputDirPath\":\"/dump/dumpling_output\",\"StatusAddr\":\":8281\",\"Snapshot\":\"\",\"Consistency\":\"flush\",\"CsvNullValue\":\"\\\\N\",\"SQL\":\"\",\"CsvSeparator\":\",\",\"CsvDelimiter\":\"\\\"\",\"CsvLineTerminator\":\"\\r\\n\",\"Databases\":[\"lab_mysqldump_sim\"],\"Where\":\"\",\"FileType\":\"csv\",\"ServerInfo\":{\"ServerType\":1,\"ServerVersion\":\"8.0.44\",\"HasTiKV\":false},\"Rows\":0,\"ReadTimeout\":900000000000,\"TiDBMemQuotaQuery\":0,\"FileSize\":0,\"StatementSize\":1000000,\"SessionParams\":{},\"Tables\":{},\"CollationCompatible\":\"loose\",\"IOTotalBytes\":null,\"Net\":\"\"}"]
+[2025/12/05 23:27:07.686 +00:00] [INFO] [dump.go:275] ["All the dumping transactions have started. Start to unlock tables"]
+[2025/12/05 23:27:07.692 +00:00] [INFO] [collector.go:264] ["backup success summary"] [total-ranges=7] [ranges-succeed=7] [ranges-failed=0] [total-take=6.633867ms] [total-kv-size=254B] [average-speed=38.29kB/s] [total-rows=6]
+[2025/12/05 23:27:07.693 +00:00] [INFO] [main.go:82] ["dump data successfully, dumpling will exit now"]
+lab_mysqldump_sim-schema-create.sql
+lab_mysqldump_sim.departments-schema.sql
+lab_mysqldump_sim.departments.000000000.csv
+lab_mysqldump_sim.employees-schema.sql
+lab_mysqldump_sim.employees.000000000.csv
+lab_mysqldump_sim.v_employee_details-schema-view.sql
+lab_mysqldump_sim.v_employee_details-schema.sql
+lab_mysqldump_sim.v_management_roster-schema-view.sql
+lab_mysqldump_sim.v_management_roster-schema.sql
+metadata

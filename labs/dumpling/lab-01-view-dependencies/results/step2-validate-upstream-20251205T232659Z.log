@@ -1,0 +1,28 @@
+--- Step 2: Validate upstream views ---
++-----------------------------+
+| note                        |
++-----------------------------+
+| Querying v_employee_details |
++-----------------------------+
++---------------+-----------------+---------------------+
+| employee_name | department_name | job_title           |
++---------------+-----------------+---------------------+
+| Alice         | Engineering     | Software Engineer   |
+| Bob           | Engineering     | Engineering Manager |
++---------------+-----------------+---------------------+
++------------------------------+
+| note                         |
++------------------------------+
+| Querying v_management_roster |
++------------------------------+
++---------------+-----------------+
+| employee_name | department_name |
++---------------+-----------------+
+| Bob           | Engineering     |
+| Diana         | Engineering     |
++---------------+-----------------+
+*************************** 1. row ***************************
+                View: v_management_roster
+         Create View: CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_management_roster` AS select `v_employee_details`.`employee_name` AS `employee_name`,`v_employee_details`.`department_name` AS `department_name` from `v_employee_details` where ((`v_employee_details`.`job_title` like '%Manager%') or (`v_employee_details`.`job_title` like '%VP%'))
+character_set_client: latin1
+collation_connection: latin1_swedish_ci

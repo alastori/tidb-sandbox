@@ -1,0 +1,11 @@
+--- Step 4: Dump with mydumper (mydumper/mydumper:v0.20.1-2) ---
+lab_mysqldump_sim-schema-create.sql
+lab_mysqldump_sim.departments-schema.sql
+lab_mysqldump_sim.departments.00000.sql
+lab_mysqldump_sim.employees-schema.sql
+lab_mysqldump_sim.employees.00000.sql
+lab_mysqldump_sim.v_employee_details-schema-view.sql
+lab_mysqldump_sim.v_employee_details-schema.sql
+lab_mysqldump_sim.v_management_roster-schema-view.sql
+lab_mysqldump_sim.v_management_roster-schema.sql
+metadata
