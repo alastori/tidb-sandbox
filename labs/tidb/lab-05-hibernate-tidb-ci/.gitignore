@@ -1,0 +1,24 @@
+# Gradle build outputs
+test-hibernate-tidb-ci/.gradle/
+test-hibernate-tidb-ci/build/
+test-hibernate-tidb-ci/artifacts/
+hibernate-tidb-ci-runner/workspace/
+hibernate-tidb-ci-runner/artifacts/*
+!hibernate-tidb-ci-runner/artifacts/.gitkeep
+scripts/verify_tidb/.gradle/
+scripts/verify_tidb/build/
+
+# Results
+results/
+
+# Log directory
+log/
+
+# Tests coverage data and integration artifacts
+.coverage*
+scripts/tests/.coverage-data/
+scripts/tests/integration/artifacts/
+
+# Java binaries
+*.class
+*.jar

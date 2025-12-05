@@ -19,27 +19,25 @@ $RECYCLE.BIN/
 .nfs*
 
 # --- Generic temp files ---
+tmp/
 *.swp
 *.swo
 *~
 *.tmp
 *.bak
+*.bak-*
 *.orig
-
-# --- Gradle build outputs (labs/tidb lab-05) ---
-labs/tidb/lab-05-hibernate-tidb-ci/test-hibernate-tidb-ci/.gradle/
-labs/tidb/lab-05-hibernate-tidb-ci/test-hibernate-tidb-ci/build/
-labs/tidb/lab-05-hibernate-tidb-ci/test-hibernate-tidb-ci/artifacts/
-labs/tidb/lab-05-hibernate-tidb-ci/hibernate-tidb-ci-runner/workspace/
-labs/tidb/lab-05-hibernate-tidb-ci/hibernate-tidb-ci-runner/artifacts/*
-!labs/tidb/lab-05-hibernate-tidb-ci/hibernate-tidb-ci-runner/artifacts/.gitkeep
 
 # --- env ---
 .env
 
 # --- Python venv ---
+.venv
 .venv/
+.venv*/
+venv
 venv/
+venv*/
 ENV/
 env/
 .pyenv/
@@ -48,8 +46,12 @@ __pycache__/
 *.pyo
 *.pyd
 .pytest_cache/
-.coverage
+.coverage*
 .tox/
 .nox/
 .cache/
 .ipynb_checkpoints/
+
+# --- IDEs and editors ---
+.claude/
+.vscode/
