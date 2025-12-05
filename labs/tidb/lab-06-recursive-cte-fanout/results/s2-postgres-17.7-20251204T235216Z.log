@@ -1,0 +1,22 @@
+# Input: s2_global_limit.sql
+WITH RECURSIVE traversal AS (
+  SELECT id, 0 as depth FROM nodes WHERE id = 1
+  UNION ALL
+  SELECT e.to_id, t.depth + 1
+  FROM traversal t
+  JOIN edges e ON t.id = e.from_id
+  LIMIT 3
+) SELECT * FROM traversal;
+
+# Output:
+WITH RECURSIVE traversal AS (
+  SELECT id, 0 as depth FROM nodes WHERE id = 1
+  UNION ALL
+  SELECT e.to_id, t.depth + 1
+  FROM traversal t
+  JOIN edges e ON t.id = e.from_id
+  LIMIT 3
+) SELECT * FROM traversal;
+ERROR:  LIMIT in a recursive query is not implemented
+LINE 7:   LIMIT 3
+                ^

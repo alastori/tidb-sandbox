@@ -1,0 +1,49 @@
+# Input: s1_recursive_lateral_topn.sql
+WITH RECURSIVE traversal AS (
+  -- anchor
+  SELECT id, 0 AS depth FROM nodes WHERE id IN (1,2)
+  UNION ALL
+  -- recursive member with per-parent Top-2
+  SELECT e.to_id, t.depth + 1
+  FROM traversal t
+  CROSS JOIN LATERAL (
+    SELECT to_id
+    FROM edges
+    WHERE from_id = t.id
+    ORDER BY weight DESC
+    LIMIT 2
+  ) e
+  WHERE t.depth < 3
+) SELECT * FROM traversal;
+
+# Output:
+mysql: [Warning] Using a password on the command line interface can be insecure.
+--------------
+WITH RECURSIVE traversal AS (
+  
+  SELECT id, 0 AS depth FROM nodes WHERE id IN (1,2)
+  UNION ALL
+  
+  SELECT e.to_id, t.depth + 1
+  FROM traversal t
+  CROSS JOIN LATERAL (
+    SELECT to_id
+    FROM edges
+    WHERE from_id = t.id
+    ORDER BY weight DESC
+    LIMIT 2
+  ) e
+  WHERE t.depth < 3
+) SELECT * FROM traversal
+--------------
+
++------+-------+
+| id   | depth |
++------+-------+
+|    1 |     0 |
+|    2 |     0 |
+|   10 |     1 |
+|   11 |     1 |
+|   20 |     1 |
+|   21 |     1 |
++------+-------+

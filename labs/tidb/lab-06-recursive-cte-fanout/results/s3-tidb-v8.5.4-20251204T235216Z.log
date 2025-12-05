@@ -1,0 +1,35 @@
+# Input: s3_nonrecursive_lateral_topn.sql
+SELECT n.id, top_edges.to_id, top_edges.weight
+FROM nodes n
+JOIN LATERAL (
+  SELECT to_id, weight
+  FROM edges e
+  WHERE e.from_id = n.id
+  ORDER BY weight DESC
+  LIMIT 2
+) top_edges ON TRUE
+WHERE n.id IN (1,2);
+
+# Output:
+ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 3 column 15 near "(
+  SELECT to_id, weight
+  FROM edges e
+  WHERE e.from_id = n.id
+  ORDER BY weight DESC
+  LIMIT 2
+) top_edges ON TRUE
+WHERE n.id IN (1,2)" 
+--------------
+SELECT n.id, top_edges.to_id, top_edges.weight
+FROM nodes n
+JOIN LATERAL (
+  SELECT to_id, weight
+  FROM edges e
+  WHERE e.from_id = n.id
+  ORDER BY weight DESC
+  LIMIT 2
+) top_edges ON TRUE
+WHERE n.id IN (1,2)
+--------------
+
+Bye

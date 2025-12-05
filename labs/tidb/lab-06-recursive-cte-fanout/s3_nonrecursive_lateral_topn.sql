@@ -1,0 +1,10 @@
+SELECT n.id, top_edges.to_id, top_edges.weight
+FROM nodes n
+JOIN LATERAL (
+  SELECT to_id, weight
+  FROM edges e
+  WHERE e.from_id = n.id
+  ORDER BY weight DESC
+  LIMIT 2
+) top_edges ON TRUE
+WHERE n.id IN (1,2);
