@@ -1,0 +1,48 @@
+Starting component [1mdmctl[0m: /Users/alastori/.tiup/components/dmctl/v8.5.4/dmctl/dmctl --master-addr 127.0.0.1:8261 query-status fk-lab
+[0m{
+    "result": true,
+    "msg": "",
+    "sources": [
+        {
+            "result": true,
+            "msg": "",
+            "sourceStatus": {
+                "source": "src-01",
+                "worker": "dm-worker-0",
+                "result": null,
+                "relayStatus": null
+            },
+            "subTaskStatus": [
+                {
+                    "name": "fk-lab",
+                    "stage": "Running",
+                    "unit": "Sync",
+                    "result": null,
+                    "unresolvedDDLLockID": "",
+                    "sync": {
+                        "totalEvents": "41",
+                        "totalTps": "0",
+                        "recentTps": "0",
+                        "masterBinlog": "(binlog.000002, 10047)",
+                        "masterBinlogGtid": "",
+                        "syncerBinlog": "(binlog.000002, 10047)",
+                        "syncerBinlogGtid": "00000000-0000-0000-0000-000000000000:0",
+                        "blockingDDLs": [
+                        ],
+                        "unresolvedGroups": [
+                        ],
+                        "synced": true,
+                        "binlogType": "remote",
+                        "secondsBehindMaster": "0",
+                        "blockDDLOwner": "",
+                        "conflictMsg": "",
+                        "totalRows": "41",
+                        "totalRps": "0",
+                        "recentRps": "0"
+                    },
+                    "validation": null
+                }
+            ]
+        }
+    ]
+}

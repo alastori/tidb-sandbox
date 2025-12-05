@@ -1,0 +1,24 @@
+name: fk-lab
+task-mode: "all"
+
+target-database:
+  host: "127.0.0.1"
+  port: 4000
+  user: "root"
+  password: ""
+  session:
+    foreign_key_checks: "ON"
+
+mysql-instances:
+  - source-id: "src-01"
+    block-allow-list: "all"
+    syncer-config-name: "sync-unsafe"
+
+block-allow-list:
+  all:
+    do-dbs: ["fk_lab"]
+
+syncers:
+  sync-unsafe:
+    safe-mode: off
+    worker-count: 1

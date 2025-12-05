@@ -1,0 +1,62 @@
+Starting component [1mdmctl[0m: /Users/alastori/.tiup/components/dmctl/v8.5.4/dmctl/dmctl --master-addr 127.0.0.1:8261 query-status fk-lab
+[0m{
+    "result": true,
+    "msg": "",
+    "sources": [
+        {
+            "result": true,
+            "msg": "",
+            "sourceStatus": {
+                "source": "src-01",
+                "worker": "dm-worker-0",
+                "result": null,
+                "relayStatus": null
+            },
+            "subTaskStatus": [
+                {
+                    "name": "fk-lab",
+                    "stage": "Paused",
+                    "unit": "Sync",
+                    "result": {
+                        "isCanceled": false,
+                        "errors": [
+                            {
+                                "ErrCode": 10006,
+                                "ErrClass": "database",
+                                "ErrScope": "not-set",
+                                "ErrLevel": "high",
+                                "Message": "startLocation: [position: (binlog.000002, 5194), gtid-set: 00000000-0000-0000-0000-000000000000:0], endLocation: [position: (binlog.000002, 5259), gtid-set: 00000000-0000-0000-0000-000000000000:0]: execute statement failed: DELETE FROM `fk_lab`.`parent` WHERE `id` = ? LIMIT 1",
+                                "RawCause": "Error 1451 (23000): Cannot delete or update a parent row: a foreign key constraint fails (`fk_lab`.`child_restrict`, CONSTRAINT `fk_res` FOREIGN KEY (`parent_id`) REFERENCES `parent` (`id`) ON DELETE RESTRICT)",
+                                "Workaround": ""
+                            }
+                        ],
+                        "detail": null
+                    },
+                    "unresolvedDDLLockID": "",
+                    "sync": {
+                        "totalEvents": "13",
+                        "totalTps": "0",
+                        "recentTps": "0",
+                        "masterBinlog": "(binlog.000002, 5946)",
+                        "masterBinlogGtid": "",
+                        "syncerBinlog": "(binlog.000002, 4965)",
+                        "syncerBinlogGtid": "",
+                        "blockingDDLs": [
+                        ],
+                        "unresolvedGroups": [
+                        ],
+                        "synced": false,
+                        "binlogType": "remote",
+                        "secondsBehindMaster": "0",
+                        "blockDDLOwner": "",
+                        "conflictMsg": "",
+                        "totalRows": "13",
+                        "totalRps": "0",
+                        "recentRps": "0"
+                    },
+                    "validation": null
+                }
+            ]
+        }
+    ]
+}
