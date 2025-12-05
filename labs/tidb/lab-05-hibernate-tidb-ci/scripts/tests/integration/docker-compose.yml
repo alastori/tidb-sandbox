@@ -1,0 +1,27 @@
+services:
+  tidb:
+    image: bash:5.2
+    container_name: ${TIDB_CONTAINER_NAME:-tidb}
+    command: ["bash", "-lc", "trap : TERM INT; while true; do sleep 60; done"]
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "echo ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 1
+    labels:
+      org.tidb.lab: integration
+  mysql:
+    image: bash:5.2
+    container_name: ${MYSQL_CONTAINER_NAME:-mysql}
+    command: ["bash", "-lc", "trap : TERM INT; while true; do sleep 60; done"]
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "echo ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 1
+    labels:
+      org.tidb.lab: integration
+networks:
+  default:
+    external: true
+    name: tidb-integration-shared
