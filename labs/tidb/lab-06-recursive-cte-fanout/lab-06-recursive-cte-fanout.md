@@ -56,24 +56,6 @@ done
 
 Latest captured outputs: S1–S4 at UTC `20251205T014857Z` (files `s1-*.log` … `s4-*.log`) and S5 at UTC `20251205T014502Z` (files `s5-*.log`) under `results/`.
 
-## S5 — Recursive LATERAL with Per-Parent Cap and Depth Cap
-
-Goal: Seeded roots, per-parent limit (100), depth cap (15). Uses dedicated tables `seed_nodes_s5` and `edges_s5` created inside `s5_recursive_lateral_depthcap.sql` (no interference with other scenarios).
-
-Run:
-
-```shell
-docker exec -i mysql8rec mysql -uroot -ppass lab < s5_recursive_lateral_depthcap.sql
-docker exec -i pg17rec psql -U postgres < s5_recursive_lateral_depthcap.sql
-docker run --rm --network=host -i mysql:8.0 mysql -h127.0.0.1 -P4000 -uroot lab < s5_recursive_lateral_depthcap.sql
-```
-
-Observed:
-
-* MySQL 8.0.44 — PASS (10 rows: roots 1,2; top-2 children per root; plus grandchildren from the top children due to `depth < 2`).
-* PostgreSQL 17.7 — PASS (same rows).
-* TiDB v8.5.4 — FAIL: `ERROR 1064 (42000)` near `JOIN LATERAL (...)`.
-
 ## Step 0: Schema & Seed Data (super-node + regular node)
 
 Use `edges.sql` in this folder.
@@ -229,6 +211,24 @@ Observed:
   ```
 
 * TiDB v8.5.4 — FAIL: same error text as MySQL (`ORDER BY / LIMIT ... in recursive query block`).
+
+## S5 — Recursive LATERAL with Per-Parent Cap and Depth Cap
+
+Goal: Seeded roots, per-parent limit (100), depth cap (15). Uses dedicated tables `seed_nodes_s5` and `edges_s5` created inside `s5_recursive_lateral_depthcap.sql` (no interference with other scenarios).
+
+Run:
+
+```shell
+docker exec -i mysql8rec mysql -uroot -ppass lab < s5_recursive_lateral_depthcap.sql
+docker exec -i pg17rec psql -U postgres < s5_recursive_lateral_depthcap.sql
+docker run --rm --network=host -i mysql:8.0 mysql -h127.0.0.1 -P4000 -uroot lab < s5_recursive_lateral_depthcap.sql
+```
+
+Observed:
+
+* MySQL 8.0.44 — PASS (10 rows: roots 1,2; top-2 children per root; plus grandchildren from the top children due to `depth < 2`).
+* PostgreSQL 17.7 — PASS (same rows).
+* TiDB v8.5.4 — FAIL: `ERROR 1064 (42000)` near `JOIN LATERAL (...)`.
 
 ## Results Matrix
 
