@@ -8,6 +8,7 @@ Expanded scenarios to reproduce fan-out control patterns (and failures) for recu
 * S2 — MySQL global limit (inner `LIMIT` at end of recursive member; total-row brake).
 * S3 — Non-recursive Top-N with `LATERAL` (baseline capability).
 * S4 — Naive in-scope `ORDER BY/LIMIT` in recursive member without `LATERAL` (syntax/behavior check).
+* S5 — Recursive `LATERAL` with per-parent cap and depth cap, using dedicated S5 seed/edge tables (`seed_nodes_s5`, `edges_s5`).
 
 ## Tested Environment
 
@@ -53,7 +54,25 @@ for s in 1 2 3 4; do
 done
 ```
 
-Latest captured outputs from the most recent run (UTC `20251204T235216Z`), per scenario and engine: `s1-*.log`, `s2-*.log`, `s3-*.log`, `s4-*.log` under `results/`.
+Latest captured outputs: S1–S4 at UTC `20251205T014857Z` (files `s1-*.log` … `s4-*.log`) and S5 at UTC `20251205T014502Z` (files `s5-*.log`) under `results/`.
+
+## S5 — Recursive LATERAL with Per-Parent Cap and Depth Cap
+
+Goal: Seeded roots, per-parent limit (100), depth cap (15). Uses dedicated tables `seed_nodes_s5` and `edges_s5` created inside `s5_recursive_lateral_depthcap.sql` (no interference with other scenarios).
+
+Run:
+
+```shell
+docker exec -i mysql8rec mysql -uroot -ppass lab < s5_recursive_lateral_depthcap.sql
+docker exec -i pg17rec psql -U postgres < s5_recursive_lateral_depthcap.sql
+docker run --rm --network=host -i mysql:8.0 mysql -h127.0.0.1 -P4000 -uroot lab < s5_recursive_lateral_depthcap.sql
+```
+
+Observed:
+
+* MySQL 8.0.44 — PASS (10 rows: roots 1,2; top-2 children per root; plus grandchildren from the top children due to `depth < 2`).
+* PostgreSQL 17.7 — PASS (same rows).
+* TiDB v8.5.4 — FAIL: `ERROR 1064 (42000)` near `JOIN LATERAL (...)`.
 
 ## Step 0: Schema & Seed Data (super-node + regular node)
 
@@ -219,6 +238,7 @@ Observed:
 | S2: Inner global `LIMIT` (total rows) | Pass (global brake) | Fail (syntax not implemented) | Pass (global brake) |
 | S3: Non-recursive `LATERAL ... LIMIT` | Pass | Pass | Fail (no `LATERAL`) |
 | S4: Naive in-scope `ORDER BY/LIMIT` | Fail (1235) | Pass (acts like global limit) | Fail (1235) |
+| S5: Recursive LATERAL with per-parent cap + depth cap | Pass | Pass | Fail (no `LATERAL`) |
 
 ## Analysis
 

@@ -1,0 +1,122 @@
+# Input: s5_recursive_lateral_depthcap.sql
+-- Dedicated schema for S5 to avoid column mismatches with other scenarios
+DROP TABLE IF EXISTS seed_nodes_s5;
+DROP TABLE IF EXISTS edges_s5;
+
+CREATE TABLE seed_nodes_s5 (root_id INT PRIMARY KEY);
+CREATE TABLE edges_s5 (
+    parent_id INT,
+    child_id  INT,
+    score     INT,
+    PRIMARY KEY (parent_id, child_id)
+);
+
+-- anchors
+INSERT INTO seed_nodes_s5 VALUES (1),(2);
+
+-- parent 1 has many children (only top 2 should appear)
+INSERT INTO edges_s5 VALUES
+  (1,110,95),(1,111,90),(1,112,85),(1,113,80),(1,114,75),
+  (1,115,70),(1,116,65);
+
+-- parent 2 has many children (only top 2 should appear)
+INSERT INTO edges_s5 VALUES
+  (2,210,99),(2,211,92),(2,212,40),(2,213,30);
+
+-- grandchildren (depth cap will suppress these)
+INSERT INTO edges_s5 VALUES
+  (110,310,50),(110,311,45),(111,320,60),(211,330,55);
+
+WITH RECURSIVE bfs AS (
+  SELECT root_id AS node_id, 0 AS depth
+  FROM seed_nodes_s5
+  UNION ALL
+  SELECT e.child_id AS node_id, bfs.depth + 1 AS depth
+  FROM bfs
+  JOIN LATERAL (
+    SELECT child_id
+    FROM edges_s5 e
+    WHERE e.parent_id = bfs.node_id
+    ORDER BY e.score DESC
+    LIMIT 2          -- per-parent cap (visible)
+  ) AS e ON TRUE
+  WHERE bfs.depth < 2 -- depth cap (suppresses grandchildren)
+)
+SELECT * FROM bfs;
+
+# Output:
+mysql: [Warning] Using a password on the command line interface can be insecure.
+--------------
+DROP TABLE IF EXISTS seed_nodes_s5
+--------------
+
+--------------
+DROP TABLE IF EXISTS edges_s5
+--------------
+
+--------------
+CREATE TABLE seed_nodes_s5 (root_id INT PRIMARY KEY)
+--------------
+
+--------------
+CREATE TABLE edges_s5 (
+    parent_id INT,
+    child_id  INT,
+    score     INT,
+    PRIMARY KEY (parent_id, child_id)
+)
+--------------
+
+--------------
+INSERT INTO seed_nodes_s5 VALUES (1),(2)
+--------------
+
+--------------
+INSERT INTO edges_s5 VALUES
+  (1,110,95),(1,111,90),(1,112,85),(1,113,80),(1,114,75),
+  (1,115,70),(1,116,65)
+--------------
+
+--------------
+INSERT INTO edges_s5 VALUES
+  (2,210,99),(2,211,92),(2,212,40),(2,213,30)
+--------------
+
+--------------
+INSERT INTO edges_s5 VALUES
+  (110,310,50),(110,311,45),(111,320,60),(211,330,55)
+--------------
+
+--------------
+WITH RECURSIVE bfs AS (
+  SELECT root_id AS node_id, 0 AS depth
+  FROM seed_nodes_s5
+  UNION ALL
+  SELECT e.child_id AS node_id, bfs.depth + 1 AS depth
+  FROM bfs
+  JOIN LATERAL (
+    SELECT child_id
+    FROM edges_s5 e
+    WHERE e.parent_id = bfs.node_id
+    ORDER BY e.score DESC
+    LIMIT 2          
+  ) AS e ON TRUE
+  WHERE bfs.depth < 2 
+)
+SELECT * FROM bfs
+--------------
+
++---------+-------+
+| node_id | depth |
++---------+-------+
+|       1 |     0 |
+|       2 |     0 |
+|     110 |     1 |
+|     111 |     1 |
+|     210 |     1 |
+|     211 |     1 |
+|     310 |     2 |
+|     311 |     2 |
+|     320 |     2 |
+|     330 |     2 |
++---------+-------+

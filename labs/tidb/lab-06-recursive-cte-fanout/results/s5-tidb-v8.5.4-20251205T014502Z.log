@@ -1,0 +1,171 @@
+# Input: s5_recursive_lateral_depthcap.sql
+-- Dedicated schema for S5 to avoid column mismatches with other scenarios
+DROP TABLE IF EXISTS seed_nodes_s5;
+DROP TABLE IF EXISTS edges_s5;
+
+CREATE TABLE seed_nodes_s5 (root_id INT PRIMARY KEY);
+CREATE TABLE edges_s5 (
+    parent_id INT,
+    child_id  INT,
+    score     INT,
+    PRIMARY KEY (parent_id, child_id)
+);
+
+-- anchors
+INSERT INTO seed_nodes_s5 VALUES (1),(2);
+
+-- parent 1 has many children (only top 2 should appear)
+INSERT INTO edges_s5 VALUES
+  (1,110,95),(1,111,90),(1,112,85),(1,113,80),(1,114,75),
+  (1,115,70),(1,116,65);
+
+-- parent 2 has many children (only top 2 should appear)
+INSERT INTO edges_s5 VALUES
+  (2,210,99),(2,211,92),(2,212,40),(2,213,30);
+
+-- grandchildren (depth cap will suppress these)
+INSERT INTO edges_s5 VALUES
+  (110,310,50),(110,311,45),(111,320,60),(211,330,55);
+
+WITH RECURSIVE bfs AS (
+  SELECT root_id AS node_id, 0 AS depth
+  FROM seed_nodes_s5
+  UNION ALL
+  SELECT e.child_id AS node_id, bfs.depth + 1 AS depth
+  FROM bfs
+  JOIN LATERAL (
+    SELECT child_id
+    FROM edges_s5 e
+    WHERE e.parent_id = bfs.node_id
+    ORDER BY e.score DESC
+    LIMIT 2          -- per-parent cap (visible)
+  ) AS e ON TRUE
+  WHERE bfs.depth < 2 -- depth cap (suppresses grandchildren)
+)
+SELECT * FROM bfs;
+
+# Output:
+--------------
+-- Dedicated schema for S5 to avoid column mismatches with other scenarios
+--------------
+
+Query OK, 0 rows affected (0.00 sec)
+
+--------------
+DROP TABLE IF EXISTS seed_nodes_s5
+--------------
+
+Query OK, 0 rows affected (0.01 sec)
+
+--------------
+DROP TABLE IF EXISTS edges_s5
+--------------
+
+Query OK, 0 rows affected (0.01 sec)
+
+--------------
+CREATE TABLE seed_nodes_s5 (root_id INT PRIMARY KEY)
+--------------
+
+Query OK, 0 rows affected (0.01 sec)
+
+--------------
+CREATE TABLE edges_s5 (
+    parent_id INT,
+    child_id  INT,
+    score     INT,
+    PRIMARY KEY (parent_id, child_id)
+)
+--------------
+
+Query OK, 0 rows affected (0.00 sec)
+
+--------------
+-- anchors
+--------------
+
+Query OK, 0 rows affected (0.00 sec)
+
+--------------
+INSERT INTO seed_nodes_s5 VALUES (1),(2)
+--------------
+
+Query OK, 2 rows affected (0.01 sec)
+Records: 2  Duplicates: 0  Warnings: 0
+
+--------------
+-- parent 1 has many children (only top 2 should appear)
+--------------
+
+Query OK, 2 rows affected (0.00 sec)
+Records: 2  Duplicates: 0  Warnings: 0
+
+--------------
+INSERT INTO edges_s5 VALUES
+  (1,110,95),(1,111,90),(1,112,85),(1,113,80),(1,114,75),
+  (1,115,70),(1,116,65)
+--------------
+
+Query OK, 7 rows affected (0.00 sec)
+Records: 7  Duplicates: 0  Warnings: 0
+
+--------------
+-- parent 2 has many children (only top 2 should appear)
+--------------
+
+Query OK, 7 rows affected (0.00 sec)
+Records: 7  Duplicates: 0  Warnings: 0
+
+--------------
+INSERT INTO edges_s5 VALUES
+  (2,210,99),(2,211,92),(2,212,40),(2,213,30)
+--------------
+
+Query OK, 4 rows affected (0.00 sec)
+Records: 4  Duplicates: 0  Warnings: 0
+
+--------------
+-- grandchildren (depth cap will suppress these)
+--------------
+
+Query OK, 4 rows affected (0.00 sec)
+Records: 4  Duplicates: 0  Warnings: 0
+
+--------------
+INSERT INTO edges_s5 VALUES
+  (110,310,50),(110,311,45),(111,320,60),(211,330,55)
+--------------
+
+Query OK, 4 rows affected (0.00 sec)
+Records: 4  Duplicates: 0  Warnings: 0
+
+--------------
+WITH RECURSIVE bfs AS (
+  SELECT root_id AS node_id, 0 AS depth
+  FROM seed_nodes_s5
+  UNION ALL
+  SELECT e.child_id AS node_id, bfs.depth + 1 AS depth
+  FROM bfs
+  JOIN LATERAL (
+    SELECT child_id
+    FROM edges_s5 e
+    WHERE e.parent_id = bfs.node_id
+    ORDER BY e.score DESC
+    LIMIT 2          -- per-parent cap (visible)
+  ) AS e ON TRUE
+  WHERE bfs.depth < 2 -- depth cap (suppresses grandchildren)
+)
+SELECT * FROM bfs
+--------------
+
+ERROR 1064 (42000) at line 29: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 7 column 17 near "(
+    SELECT child_id
+    FROM edges_s5 e
+    WHERE e.parent_id = bfs.node_id
+    ORDER BY e.score DESC
+    LIMIT 2          -- per-parent cap (visible)
+  ) AS e ON TRUE
+  WHERE bfs.depth < 2 -- depth cap (suppresses grandchildren)
+)
+SELECT * FROM bfs" 
+Bye
