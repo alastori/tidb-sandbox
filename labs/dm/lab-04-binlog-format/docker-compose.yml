@@ -1,0 +1,41 @@
+services:
+  # Source MySQL database
+  mysql:
+    image: ${MYSQL_IMAGE:-mysql:8.0.44}
+    container_name: lab04-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: Pass_1234
+    ports:
+      - "3306:3306"
+    command: >
+      ${MYSQL_AUTH_FLAG---default-authentication-plugin=mysql_native_password}
+      --log-bin=mysql-bin
+      --binlog-format=${MYSQL_BINLOG_FORMAT:-ROW}
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_bin
+      ${MYSQL_SKIP_CHARSET_FLAG---skip-character-set-client-handshake}
+      --server-id=1
+    networks:
+      - tidb-net
+
+  # TiDB Playground (includes TiDB, PD, TiKV, DM-master, DM-worker)
+  tidb:
+    build:
+      context: .
+      dockerfile: Dockerfile.dm
+      args:
+        DM_VERSION: ${DM_VERSION:-8.5.4}
+    container_name: lab04-tidb
+    ports:
+      - "4000:4000"
+      - "8261:8261"
+    networks:
+      - tidb-net
+    depends_on:
+      - mysql
+
+networks:
+  tidb-net:
+    driver: bridge

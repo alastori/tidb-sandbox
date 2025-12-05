@@ -1,0 +1,13 @@
+name: "lab04-task"
+task-mode: "incremental"
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+mysql-instances:
+  - source-id: "mysql-01"
+    block-allow-list: "allow-test-db"
+block-allow-list:
+  allow-test-db:
+    do-dbs: ["test_db"]

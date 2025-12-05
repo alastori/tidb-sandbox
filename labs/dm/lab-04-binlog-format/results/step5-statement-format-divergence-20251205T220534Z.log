@@ -1,0 +1,31 @@
+# Switching to STATEMENT format - 20251205T220534Z
+
+# Changing binlog_format globally and for session:
+Variable_name	Value
+binlog_format	STATEMENT
+
+# Truncating table to reset baseline:
+(truncated)
+(truncated)
+
+# Executing multi-statement batch with STATEMENT format:
+Sending problematic SQL batch...
+Number of rows affected: 0
+Number of rows affected: 0
+Number of rows affected: 1
+Number of rows affected: 0
+Done. Check DM status now.
+
+# Waiting 5 seconds for replication...
+
+# DM task status:
+                    "stage": "Running",
+                        "synced": false,
+
+# Source (MySQL) row count:
+source_count
+1
+
+# Target (TiDB) row count:
+target_count
+0

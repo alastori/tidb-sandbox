@@ -1,0 +1,42 @@
+# Installing Python and MySQL connector - 20251205T220534Z
+Downloading metadata...
+Downloading metadata...
+Downloading metadata...
+Downloading metadata...
+Package                                             Repository            Size
+Installing:                                                                   
+ expat-2.5.0-5.el9_7.1.aarch64                      ol9_baseos_latest 121.1 kB
+ python-unversioned-command-3.9.23-2.0.1.el9.noarch ol9_appstream       9.1 kB
+ python3-3.9.23-2.0.1.el9.aarch64                   ol9_baseos_latest  30.9 kB
+ python3-libs-3.9.23-2.0.1.el9.aarch64              ol9_baseos_latest  10.3 MB
+ python3-pip-21.3.1-1.el9.noarch                    ol9_appstream       3.1 MB
+ python3-pip-wheel-21.3.1-1.el9.noarch              ol9_baseos_latest   1.2 MB
+ python3-setuptools-53.0.0-15.el9.noarch            ol9_baseos_latest   1.3 MB
+ python3-setuptools-wheel-53.0.0-15.el9.noarch      ol9_baseos_latest 478.0 kB
+Transaction Summary:
+ Installing:        8 packages
+ Reinstalling:      0 packages
+ Upgrading:         0 packages
+ Obsoleting:        0 packages
+ Removing:          0 packages
+ Downgrading:       0 packages
+Downloading packages...
+Running transaction test...
+Installing: python3-setuptools-wheel;53.0.0-15.el9;noarch;ol9_baseos_latest
+Installing: python3-pip-wheel;21.3.1-1.el9;noarch;ol9_baseos_latest
+Installing: expat;2.5.0-5.el9_7.1;aarch64;ol9_baseos_latest
+Installing: python-unversioned-command;3.9.23-2.0.1.el9;noarch;ol9_appstream
+Installing: python3;3.9.23-2.0.1.el9;aarch64;ol9_baseos_latest
+Installing: python3-libs;3.9.23-2.0.1.el9;aarch64;ol9_baseos_latest
+Installing: python3-setuptools;53.0.0-15.el9;noarch;ol9_baseos_latest
+Installing: python3-pip;21.3.1-1.el9;noarch;ol9_appstream
+Complete.
+Collecting mysql-connector-python
+  Downloading mysql_connector_python-9.4.0-cp39-cp39-manylinux_2_28_aarch64.whl (33.5 MB)
+Installing collected packages: mysql-connector-python
+Successfully installed mysql-connector-python-9.4.0
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+
+# Verifying Python installation:
+Python 3.9.23
+mysql-connector-python installed

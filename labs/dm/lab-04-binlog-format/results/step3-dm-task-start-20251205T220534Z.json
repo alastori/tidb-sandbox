@@ -1,0 +1,74 @@
+# Registering DM source - 20251205T220534Z
+    "result": true,
+    "msg": "",
+    "sources": [
+        {
+            "result": true,
+            "msg": "",
+            "source": "mysql-01",
+            "worker": "dm-worker-0"
+        }
+    ]
+}
+
+# Starting DM task (precheck will validate binlog_format=ROW):
+    "result": true,
+    "msg": "",
+    "sources": [
+        {
+            "result": true,
+            "msg": "",
+            "source": "mysql-01",
+            "worker": "dm-worker-0"
+        }
+    ],
+    "checkResult": "pre-check is passed. "
+}
+
+# Initial task status:
+    "result": true,
+    "msg": "",
+    "sources": [
+        {
+            "result": true,
+            "msg": "",
+            "sourceStatus": {
+                "source": "mysql-01",
+                "worker": "dm-worker-0",
+                "result": null,
+                "relayStatus": null
+            },
+            "subTaskStatus": [
+                {
+                    "name": "lab04-task",
+                    "stage": "Running",
+                    "unit": "Sync",
+                    "result": null,
+                    "unresolvedDDLLockID": "",
+                    "sync": {
+                        "totalEvents": "0",
+                        "totalTps": "0",
+                        "recentTps": "0",
+                        "masterBinlog": "(mysql-bin.000003, 197)",
+                        "masterBinlogGtid": "48840584-d226-11f0-9370-96f5bf994234:1-5",
+                        "syncerBinlog": "(mysql-bin.000003, 197)",
+                        "syncerBinlogGtid": "48840584-d226-11f0-9370-96f5bf994234:1-5",
+                        "blockingDDLs": [
+                        ],
+                        "unresolvedGroups": [
+                        ],
+                        "synced": true,
+                        "binlogType": "remote",
+                        "secondsBehindMaster": "0",
+                        "blockDDLOwner": "",
+                        "conflictMsg": "",
+                        "totalRows": "0",
+                        "totalRps": "0",
+                        "recentRps": "0"
+                    },
+                    "validation": null
+                }
+            ]
+        }
+    ]
+}

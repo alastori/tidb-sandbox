@@ -1,0 +1,31 @@
+# Baseline test with binlog_format=ROW - 20251205T220534Z
+
+# Confirming binlog format:
+Variable_name	Value
+binlog_format	ROW
+
+# Executing multi-statement batch (trigger_error.py):
+Sending problematic SQL batch...
+Number of rows affected: 0
+Number of rows affected: 0
+Number of rows affected: 1
+Number of rows affected: 0
+Done. Check DM status now.
+
+# Waiting 5 seconds for replication...
+
+# DM task status after baseline:
+                    "stage": "Running",
+                        "synced": false,
+
+# Source (MySQL) row count:
+source_count
+1
+
+# Target (TiDB) row count:
+target_count
+1
+
+# Target (TiDB) data sample:
+id
+1

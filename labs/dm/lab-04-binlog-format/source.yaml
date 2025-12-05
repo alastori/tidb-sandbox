@@ -1,0 +1,6 @@
+source-id: "mysql-01"
+from:
+  host: "mysql"  # Docker DNS name
+  user: "root"
+  password: "Pass_1234"
+  port: 3306
