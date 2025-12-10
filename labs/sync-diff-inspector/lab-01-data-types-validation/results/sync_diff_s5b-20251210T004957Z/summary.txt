@@ -1,0 +1,51 @@
+Summary
+
+
+
+Source Database
+
+
+
+host = "127.0.0.1"
+port = 3307
+user = "root"
+
+Target Databases
+
+
+
+host = "127.0.0.1"
+port = 4000
+user = "root"
+
+Comparison Result
+
+
+
+The table structure and data in following tables are equivalent
+
++-----------------------------+---------+-----------+
+|            TABLE            | UPCOUNT | DOWNCOUNT |
++-----------------------------+---------+-----------+
+| `sakila_wa`.`actor`         |     200 |       200 |
+| `sakila_wa`.`address`       |     603 |       603 |
+| `sakila_wa`.`category`      |      16 |        16 |
+| `sakila_wa`.`city`          |     600 |       600 |
+| `sakila_wa`.`country`       |     109 |       109 |
+| `sakila_wa`.`customer`      |     599 |       599 |
+| `sakila_wa`.`film_actor`    |    5462 |      5462 |
+| `sakila_wa`.`film_category` |    1000 |      1000 |
+| `sakila_wa`.`film_text`     |       0 |         0 |
+| `sakila_wa`.`film`          |    1000 |      1000 |
+| `sakila_wa`.`inventory`     |    4581 |      4581 |
+| `sakila_wa`.`language`      |       6 |         6 |
+| `sakila_wa`.`payment`       |   16044 |     16044 |
+| `sakila_wa`.`rental`        |   16044 |     16044 |
+| `sakila_wa`.`staff`         |       2 |         2 |
+| `sakila_wa`.`store`         |       2 |         2 |
++-----------------------------+---------+-----------+
+
+
+
+Time Cost: 121.39548ms
+Average Speed: 0.000000MB/s

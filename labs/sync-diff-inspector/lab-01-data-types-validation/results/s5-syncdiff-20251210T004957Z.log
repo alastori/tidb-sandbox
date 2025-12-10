@@ -1,0 +1,4 @@
+A total of 16 tables need to be compared
+
+
+An error occurred while comparing table structure: [ddl:1170]BLOB/TEXT column 'description' used in key specification without a key length, please check log info in /results/sync_diff_s5-20251210T004957Z/sync_diff.log for full details

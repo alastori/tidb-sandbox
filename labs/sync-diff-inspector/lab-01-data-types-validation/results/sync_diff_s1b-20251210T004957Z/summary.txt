@@ -1,0 +1,36 @@
+Summary
+
+
+
+Source Database
+
+
+
+host = "127.0.0.1"
+port = 3307
+user = "root"
+
+Target Databases
+
+
+
+host = "127.0.0.1"
+port = 4000
+user = "root"
+
+Comparison Result
+
+
+
+The table structure and data in following tables are equivalent
+
++----------------------------+---------+-----------+
+|           TABLE            | UPCOUNT | DOWNCOUNT |
++----------------------------+---------+-----------+
+| `lab`.`s1b_blob_family_wa` |       7 |         7 |
++----------------------------+---------+-----------+
+
+
+
+Time Cost: 17.815908ms
+Average Speed: 0.000000MB/s

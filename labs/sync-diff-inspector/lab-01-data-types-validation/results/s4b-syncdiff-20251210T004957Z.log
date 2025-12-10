@@ -1,0 +1,13 @@
+A total of 1 tables need to be compared
+
+
+[0A[JComparing the table structure of `lab`.`s4b_mixed_app_wa` ... equivalent
+Comparing the table data of `lab`.`s4b_mixed_app_wa` ...
+_____________________________________________________________________________
+Progress [>------------------------------------------------------------] 0% 0/1
+[3A[JComparing the table data of `lab`.`s4b_mixed_app_wa` ... equivalent
+_____________________________________________________________________________
+Progress [============================================================>] 100% 0/0
+[1A[JProgress [============================================================>] 100% 0/0
+A total of 1 table have been compared and all are equal.
+You can view the comparison details through '/results/sync_diff_s4b-20251210T004957Z/sync_diff.log'

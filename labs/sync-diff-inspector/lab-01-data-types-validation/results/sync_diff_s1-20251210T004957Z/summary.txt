@@ -1,0 +1,36 @@
+Summary
+
+
+
+Source Database
+
+
+
+host = "127.0.0.1"
+port = 3307
+user = "root"
+
+Target Databases
+
+
+
+host = "127.0.0.1"
+port = 4000
+user = "root"
+
+Comparison Result
+
+
+
+The table structure and data in following tables are equivalent
+
+The following tables contains inconsistent data
+
++------------------------+---------+--------------------+----------------+---------+-----------+
+|         TABLE          | RESULT  | STRUCTURE EQUALITY | DATA DIFF ROWS | UPCOUNT | DOWNCOUNT |
++------------------------+---------+--------------------+----------------+---------+-----------+
+| `lab`.`s1_blob_family` | succeed | true               | +2/-2          |       7 |         7 |
++------------------------+---------+--------------------+----------------+---------+-----------+
+
+Time Cost: 21.632575ms
+Average Speed: 0.000000MB/s

@@ -1,0 +1,13 @@
+*************************** 1. row ***************************
+       Table: s4_mixed_app
+Create Table: CREATE TABLE `s4_mixed_app` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_name` varchar(100) DEFAULT NULL,
+  `profile_blob` blob,
+  `settings` json DEFAULT NULL,
+  `flags` bit(8) DEFAULT NULL,
+  `description` text,
+  `binary_data` varbinary(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci

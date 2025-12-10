@@ -1,0 +1,19 @@
+A total of 1 tables need to be compared
+
+
+[0A[JComparing the table structure of `lab`.`s1_blob_family` ... equivalent
+Comparing the table data of `lab`.`s1_blob_family` ...
+_____________________________________________________________________________
+Progress [>------------------------------------------------------------] 0% 0/1
+[3A[JComparing the table data of `lab`.`s1_blob_family` ... failure
+_____________________________________________________________________________
+Progress [============================================================>] 100% 0/0
+[1A[JProgress [============================================================>] 100% 0/0
+The data of `lab`.`s1_blob_family` is not equal
+
+The rest of tables are all equal.
+
+A total of 1 tables have been compared, 0 tables finished, 1 tables failed, 0 tables skipped.
+The patch file has been generated in 
+	'/results/sync_diff_s1-20251210T004957Z/fix-on-tidb/'
+You can view the comparison details through '/results/sync_diff_s1-20251210T004957Z/sync_diff.log'

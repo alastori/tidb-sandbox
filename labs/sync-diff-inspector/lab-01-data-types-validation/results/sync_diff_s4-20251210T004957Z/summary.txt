@@ -1,0 +1,36 @@
+Summary
+
+
+
+Source Database
+
+
+
+host = "127.0.0.1"
+port = 3307
+user = "root"
+
+Target Databases
+
+
+
+host = "127.0.0.1"
+port = 4000
+user = "root"
+
+Comparison Result
+
+
+
+The table structure and data in following tables are equivalent
+
+The following tables contains inconsistent data
+
++----------------------+---------+--------------------+----------------+---------+-----------+
+|        TABLE         | RESULT  | STRUCTURE EQUALITY | DATA DIFF ROWS | UPCOUNT | DOWNCOUNT |
++----------------------+---------+--------------------+----------------+---------+-----------+
+| `lab`.`s4_mixed_app` | succeed | true               | +6/-6          |       6 |         6 |
++----------------------+---------+--------------------+----------------+---------+-----------+
+
+Time Cost: 20.682482ms
+Average Speed: 0.000000MB/s

@@ -1,0 +1,13 @@
+*************************** 1. row ***************************
+       Table: s1_blob_family
+Create Table: CREATE TABLE `s1_blob_family` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `col_varchar` varchar(255) DEFAULT NULL,
+  `col_text` text DEFAULT NULL,
+  `col_blob` blob DEFAULT NULL,
+  `col_varbinary` varbinary(255) DEFAULT NULL,
+  `col_tinyblob` tinyblob DEFAULT NULL,
+  `col_mediumblob` mediumblob DEFAULT NULL,
+  `description` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30001

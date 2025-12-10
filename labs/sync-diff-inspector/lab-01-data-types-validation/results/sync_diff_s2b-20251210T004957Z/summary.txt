@@ -1,0 +1,36 @@
+Summary
+
+
+
+Source Database
+
+
+
+host = "127.0.0.1"
+port = 3307
+user = "root"
+
+Target Databases
+
+
+
+host = "127.0.0.1"
+port = 4000
+user = "root"
+
+Comparison Result
+
+
+
+The table structure and data in following tables are equivalent
+
++--------------------------+---------+-----------+
+|          TABLE           | UPCOUNT | DOWNCOUNT |
++--------------------------+---------+-----------+
+| `lab`.`s2b_json_test_wa` |      16 |        16 |
++--------------------------+---------+-----------+
+
+
+
+Time Cost: 17.826116ms
+Average Speed: 0.000000MB/s

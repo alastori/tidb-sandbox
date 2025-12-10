@@ -1,0 +1,23 @@
+# S1: BLOB/String/Binary family validation
+
+check-thread-count = 4
+export-fix-sql = true
+
+[data-sources]
+[data-sources.mysql]
+    host = "127.0.0.1"
+    port = 3307
+    user = "root"
+    password = "Password_1234"
+
+[data-sources.tidb]
+    host = "127.0.0.1"
+    port = 4000
+    user = "root"
+    password = ""
+
+[task]
+    output-dir = "./results/sync_diff_s1"
+    source-instances = ["mysql"]
+    target-instance = "tidb"
+    target-check-tables = ["lab.s1_blob_family"]

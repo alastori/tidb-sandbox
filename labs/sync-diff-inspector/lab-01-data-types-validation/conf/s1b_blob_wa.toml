@@ -1,0 +1,23 @@
+# S1B: BLOB/String/Binary with collation aligned
+
+check-thread-count = 4
+export-fix-sql = true
+
+[data-sources]
+[data-sources.mysql]
+    host = "127.0.0.1"
+    port = 3307
+    user = "root"
+    password = "Password_1234"
+
+[data-sources.tidb]
+    host = "127.0.0.1"
+    port = 4000
+    user = "root"
+    password = ""
+
+[task]
+    output-dir = "./results/sync_diff_s1b"
+    source-instances = ["mysql"]
+    target-instance = "tidb"
+    target-check-tables = ["lab.s1b_blob_family_wa"]

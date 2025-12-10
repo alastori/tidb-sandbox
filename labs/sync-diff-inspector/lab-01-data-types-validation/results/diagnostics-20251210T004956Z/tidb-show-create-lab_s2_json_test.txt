@@ -1,0 +1,8 @@
+*************************** 1. row ***************************
+       Table: s2_json_test
+Create Table: CREATE TABLE `s2_json_test` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `json_col` json DEFAULT NULL,
+  `description` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30001

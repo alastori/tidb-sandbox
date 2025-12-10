@@ -1,0 +1,36 @@
+Summary
+
+
+
+Source Database
+
+
+
+host = "127.0.0.1"
+port = 3307
+user = "root"
+
+Target Databases
+
+
+
+host = "127.0.0.1"
+port = 4000
+user = "root"
+
+Comparison Result
+
+
+
+The table structure and data in following tables are equivalent
+
++--------------------------+---------+-----------+
+|          TABLE           | UPCOUNT | DOWNCOUNT |
++--------------------------+---------+-----------+
+| `lab`.`s4b_mixed_app_wa` |       6 |         6 |
++--------------------------+---------+-----------+
+
+
+
+Time Cost: 16.623227ms
+Average Speed: 0.000000MB/s
