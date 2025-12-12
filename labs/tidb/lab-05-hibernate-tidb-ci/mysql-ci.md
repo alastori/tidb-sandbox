@@ -1,6 +1,6 @@
 # Running Hibernate's Test Suite Against MySQL
 
-This guide runs the complete Hibernate ORM test suite against MySQL using the same workflow as Hibernate's Jenkins CI pipeline (`ci/build.sh`). The full suite executes ~18,750-19,550 tests across all modules (exact count varies based on Gradle caching and module selection).
+This guide runs the complete Hibernate ORM test suite against MySQL using the same workflow as Hibernate's Jenkins CI pipeline (`ci/build.sh`). The full suite executes approximately 18,650 tests across all modules (exact count varies based on Gradle caching and module selection).
 
 ## Prerequisites
 
@@ -180,23 +180,23 @@ This creates:
 - `$TEMP_DIR/mysql-local-summary-{timestamp}.json` - Summary statistics
 - `$TEMP_DIR/mysql-results-{timestamp}/` - Archived test results (can be re-summarized later)
 
-Sample output (with clean cache):
+Sample output (based on run date: 2025-11-13):
 
 ```text
 Starting local JUnit summary…
   Root path:        …/workspace/hibernate-orm
-  XML files found:  9807
+  XML files found:  4899
   Database:         mysql_8_0
 
 Aggregated totals (all modules):
-  Tests:    37482
-  Failures: 14
+  Tests:    18653
+  Failures: 1
   Errors:   0
-  Skipped:  5355
-  Duration: 51m 20s
+  Skipped:  2586
+  Duration: 18m 2s
 ```
 
-**Note:** With clean Gradle cache, the full suite executes **37,482 tests** (nearly double the cached run). The 14 failures are all in hibernate-envers, related to the same ON DUPLICATE KEY UPDATE syntax issue that affects TiDB.
+**Note:** The failure is in hibernate-core. Results may vary slightly based on Gradle caching and module selection.
 
 The script archives HTML reports to `$TEMP_DIR/mysql-results-{timestamp}/` for later analysis. You can re-summarize archived results:
 
@@ -220,14 +220,14 @@ cd "$LAB_HOME_DIR"
   --json-out "$TEMP_DIR/jenkins-summary.json"
 ```
 
-Sample comparison (local run vs Jenkins nightly #1002):
+Sample comparison (local run vs Jenkins nightly):
 
 | Source | Tests | Failures | Skipped | Duration |
 |--------|-------|----------|---------|----------|
-| Local (2025-11-06) | 18,754 | 0 | 2,672 | 12m 14s |
-| Jenkins #1002 (`mysql_8_0`) | 19,535 | 0 | 2,738 | 49m 42s |
+| Local (2025-11-13) | 18,653 | 1 | 2,586 | 18m 2s |
+| Jenkins nightly (`mysql_8_0`) | ~19,500 | 0 | ~2,700 | ~50m |
 
-**Note:** Test count differences (~4% variance) can occur due to Gradle caching, module selection, or test filtering. The skipped test count may also vary slightly. Both local and Jenkins runs should show zero failures for a successful baseline.
+**Note:** Test count differences can occur due to Gradle caching, module selection, or test filtering. The skipped test count may also vary. Jenkins runs typically execute more tests and take longer due to additional validation steps and clean builds. Local runs may show occasional failures that don't appear in Jenkins builds.
 
 ## 7. Cleanup
 

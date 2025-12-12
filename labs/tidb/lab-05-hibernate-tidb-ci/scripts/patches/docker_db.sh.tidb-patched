@@ -1,0 +1,127 @@
+# TiDB function template for docker_db.sh
+#
+# This template is used by scripts/patch_docker_db_tidb.py to generate
+# a hardened TiDB setup function that replaces the upstream tidb() function
+# in Hibernate ORM's docker_db.sh script.
+#
+# Placeholders (substituted by patch_docker_db_tidb.py):
+#   {{TMP_DIR}}              - Path to workspace/tmp directory
+#   {{BOOTSTRAP_SQL_FILE}}   - Path to bootstrap SQL snapshot file (or empty for baseline)
+#
+# Generated output: scripts/patches/docker_db.sh.tidb-patched
+#
+# Features:
+# - Headless compatibility (no -it flag)
+# - TiDB v8.5.3 LTS image
+# - Hardened readiness checks (log + ping probes, ~75s timeout)
+# - Retry logic for bootstrap SQL (3 attempts)
+# - Post-bootstrap verification (confirms user/schema exist)
+# - Main database and user creation embedded inline (baseline)
+# - Optional bootstrap SQL injection (strict/permissive/custom modes)
+#
+tidb() {
+    TMP_DIR="${PATCH_TIDB_TMP_DIR:-/Users/alastori/tmp/hibernate-tidb/workspace/hibernate-orm/tmp}"
+    mkdir -p "$TMP_DIR"
+    BOOTSTRAP_SQL_FILE=""
+
+    $CONTAINER_CLI rm -f tidb || true
+    $CONTAINER_CLI run --name tidb -p4000:4000 -d ${DB_IMAGE_TIDB:-docker.io/pingcap/tidb:v8.5.3}
+
+    echo "Waiting for TiDB logs to report readiness..."
+    OUTPUT=
+    n=0
+    until [ "$n" -ge 15 ]
+    do
+        OUTPUT=$($CONTAINER_CLI logs tidb 2>&1)
+        if [[ $OUTPUT == *"server is running"* ]]; then
+          break
+        fi
+        n=$((n+1))
+        echo "  TiDB not ready yet (log probe $n/15)..."
+        sleep 5
+    done
+
+    echo "Checking TiDB SQL readiness..."
+    ping_attempt=0
+    ping_success=0
+    while [ $ping_attempt -lt 15 ]; do
+      if docker run --rm --network container:tidb mysql:8.0 mysqladmin -h 127.0.0.1 -P 4000 -uroot ping --connect-timeout=5 >/dev/null 2>&1; then
+        ping_success=1
+        break
+      fi
+      ping_attempt=$((ping_attempt+1))
+      echo "  TiDB not accepting connections yet (ping $ping_attempt/15)..."
+      sleep 5
+    done
+
+    if [ "$ping_success" -ne 1 ]; then
+      echo "ERROR: TiDB never accepted connections (waited ~75 seconds). Check 'docker logs tidb'."
+      exit 1
+    fi
+
+    databases=()
+    for n in $(seq 1 $DB_COUNT)
+    do
+      databases+=("hibernate_orm_test_${n}")
+    done
+
+    # Main database and user (must be created first)
+    create_cmd="CREATE DATABASE IF NOT EXISTS hibernate_orm_test;"
+    create_cmd+="CREATE USER IF NOT EXISTS 'hibernate_orm_test'@'%' IDENTIFIED BY 'hibernate_orm_test';"
+    create_cmd+="GRANT ALL ON hibernate_orm_test.* TO 'hibernate_orm_test'@'%';"
+
+    # Additional test databases
+    for i in "${!databases[@]}"; do
+      create_cmd+="CREATE DATABASE IF NOT EXISTS ${databases[i]}; GRANT ALL ON ${databases[i]}.* TO 'hibernate_orm_test'@'%';"
+    done
+
+    tmp_bootstrap="$TMP_DIR/tidb-bootstrap-$$.sql"
+    : > "$tmp_bootstrap"
+    if [ -n "$BOOTSTRAP_SQL_FILE" ]; then
+      cat "$BOOTSTRAP_SQL_FILE" >> "$tmp_bootstrap"
+    fi
+    printf "%s\n" "$create_cmd" >> "$tmp_bootstrap"
+    echo "FLUSH PRIVILEGES;" >> "$tmp_bootstrap"
+
+    echo "Bootstrapping TiDB databases..."
+    bootstrap_attempt=0
+    bootstrap_success=0
+    while [ $bootstrap_attempt -lt 3 ]; do
+      if docker run --rm --network container:tidb \
+        -v "$tmp_bootstrap":/tmp/bootstrap.sql:ro \
+        mysql:8.0 bash -lc "cat /tmp/bootstrap.sql | mysql -h 127.0.0.1 -P 4000 -uroot"; then
+        bootstrap_success=1
+        break
+      fi
+      bootstrap_attempt=$((bootstrap_attempt+1))
+      echo "  Bootstrap SQL failed (attempt $bootstrap_attempt/3). Retrying in 5 seconds..."
+      sleep 5
+    done
+
+    rm -f "$tmp_bootstrap"
+
+    if [ "$bootstrap_success" -ne 1 ]; then
+      echo "ERROR: TiDB bootstrap SQL failed after 3 attempts. Check 'docker logs tidb'."
+      exit 1
+    fi
+
+    verify_user=$(docker run --rm --network container:tidb mysql:8.0 mysql -N -B -h 127.0.0.1 -P 4000 -uroot -e "SELECT COUNT(*) FROM mysql.user WHERE user='hibernate_orm_test' AND host='%';" | tr -d '[:space:]')
+    verify_user=${verify_user:-0}
+    if [ "$verify_user" -eq 0 ]; then
+      echo "ERROR: TiDB bootstrap verification failed. User 'hibernate_orm_test' missing."
+      exit 1
+    fi
+
+    verify_schema=$(docker run --rm --network container:tidb mysql:8.0 mysql -N -B -h 127.0.0.1 -P 4000 -uroot -e "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name='hibernate_orm_test';" | tr -d '[:space:]')
+    verify_schema=${verify_schema:-0}
+    if [ "$verify_schema" -eq 0 ]; then
+      echo "ERROR: TiDB bootstrap verification failed. Schema 'hibernate_orm_test' missing."
+      exit 1
+    fi
+
+    echo "TiDB successfully started and bootstrap SQL executed"
+}
+tidb_5_4() {
+    echo "tidb_5_4 preset is deprecated. Falling back to tidb()."
+    tidb
+}

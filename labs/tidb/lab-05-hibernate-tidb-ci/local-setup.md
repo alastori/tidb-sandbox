@@ -267,16 +267,18 @@ This generates:
 - Console summary with total tests, failures, errors, skipped, and duration
 - JSON file with detailed per-module statistics: `$TEMP_DIR/test-summary-{timestamp}.json`
 
-Example output:
+Example output (MySQL 8.0 baseline, run date: 2025-11-13):
 
 ```text
 Aggregated totals (all modules):
-  Tests:    19569
-  Failures: 0
+  Tests:    18653
+  Failures: 1
   Errors:   0
-  Skipped:  2738
-  Duration: 22m 14s
+  Skipped:  2586
+  Duration: 18m 2s
 ```
+
+**Note:** Results shown are from a MySQL baseline run. TiDB runs will show different test counts and failure rates (see [tidb-ci.md](./tidb-ci.md) for TiDB-specific results).
 
 See [scripts/README.md](./scripts/README.md) for more details on the summary scripts.
 

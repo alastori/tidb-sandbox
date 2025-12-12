@@ -1,0 +1,40 @@
+# TiDB function template for docker_db.sh
+#
+# This template is used by scripts/patch_docker_db_tidb.py to generate
+# a hardened TiDB setup function that replaces the upstream tidb() function
+# in Hibernate ORM's docker_db.sh script.
+#
+# Placeholders (substituted by patch_docker_db_tidb.py):
+#   {{TMP_DIR}}              - Path to workspace/tmp directory
+#   {{BOOTSTRAP_SQL_FILE}}   - Path to bootstrap SQL snapshot file (or empty for baseline)
+#
+# Generated output: scripts/patches/docker_db.sh.tidb-patched
+#
+# Features:
+# - Headless compatibility (no -it flag)
+# - TiDB v8.5.3 LTS image
+# - Hardened readiness checks (log + ping probes, ~75s timeout)
+# - Retry logic for bootstrap SQL (3 attempts)
+# - Post-bootstrap verification (confirms user/schema exist)
+# - Main database and user creation embedded inline (baseline)
+# - Optional bootstrap SQL injection (strict/permissive/custom modes)
+#
+tidb() {
+{{ENV_BLOCK}}
+
+{{START_CONTAINER}}
+
+{{LOG_WAIT}}
+
+{{PING_BLOCK}}
+
+{{DB_CREATION}}
+
+{{BOOTSTRAP_STAGE}}
+
+{{BOOTSTRAP_EXECUTE}}
+
+{{VERIFICATION}}
+
+    echo "TiDB successfully started and bootstrap SQL executed"
+}

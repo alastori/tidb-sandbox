@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+"""
+Patch docker_db.sh with hardened TiDB implementation.
+
+This script implements a two-stage workflow:
+1. Generate versioned patch file from template → scripts/patches/docker_db.sh.tidb-patched
+2. Apply the patch to workspace/hibernate-orm/docker_db.sh
+
+The versioned patch file can be:
+- Git-tracked for easy diff with upstream
+- Copied to other projects
+- Compared with upstream docker_db.sh changes
+"""
 import argparse
 import os
 import shutil
@@ -8,30 +20,6 @@ from textwrap import dedent, indent
 from typing import Dict, Optional
 
 from env_utils import load_lab_env, resolve_workspace_dir
-
-TIDB_TEMPLATE = dedent(
-    """\
-    tidb() {
-    __ENV_BLOCK__
-
-    __START_CONTAINER__
-
-    __LOG_WAIT__
-
-    __PING_BLOCK__
-
-    __DB_CREATION__
-
-    __BOOTSTRAP_STAGE_BLOCK__
-
-    __BOOTSTRAP_EXECUTE_BLOCK__
-
-    __VERIFICATION_BLOCK__
-
-        echo "TiDB successfully started and bootstrap SQL executed"
-    }
-    """
-)
 
 
 def replace_function(text: str, func_name: str, replacement: str) -> str:
@@ -162,7 +150,7 @@ def build_db_creation_block() -> str:
         create_cmd="CREATE DATABASE IF NOT EXISTS hibernate_orm_test;"
         create_cmd+="CREATE USER IF NOT EXISTS 'hibernate_orm_test'@'%' IDENTIFIED BY 'hibernate_orm_test';"
         create_cmd+="GRANT ALL ON hibernate_orm_test.* TO 'hibernate_orm_test'@'%';"
-        
+
         # Additional test databases
         for i in "${!databases[@]}"; do
           create_cmd+="CREATE DATABASE IF NOT EXISTS ${databases[i]}; GRANT ALL ON ${databases[i]}.* TO 'hibernate_orm_test'@'%';"
@@ -179,7 +167,7 @@ def build_bootstrap_stage_block() -> str:
         if [ -n "$BOOTSTRAP_SQL_FILE" ]; then
           cat "$BOOTSTRAP_SQL_FILE" >> "$tmp_bootstrap"
         fi
-        printf "%s\n" "$create_cmd" >> "$tmp_bootstrap"
+        printf "%s\\n" "$create_cmd" >> "$tmp_bootstrap"
         echo "FLUSH PRIVILEGES;" >> "$tmp_bootstrap"
         """
     )
@@ -192,8 +180,8 @@ def build_bootstrap_execute_block() -> str:
         bootstrap_attempt=0
         bootstrap_success=0
         while [ $bootstrap_attempt -lt 3 ]; do
-          if docker run --rm --network container:tidb \
-            -v "$tmp_bootstrap":/tmp/bootstrap.sql:ro \
+          if docker run --rm --network container:tidb \\
+            -v "$tmp_bootstrap":/tmp/bootstrap.sql:ro \\
             mysql:8.0 bash -lc "cat /tmp/bootstrap.sql | mysql -h 127.0.0.1 -P 4000 -uroot"; then
             bootstrap_success=1
             break
@@ -233,39 +221,85 @@ def build_verification_block() -> str:
     )
 
 
-def build_tidb_function(tmp_dir: Path, bootstrap_sql_file: Optional[Path]) -> str:
+def load_tidb_template(template_path: Path) -> str:
+    """Load the TiDB function template from file."""
+    if not template_path.exists():
+        raise FileNotFoundError(f"Template file not found: {template_path}")
+    return template_path.read_text()
+
+
+def build_tidb_function(tmp_dir: Path, bootstrap_sql_file: Optional[Path], template_path: Path) -> str:
+    """Build the TiDB function by substituting blocks into the template."""
+    template = load_tidb_template(template_path)
+
     blocks: Dict[str, str] = {
-        "__ENV_BLOCK__": build_env_block(tmp_dir, bootstrap_sql_file),
-        "__START_CONTAINER__": build_start_block(),
-        "__LOG_WAIT__": build_log_wait_block(),
-        "__PING_BLOCK__": build_ping_block(),
-        "__DB_CREATION__": build_db_creation_block(),
-        "__BOOTSTRAP_STAGE_BLOCK__": build_bootstrap_stage_block(),
-        "__BOOTSTRAP_EXECUTE_BLOCK__": build_bootstrap_execute_block(),
-        "__VERIFICATION_BLOCK__": build_verification_block(),
+        "{{ENV_BLOCK}}": build_env_block(tmp_dir, bootstrap_sql_file),
+        "{{START_CONTAINER}}": build_start_block(),
+        "{{LOG_WAIT}}": build_log_wait_block(),
+        "{{PING_BLOCK}}": build_ping_block(),
+        "{{DB_CREATION}}": build_db_creation_block(),
+        "{{BOOTSTRAP_STAGE}}": build_bootstrap_stage_block(),
+        "{{BOOTSTRAP_EXECUTE}}": build_bootstrap_execute_block(),
+        "{{VERIFICATION}}": build_verification_block(),
     }
-    rendered = TIDB_TEMPLATE
+
+    rendered = template
     for placeholder, block in blocks.items():
         rendered = rendered.replace(placeholder, block)
+
     return rendered
 
 
-def patch_docker_db(
-    docker_db_path: Path,
-    bootstrap_sql: str,
-    dry_run: bool,
-    snapshot_sql: Optional[Path],
+def generate_patched_file(
+    patch_output_path: Path,
     tmp_dir: Path,
+    bootstrap_sql_file: Optional[Path],
+    template_path: Path,
+    dry_run: bool,
+) -> str:
+    """
+    Stage 1: Generate the versioned patch file from template.
+
+    Returns the generated tidb() function content.
+    """
+    tidb_function = build_tidb_function(tmp_dir.resolve(), bootstrap_sql_file, template_path)
+
+    # Add tidb_5_4() fallback function
+    tidb_54_function = """tidb_5_4() {
+    echo "tidb_5_4 preset is deprecated. Falling back to tidb()."
+    tidb
+}
+"""
+
+    patched_content = tidb_function + "\n" + tidb_54_function
+
+    if not dry_run:
+        patch_output_path.parent.mkdir(parents=True, exist_ok=True)
+        patch_output_path.write_text(patched_content)
+        print(f"✓ Generated versioned patch: {patch_output_path}")
+    else:
+        print(f"[dry-run] Would generate versioned patch: {patch_output_path}")
+
+    return tidb_function
+
+
+def apply_patch_to_workspace(
+    docker_db_path: Path,
+    tidb_function: str,
+    dry_run: bool,
 ) -> None:
+    """
+    Stage 2: Apply the generated patch to workspace docker_db.sh.
+    """
     text = docker_db_path.read_text()
     tidb_old = "tidb() {\n  tidb_5_4\n}\n"
     if tidb_old not in text:
-        raise SystemExit("Error: expected tidb() definition not found")
+        raise SystemExit("Error: expected tidb() definition not found in docker_db.sh")
 
-    bootstrap_sql_file = snapshot_sql.resolve() if snapshot_sql else None
-    tidb_new = build_tidb_function(tmp_dir.resolve(), bootstrap_sql_file)
-    text = text.replace(tidb_old, tidb_new, 1)
+    # Replace tidb() function
+    text = text.replace(tidb_old, tidb_function, 1)
 
+    # Replace tidb_5_4() function
     tidb_54_new = """tidb_5_4() {
     echo \"tidb_5_4 preset is deprecated. Falling back to tidb().\"
     tidb
@@ -274,13 +308,11 @@ def patch_docker_db(
     text = replace_function(text, "tidb_5_4", tidb_54_new)
 
     if dry_run:
-        print("[dry-run] TiDB section would be updated in", docker_db_path)
+        print(f"[dry-run] Would update tidb() function in: {docker_db_path}")
         return
 
     docker_db_path.write_text(text)
-    if snapshot_sql:
-        snapshot_sql.parent.mkdir(parents=True, exist_ok=True)
-        snapshot_sql.write_text(bootstrap_sql)
+    print(f"✓ Applied patch to workspace: {docker_db_path}")
 
 
 def download_docker_db(url: str, dest: Path) -> None:
@@ -293,7 +325,9 @@ def download_docker_db(url: str, dest: Path) -> None:
 
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     """Parse CLI arguments."""
-    parser = argparse.ArgumentParser(description="Patch docker_db.sh with hardened TiDB implementation.")
+    parser = argparse.ArgumentParser(
+        description="Patch docker_db.sh with hardened TiDB implementation (two-stage workflow)."
+    )
     parser.add_argument(
         "workspace",
         nargs="?",
@@ -317,7 +351,13 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace) -> dict:
-    """Execute the TiDB docker_db patch workflow and return metadata."""
+    """
+    Execute the TiDB docker_db patch workflow and return metadata.
+
+    Two-stage workflow:
+    1. Generate versioned patch file from template → scripts/patches/docker_db.sh.tidb-patched
+    2. Apply the patch to workspace/hibernate-orm/docker_db.sh
+    """
     load_lab_env(required=("WORKSPACE_DIR", "TEMP_DIR"))
 
     if args.workspace:
@@ -356,13 +396,28 @@ def run(args: argparse.Namespace) -> dict:
 
     tmp_dir = workspace / "tmp"
 
-    patch_docker_db(
-        docker_db_path,
-        bootstrap_sql,
-        args.dry_run,
-        snapshot_sql_path,
+    # Determine script location to find templates
+    script_dir = Path(__file__).parent
+    template_path = script_dir / "templates" / "docker_db.sh.tidb-function"
+    patch_output_path = script_dir / "patches" / "docker_db.sh.tidb-patched"
+
+    # Stage 1: Generate versioned patch file from template
+    bootstrap_sql_file = snapshot_sql_path.resolve() if snapshot_sql_path else None
+    tidb_function = generate_patched_file(
+        patch_output_path,
         tmp_dir,
+        bootstrap_sql_file,
+        template_path,
+        args.dry_run,
     )
+
+    # Stage 2: Apply patch to workspace
+    apply_patch_to_workspace(docker_db_path, tidb_function, args.dry_run)
+
+    # Write bootstrap SQL snapshot if needed
+    if not args.dry_run and snapshot_sql_path and use_bootstrap_sql:
+        snapshot_sql_path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot_sql_path.write_text(bootstrap_sql)
 
     if not args.dry_run:
         source = args.bootstrap_sql if args.bootstrap_sql else "none"
@@ -372,6 +427,7 @@ def run(args: argparse.Namespace) -> dict:
         print(f"  (Bootstrap SQL injected from: {source})")
         if snapshot_sql_path:
             print(f"  (Bootstrap SQL snapshot: {snapshot_sql_path})")
+        print(f"  (Versioned patch saved to: {patch_output_path})")
     elif use_bootstrap_sql and snapshot_sql_path:
         print(f"[dry-run] Would save bootstrap SQL snapshot to {snapshot_sql_path}")
 
@@ -380,6 +436,7 @@ def run(args: argparse.Namespace) -> dict:
         "backup_path": backup_path,
         "snapshot_sql_path": snapshot_sql_path,
         "bootstrap_sql": bootstrap_path,
+        "patch_output_path": patch_output_path,
     }
 
 

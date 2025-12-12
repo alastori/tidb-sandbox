@@ -1,14 +1,14 @@
 # Hibernate ORM TiDB CI Lab
 
-This lab focuses on analyzing and running the [Hhibernate-orm](https://github.com/hibernate/hibernate-orm) test suite locally with TiDB.
+This lab focuses on analyzing and running the [Hibernate ORM](https://github.com/hibernate/hibernate-orm) test suite locally with TiDB.
 
 The plan includes:
 
 1. **Inspect Hibernate Continuous Integration (CI):** Understand the current Hibernate ORM CI and record the MySQL coverage snapshot from [Hibernate ORM GitHub Actions](https://github.com/hibernate/hibernate-orm/tree/main/.github/workflows) and [Hibernate ORM nightly Jenkins pipeline](https://ci.hibernate.org/job/hibernate-orm-nightly/job/main/lastBuild).
 2. **Reproduce Locally:** Use the official `hibernate-orm` helper scripts and profile to replicate the MySQL tests locally and compare coverage with Nightly Jenkins.
 3. **Run Baseline Tests Against TiDB:** Execute tests without any available workaround using both TiDBDialect and MySQLDialect, then analyze and compare failures against MySQL baseline.
-4. **Progressive Configuration Testing:** Analyze specific baseline failures and test potential workarounds (ex., by adjusting TiDB settings), re-running only the failed tests from baseline.
-5. **Document Findings and Recommendations:** Evaluate current TiDB compatibility with Hibernate in comparsion with MySQL, dialect impact, possible workaround effectiveness, and provide recommendations for TiDB compatibility with Hibernate ORM.
+4. **Baseline Analysis:** Analyze baseline test results to identify TiDB compatibility gaps and failure patterns in comparison with MySQL.
+5. **Document Findings:** Document observed TiDB compatibility with Hibernate ORM, dialect impact analysis, and identified compatibility gaps requiring TiDB engine fixes.
 
 ## 1. Inspect Hibernate's Nightly Jenkins Pipeline
 
@@ -28,7 +28,7 @@ Details: [Hibernate ORM Nightly Jenkins Pipeline Analysis](./hibernate-ci.md).
 
 Step-by-step guide to run the MySQL baseline:
 
-- Starting MySQL container with
+- Starting MySQL container using Hibernate's test suite approach
 - Running tests to create a baseline against MySQL
 - Validating results to match Nightly Jenkins tests
 
@@ -42,31 +42,22 @@ Step-by-step guide to run baseline tests (without possible workarounds):
 - Executing full test suite baseline runs:
   - Using TiDBDialect (no TiDB behavioral settings)
   - Using MySQLDialect (no TiDB behavioral settings)
-- Analyzing and comparing baseline failures against MySQL results
-- Documenting failure patterns and root causes
+- How to view results and compare TiDBDialect vs MySQLDialect and MySQL results
 
-Details: [Running Hibernate's Test Suite Against TiDB](./tidb-ci.md) and [Baseline Test Results](./findings.md)
+Details: [Running Hibernate's Test Suite Against TiDB](./tidb-ci.md).
 
-## 4. Progressive Analysis of Baseline Failures and Re-Testing with Workarounds
+## 4. Baseline Test Results Analysis
 
-Step-by-step guide to test quick workarounds (ex., adjusted configurations) against baseline failures:
+Analysis of baseline test results to identify TiDB compatibility gaps:
 
-- Analyzing specific failure patterns from baseline runs
-- Identifying potential TiDB behavioral settings to resolve failures
-- Re-running only the failed tests with quick workarounds (if available)
-  - Comparing results between TiDBDialect and MySQLDialect
-- Documenting which failures are resolved by each workaround
+- Analysis of failure patterns from baseline runs (TiDBDialect and MySQLDialect)
+- Categorization of observed failures by error signature
+- Comparison of dialect impact on test results
+- Documentation of related TiDB issues
+- Investigation priorities for remaining unanalyzed failures
 
-Details: [TiDB Retest Plan](./tidb-analysis-retest.md)
+Details: [TiDB Compatibility Analysis: Hibernate ORM Test Suite Results](./findings.md).
 
-## 5. Document Findings and Recommendations
+## 5. Future Work
 
-Comprehensive analysis and recommendations:
-
-- Summary of all test results (MySQL baseline, TiDB baselines, progressive testing)
-- Dialect comparison (TiDBDialect vs MySQLDialect)
-- Known TiDB limitations and workarounds
-- Workaround effectiveness evaluation
-- Recommendations for users considering TiDB with Hibernate ORM
-
-Details: [Complete Findings and Analysis](./findings.md)
+Future investigation areas include progressive configuration testing with TiDB behavioral settings, expanded failure categorization for the remaining 91 unanalyzed failures, and evaluation of experimental workarounds. See [findings.md Section 3: Investigation Priorities](./findings.md#3-investigation-priorities) for details.

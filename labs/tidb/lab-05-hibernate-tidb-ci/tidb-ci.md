@@ -44,7 +44,7 @@ The installer now also hardens TiDB readiness:
 - When you pass a bootstrap SQL file (strict/permissive templates or your own), the installer writes the additional statements to `$WORKSPACE_DIR/tmp/patch_docker_db_tidb-last.sql` (or the path you choose via `--snapshot-path`/`PATCH_TIDB_SNAPSHOT_FILE`) and teaches `docker_db.sh` to source that file at runtime. Baseline runs skip this file entirely, just like the upstream MySQL workflow.
 - Need an alternate temp directory? Export `PATCH_TIDB_TMP_DIR=/my/fast/tmp` before running `./docker_db.sh tidb` and the script will mirror the bootstrap file into that path.
 
-> **Note:** Do not change TiDB configurations before running baseline tests; only apply configuration changes after capturing baseline results, following instructions in [tidb-analysis-retest.md](./tidb-analysis-retest.md#progressive-configuration-strategy).
+> **Note:** Do not change TiDB configurations before running baseline tests; only apply configuration changes after capturing baseline results. For future work on configuration testing, see [findings.md Section 3: Investigation Priorities](./findings.md#3-investigation-priorities).
 >
 > **Swapping configurations later?** Re-run `python3 scripts/patch_docker_db_tidb.py "$WORKSPACE_DIR" --bootstrap-sql scripts/templates/bootstrap-strict.sql` (or `bootstrap-permissive.sql`). Use `--dry-run` to preview changes or `--no-download` if you already have an up-to-date `docker_db.sh`.
 
@@ -101,7 +101,7 @@ If verification fails, check `docker logs tidb` and re-run `./docker_db.sh tidb`
 
 > **If `docker_db.sh tidb` reports a readiness/bootstrap error:** Wait a few seconds for `docker logs tidb | grep "server is running"` to appear, then rerun the command. The hardened script exits before creating any schema when TiDB is not ready, so restarting it re-applies the bootstrap SQL safely.
 
-## 4. Clean Previous Test Results for the Baselne
+## 4. Clean Previous Test Results for the Baseline
 
 For a fresh baseline run, clean previous test artifacts:
 
@@ -278,7 +278,7 @@ The script archives HTML reports to `$TEMP_DIR/tidb-results-{timestamp}/` for la
 
 See [scripts/README.md](./scripts/README.md) for more details on the summary scripts.
 
-> **Note:** TiDB results will show some failures due to compatibility differences with MySQL. See Section 8 for comparison and [tidb-analysis.md](./tidb-analysis.md) for detailed failure investigation.
+> **Note:** TiDB results will show some failures due to compatibility differences with MySQL. See Section 8 for comparison and [findings.md](./findings.md) for detailed failure analysis.
 
 ## 8. Compare with MySQL (Optional)
 
@@ -298,7 +298,7 @@ Sample comparison (MySQL vs TiDB with fixes):
 | Failures | 0 | ~50-100 (compatibility gaps) |
 | Skipped | 2,738 | ~2,000 |
 
-> **Note:** TiDB typically has some test failures due to compatibility differences with MySQL (async DDL, isolation levels, etc.). For detailed failure analysis, see [tidb-analysis.md](./tidb-analysis.md).
+> **Note:** TiDB typically has some test failures due to compatibility differences with MySQL (async DDL, isolation levels, etc.). For detailed failure analysis, see [findings.md](./findings.md).
 
 ## 9. Cleanup
 
@@ -339,131 +339,29 @@ Run identical tests against TiDB again, but now using `MySQLDialect`. This compa
 
 ## 11. Compare TiDBDialect vs MySQLDialect
 
-After running both dialect tests (Sections 6 and 10), compare the results to verify dialect compatibility.
+After running both dialect tests, archive and compare the results:
 
-### Expected Results
+```bash
+cd "$LAB_HOME_DIR"
 
-Based on validation testing with TiDB v8.5.3 (clean cache, no Gradle caching):
+# Archive MySQLDialect results
+./scripts/junit_local_summary.py \
+  --root "$WORKSPACE_DIR" \
+  --json-out "$TEMP_DIR/tidb-mysqldialect-summary" \
+  --archive "$TEMP_DIR/tidb-mysqldialect-results"
 
-**Full Test Suite Comparison:**
-
-| Metric | TiDB Dialect | MySQL Dialect | Difference |
-|--------|--------------|---------------|------------|
-| Total Tests | 21,255 | 21,255 | 0 |
-| Failures | 28 | 28 | 0 |
-| Errors | 0 | 0 | 0 |
-| Skipped | 2,734 | 2,734 | 0 |
-| Build Result | BUILD FAILED | BUILD FAILED | Both fail |
-| Build Duration | 11m 11s | 11m 25s | +14s (±2%) |
-| Test Execution Time | 30m 32s | 30m 35s | +3s (<1%) |
-| Actionable Tasks | 189 (159 executed) | 189 (159 executed) | 0 |
-
-**Key Findings:** With clean Gradle cache, both dialects produce **100% identical results**:
-- Exact same test count (21,255 tests executed)
-- Exact same failure count (28 failures in hibernate-envers)
-- Exact same skipped count (2,734 tests)
-- Nearly identical execution time (< 2% variance)
-
-**Comparison with MySQL 8.0 Baseline (both with clean cache):**
-
-| Metric | MySQL 8.0 | TiDB (both dialects) | Difference |
-|--------|-----------|----------------------|------------|
-| Total Tests | 37,482 | 21,255 | -16,227 (-43%) |
-| Failures | 14 (hibernate-envers) | 28 | +14 |
-| Skipped | 5,355 | 2,734 | -2,621 |
-| Pass Rate | 99.96% | 99.87% | -0.09% |
-| Build Duration | 16m 48s | 11m 11s | -5m 37s |
-| Test Execution | 51m 20s | 30m 32s | -20m 48s |
-
-**Note:** MySQL's 14 failures are all in hibernate-envers (same ON DUPLICATE KEY UPDATE issue). TiDB executes fewer total tests but both databases show excellent compatibility (>99.8% pass rate).
-
-**All 14 failures are identical:**
-- `BasicSecondary` (2 methods)
-- `BidirectionalManyToOneOptionalTest` (2 methods)
-- `BidirectionalOneToOneOptionalTest` (2 methods)
-- `EmbIdSecondary` (2 methods)
-- `MixedInheritanceStrategiesEntityTest` (2 methods)
-- `MulIdSecondary` (2 methods)
-- `NamingSecondary` (2 methods)
-
-### Key Findings
-
-**1. Dialect Choice Has No Impact on Failures**
-
-Both `org.hibernate.community.dialect.TiDBDialect` and `org.hibernate.dialect.MySQLDialect` generate identical SQL when running against TiDB:
-
-```sql
--- Same SQL from both dialects:
-INSERT INTO secondary (id,s2) VALUES (?,?) AS tr ON DUPLICATE KEY UPDATE s2 = tr.s2
+# Compare with TiDBDialect results from Section 7
+./scripts/junit_local_summary.py --root "$TEMP_DIR/tidb-results-<timestamp>"
+./scripts/junit_local_summary.py --root "$TEMP_DIR/tidb-mysqldialect-results-<timestamp>"
 ```
 
-This confirms:
-- Failures are **database-driven** (TiDB's ON DUPLICATE KEY UPDATE limitation)
-- Failures are **not dialect-driven** (SQL generation is identical)
-- Switching dialects provides **no workaround** for TiDB compatibility issues
+**Expected outcome**: MySQLDialect typically shows more failures than TiDBDialect due to TiDB-specific optimizations in the TiDBDialect. For detailed analysis of dialect differences, failure breakdowns, and implications for TiDB compatibility, see [findings.md Section 1.4: Dialect Comparison Analysis](./findings.md#14-dialect-comparison-analysis).
 
-**2. Why Dialects Produce Identical Results**
+**Quick sanity check** (based on TiDB v8.5.3):
 
-The ON DUPLICATE KEY UPDATE SQL is generated by Hibernate's **core merge logic**, not by dialect-specific overrides. Both dialects:
-- Use the same base MySQL syntax for merge operations
-- Generate the MySQL 8.0.19+ pattern with table aliases
-- Have no TiDB-specific workarounds for this limitation
-
-**3. No Additional Failures with MySQL Dialect**
-
-Using MySQL Dialect did **not** introduce any new failures beyond the 14 ON DUPLICATE KEY UPDATE errors. This indicates:
-- TiDB handles MySQL-dialect SQL correctly for all other operations
-- No MySQL-specific SQL syntax causes unexpected issues on TiDB
-- The dialects are functionally equivalent for TiDB compatibility
-
-### Implications
-
-**For Hibernate ORM Users:**
-- **Dialect choice doesn't matter** for TiDB compatibility (both work equally)
-- Use `org.hibernate.community.dialect.TiDBDialect` for semantic correctness
-- MySQL Dialect can be used if needed for legacy code migration
-
-**For TiDB Compatibility:**
-- The ON DUPLICATE KEY UPDATE limitation affects **both dialects equally**
-- No workaround available by switching dialects
-- Only fix is TiDB implementing the feature ([TiDB #51650](https://github.com/pingcap/tidb/issues/51650))
-
-**For Testing Strategy:**
-- No need to test both dialects separately for compatibility validation
-- Results are deterministic based on TiDB's SQL feature support
-- Focus testing on TiDB feature gaps, not dialect differences
-
-### Verification Steps
-
-If you want to verify these findings yourself:
-
-1. **Run summaries for both dialect runs:**
-   ```bash
-   cd "$LAB_HOME_DIR"
-   ./scripts/junit_local_summary.py --root "$TEMP_DIR/tidb-results-<timestamp>"
-   ./scripts/junit_local_summary.py --root "$TEMP_DIR/tidb-mysql-dialect-results-<timestamp>"
-   ```
-
-2. **Compare failure counts:**
-   - Both should show 14 failures in hibernate-envers
-   - Both should show 0 failures in hibernate-core and other modules
-
-3. **Examine error messages:**
-   - Check that both runs produce identical SQL syntax errors
-   - Verify the error message references the same SQL: `as tr on duplicate key update`
-
-4. **Document in journal.md:**
-   - Record any deviations from expected results
-   - Note the comparison for future reference
-
-### Recommendation
-
-**Use `org.hibernate.community.dialect.TiDBDialect`** (the default in Section 2) for:
-- Semantic correctness (explicitly targeting TiDB)
-- Future TiDB-specific optimizations
-- Clear intent in configuration and logs
-
-The MySQL Dialect works equally well but provides no compatibility advantage and may cause confusion about the intended database target.
+- TiDBDialect: ~119 failures
+- MySQLDialect: ~402 failures
+- Difference: ~283 additional failures with MySQLDialect
 
 ## Troubleshooting
 
