@@ -222,10 +222,21 @@ def build_verification_block() -> str:
 
 
 def load_tidb_template(template_path: Path) -> str:
-    """Load the TiDB function template from file."""
+    """Load the TiDB function template from file, stripping header comments."""
     if not template_path.exists():
         raise FileNotFoundError(f"Template file not found: {template_path}")
-    return template_path.read_text()
+    content = template_path.read_text()
+
+    # Strip header comments (lines starting with # before the function definition)
+    lines = content.split("\n")
+    start_idx = 0
+    for i, line in enumerate(lines):
+        # Find the first line that starts with the function definition
+        if line.startswith("tidb_8_5()"):
+            start_idx = i
+            break
+
+    return "\n".join(lines[start_idx:])
 
 
 def build_tidb_function(tmp_dir: Path, bootstrap_sql_file: Optional[Path], template_path: Path) -> str:
@@ -260,18 +271,23 @@ def generate_patched_file(
     """
     Stage 1: Generate the versioned patch file from template.
 
-    Returns the generated tidb() function content.
-    """
-    tidb_function = build_tidb_function(tmp_dir.resolve(), bootstrap_sql_file, template_path)
+    Follows upstream pattern where each versioned function is standalone:
+      tidb() { tidb_8_5 }       # wrapper calls latest version
+      tidb_8_5() { ... }        # hardened v8.5 implementation (NEW)
+      tidb_5_4() { ... }        # original v5.4 implementation (PRESERVED)
 
-    # Add tidb_5_4() fallback function
-    tidb_54_function = """tidb_5_4() {
-    echo "tidb_5_4 preset is deprecated. Falling back to tidb()."
-    tidb
+    Returns the generated tidb_8_5() function content.
+    """
+    tidb_85_function = build_tidb_function(tmp_dir.resolve(), bootstrap_sql_file, template_path)
+
+    # Wrapper function (matches upstream pattern)
+    tidb_wrapper = """tidb() {
+    tidb_8_5
 }
 """
 
-    patched_content = tidb_function + "\n" + tidb_54_function
+    # NOTE: tidb_5_4() is NOT included here - it's preserved from upstream in apply_patch_to_workspace()
+    patched_content = tidb_wrapper + "\n" + tidb_85_function
 
     if not dry_run:
         patch_output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -280,32 +296,37 @@ def generate_patched_file(
     else:
         print(f"[dry-run] Would generate versioned patch: {patch_output_path}")
 
-    return tidb_function
+    return tidb_85_function
 
 
 def apply_patch_to_workspace(
     docker_db_path: Path,
-    tidb_function: str,
+    tidb_85_function: str,
     dry_run: bool,
 ) -> None:
     """
     Stage 2: Apply the generated patch to workspace docker_db.sh.
+
+    Transforms upstream pattern:
+      tidb() { tidb_5_4 }
+      tidb_5_4() { ... }
+
+    Into patched pattern (following upstream conventions):
+      tidb() { tidb_8_5 }
+      tidb_8_5() { ... }        # NEW - injected after tidb()
+      tidb_5_4() { ... }        # PRESERVED - original implementation unchanged
     """
     text = docker_db_path.read_text()
     tidb_old = "tidb() {\n  tidb_5_4\n}\n"
     if tidb_old not in text:
         raise SystemExit("Error: expected tidb() definition not found in docker_db.sh")
 
-    # Replace tidb() function
-    text = text.replace(tidb_old, tidb_function, 1)
+    # Replace tidb() wrapper to call tidb_8_5 instead of tidb_5_4
+    # Insert tidb_8_5() right after the wrapper, before tidb_5_4()
+    tidb_new_wrapper = "tidb() {\n    tidb_8_5\n}\n"
+    text = text.replace(tidb_old, tidb_new_wrapper + "\n" + tidb_85_function + "\n", 1)
 
-    # Replace tidb_5_4() function
-    tidb_54_new = """tidb_5_4() {
-    echo \"tidb_5_4 preset is deprecated. Falling back to tidb().\"
-    tidb
-}
-"""
-    text = replace_function(text, "tidb_5_4", tidb_54_new)
+    # tidb_5_4() is preserved as-is from upstream (no modification needed)
 
     if dry_run:
         print(f"[dry-run] Would update tidb() function in: {docker_db_path}")

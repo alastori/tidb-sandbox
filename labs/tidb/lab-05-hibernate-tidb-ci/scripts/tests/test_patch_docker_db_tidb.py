@@ -29,15 +29,42 @@ def test_build_tidb_function_includes_all_blocks(tmp_path, load_module):
     bootstrap = tmp_path / "bootstrap.sql"
     bootstrap.write_text("SELECT 1;", encoding="utf-8")
 
-    rendered = module.build_tidb_function(tmp_path, bootstrap)
+    # Create a minimal template file
+    template = tmp_path / "template.sh"
+    template.write_text(
+        """tidb_8_5() {
+{{ENV_BLOCK}}
 
-    assert "tidb()" in rendered
+{{START_CONTAINER}}
+
+{{LOG_WAIT}}
+
+{{PING_BLOCK}}
+
+{{DB_CREATION}}
+
+{{BOOTSTRAP_STAGE}}
+
+{{BOOTSTRAP_EXECUTE}}
+
+{{VERIFICATION}}
+
+    echo "TiDB successfully started and bootstrap SQL executed"
+}
+""",
+        encoding="utf-8",
+    )
+
+    rendered = module.build_tidb_function(tmp_path, bootstrap, template)
+
+    assert "tidb_8_5()" in rendered
     assert tmp_path.as_posix() in rendered
     assert "Bootstrapping TiDB databases" in rendered
 
 
-def test_patch_docker_db_updates_file_and_snapshot(tmp_path, load_module):
-    module = load_module("patch_docker_db_tidb", alias="patch_docker_db_tidb_patch")
+def test_apply_patch_to_workspace_preserves_tidb_5_4(tmp_path, load_module):
+    """Test that tidb_5_4() is preserved unchanged from upstream."""
+    module = load_module("patch_docker_db_tidb", alias="patch_docker_db_tidb_apply")
     docker_db = tmp_path / "docker_db.sh"
     docker_db.write_text(
         """tidb() {
@@ -45,28 +72,36 @@ def test_patch_docker_db_updates_file_and_snapshot(tmp_path, load_module):
 }
 
 tidb_5_4() {
-  echo "legacy"
+    echo "original v5.4 implementation"
+    echo "this should be preserved"
+}
+
+informix() {
+  echo "next function"
 }
 """,
         encoding="utf-8",
     )
-    snapshot = tmp_path / "snapshot.sql"
-    tmp_dir = tmp_path / "tmp"
-    tmp_dir.mkdir()
 
-    module.patch_docker_db(
-        docker_db_path=docker_db,
-        bootstrap_sql="SELECT 2;",
-        dry_run=False,
-        snapshot_sql=snapshot,
-        tmp_dir=tmp_dir,
-    )
+    # Mock tidb_8_5 function content
+    tidb_85_function = """tidb_8_5() {
+    echo "new v8.5 implementation"
+}
+"""
+
+    module.apply_patch_to_workspace(docker_db, tidb_85_function, dry_run=False)
 
     updated = docker_db.read_text(encoding="utf-8")
-    assert "tidb() {" in updated
-    assert "tidb_5_4 preset is deprecated" in updated
-    assert snapshot.exists()
-    assert "SELECT 2;" in snapshot.read_text(encoding="utf-8")
+    # Wrapper should call tidb_8_5
+    assert "tidb() {\n    tidb_8_5\n}" in updated
+    # tidb_8_5 should be present
+    assert "tidb_8_5()" in updated
+    assert "new v8.5 implementation" in updated
+    # tidb_5_4 should be preserved unchanged
+    assert "original v5.4 implementation" in updated
+    assert "this should be preserved" in updated
+    # Next function should still be there
+    assert "informix()" in updated
 
 
 def test_run_patches_workspace(tmp_path, load_module, monkeypatch):
@@ -105,3 +140,9 @@ tidb_5_4() {
 
     assert result["docker_db_path"].exists()
     assert result["backup_path"].exists()
+
+    # Verify the patched content
+    updated = result["docker_db_path"].read_text(encoding="utf-8")
+    assert "tidb_8_5" in updated
+    # tidb_5_4 should be preserved (not replaced with deprecation warning)
+    assert 'echo "legacy"' in updated

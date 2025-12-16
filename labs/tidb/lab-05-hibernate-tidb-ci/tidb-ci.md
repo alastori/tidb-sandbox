@@ -98,7 +98,7 @@ The verification tool confirms:
 If verification fails, check `docker logs tidb` and re-run `./docker_db.sh tidb`.
 
 > **Note:** Leave the TiDB container running for the test execution steps.
-
+>
 > **If `docker_db.sh tidb` reports a readiness/bootstrap error:** Wait a few seconds for `docker logs tidb | grep "server is running"` to appear, then rerun the command. The hardened script exits before creating any schema when TiDB is not ready, so restarting it re-applies the bootstrap SQL safely.
 
 ## 4. Clean Previous Test Results for the Baseline
@@ -449,7 +449,26 @@ If you prefer to apply fixes manually instead of using the script:
 
 ### Fix 1: Update `docker_db.sh`
 
-In `hibernate-orm/docker_db.sh`, replace the entire `tidb()` function with the hardened implementation below. The automated `patch_docker_db_tidb.py` script generates this exact code with additional features:
+In `hibernate-orm/docker_db.sh`, the patch follows the upstream pattern where `tidb()` is a wrapper calling a version-specific function. The automated `patch_docker_db_tidb.py` script generates this structure:
+
+**Upstream pattern (original):**
+
+```bash
+tidb() { tidb_5_4 }       # wrapper calls v5.4
+tidb_5_4() { ... }        # original implementation
+```
+
+**Patched pattern (follows upstream conventions):**
+
+```bash
+tidb() { tidb_8_5 }       # wrapper now calls v8.5
+tidb_8_5() { ... }        # hardened v8.5 implementation (NEW)
+tidb_5_4() { ... }        # original v5.4 implementation (PRESERVED)
+```
+
+> **Note:** Following upstream conventions, `tidb_5_4()` is preserved as a standalone function. Users can still explicitly call `./docker_db.sh tidb_5_4` to use the original TiDB v5.4.3 if needed.
+
+Features of the `tidb_8_5()` implementation:
 
 - Hardened readiness checks (log + ping probes with ~75s timeout)
 - Retry logic for bootstrap SQL (3 attempts)
@@ -458,7 +477,13 @@ In `hibernate-orm/docker_db.sh`, replace the entire `tidb()` function with the h
 - Optional bootstrap SQL injection (strict/permissive/custom modes)
 
 ```bash
+# Wrapper function (matches upstream pattern)
 tidb() {
+    tidb_8_5
+}
+
+# Hardened TiDB v8.5 implementation
+tidb_8_5() {
     TMP_DIR="${PATCH_TIDB_TMP_DIR:-/path/to/workspace/tmp}"
     mkdir -p "$TMP_DIR"
     BOOTSTRAP_SQL_FILE=""
@@ -508,7 +533,7 @@ tidb() {
     create_cmd="CREATE DATABASE IF NOT EXISTS hibernate_orm_test;"
     create_cmd+="CREATE USER IF NOT EXISTS 'hibernate_orm_test'@'%' IDENTIFIED BY 'hibernate_orm_test';"
     create_cmd+="GRANT ALL ON hibernate_orm_test.* TO 'hibernate_orm_test'@'%';"
-    
+
     # Additional test databases
     for i in "${!databases[@]}"; do
       create_cmd+="CREATE DATABASE IF NOT EXISTS ${databases[i]}; GRANT ALL ON ${databases[i]}.* TO 'hibernate_orm_test'@'%';"
@@ -563,15 +588,8 @@ tidb() {
 ```
 
 > **Note:** When no bootstrap SQL is provided, `BOOTSTRAP_SQL_FILE=""` and no extra statements are loaded. When you pass `--bootstrap-sql`, the `patch_docker_db_tidb.py` script sets `BOOTSTRAP_SQL_FILE` to point to the generated SQL snapshot file.
-
-To maintain compatibility with the legacy preset, forward `tidb_5_4()` to the updated implementation:
-
-```bash
-tidb_5_4() {
-    echo "tidb_5_4 preset is deprecated. Falling back to tidb()."
-    tidb
-}
-```
+>
+> The original `tidb_5_4()` function from upstream is preserved unchanged, allowing users to explicitly use `./docker_db.sh tidb_5_4` if they need the original v5.4.3 behavior.
 
 ### Fix 2: Update `local.databases.gradle`
 

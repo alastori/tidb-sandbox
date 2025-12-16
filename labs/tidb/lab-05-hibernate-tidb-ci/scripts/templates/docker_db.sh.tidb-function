@@ -1,8 +1,17 @@
 # TiDB function template for docker_db.sh
 #
 # This template is used by scripts/patch_docker_db_tidb.py to generate
-# a hardened TiDB setup function that replaces the upstream tidb() function
-# in Hibernate ORM's docker_db.sh script.
+# a hardened TiDB setup function that follows the upstream pattern
+# where each versioned function is standalone.
+#
+# Upstream pattern:
+#   tidb() { tidb_5_4 }       # wrapper calls latest version
+#   tidb_5_4() { ... }        # v5.4 implementation
+#
+# Patched pattern:
+#   tidb() { tidb_8_5 }       # wrapper now calls v8.5
+#   tidb_8_5() { ... }        # hardened v8.5 implementation (NEW)
+#   tidb_5_4() { ... }        # original v5.4 implementation (PRESERVED)
 #
 # Placeholders (substituted by patch_docker_db_tidb.py):
 #   {{TMP_DIR}}              - Path to workspace/tmp directory
@@ -19,7 +28,7 @@
 # - Main database and user creation embedded inline (baseline)
 # - Optional bootstrap SQL injection (strict/permissive/custom modes)
 #
-tidb() {
+tidb_8_5() {
 {{ENV_BLOCK}}
 
 {{START_CONTAINER}}
