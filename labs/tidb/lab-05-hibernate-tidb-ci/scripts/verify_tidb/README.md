@@ -10,11 +10,12 @@ Before running verification, ensure you have:
    - See [local-setup.md](../../local-setup.md) for cloning and building Hibernate ORM workspace
  - Verification uses the workspace's Gradle wrapper to validate the environment
 
-2. **TiDB Fixes Applied**
-  - See [tidb-ci.md Section 2: Apply TiDB Fixes](../../tidb-ci.md#2-apply-tidb-fixes) for running `python3 scripts/patch_docker_db_tidb.py ...`
+2. **TiDB Setup**
+   - Since [PR #11453](https://github.com/hibernate/hibernate-orm/pull/11453) was merged upstream (2025-12-17), TiDB support works out of the box
+   - Only the DB_COUNT patch is needed for containerized execution: see [tidb-ci.md Section 2](../../tidb-ci.md#2-apply-db_count-patch-containerized-execution-only)
 
 3. **TiDB Container Running**
-   - See [tidb-ci.md Section 3: Verify TiDB Fixes](../../tidb-ci.md#3-verify-tidb-fixes) for starting the TiDB container
+   - See [tidb-ci.md Section 3](../../tidb-ci.md#3-start-tidb-and-verify-configuration) for starting the TiDB container
 
 **Note:** This verification runs *after* applying fixes but *before* running the full test suite. It catches configuration issues early (2-3 seconds) rather than discovering them 20-30 minutes into a test run.
 
@@ -69,13 +70,15 @@ Example on 12-core system:
 - DB_COUNT = 12 / 2 = 6
 - Total databases = 1 + 6 = 7
 
-### 4. TiDB-specific behavior configuration for compatibility
+### 4. TiDB-specific behavior configuration (Optional)
 
-#### Do not report error on unsupported transaction isolation level
+#### SERIALIZABLE Isolation Level Check
 
 - Checks `@@GLOBAL.tidb_skip_isolation_level_check`
-- Must be enabled for SERIALIZABLE transaction tests
-- Without this: 4 test failures in `:hibernate-agroal:test`
+- **Only required when using `MySQLDialect`** instead of `TiDBDialect`
+- With `TiDBDialect` (default): Tests are automatically skipped via `@SkipForDialect(TiDBDialect.class)`
+- With `MySQLDialect`: 4 tests in `:hibernate-agroal:test` fail unless `tidb_skip_isolation_level_check=1` is set
+- See [tidb-ci.md Section 11](../../tidb-ci.md#11-repeat-baseline-with-mysql-dialect) for MySQLDialect testing details
 
 ## Architecture
 
@@ -137,14 +140,15 @@ Running TiDB verification...
 Verifying TiDB setup for Hibernate ORM tests...
 
 ✓ Successfully connected to TiDB
-✓ TiDB version: 8.0.11-TiDB-v8.5.3
+✓ TiDB version: 8.0.11-TiDB-v8.5.4
   ✓ Running recommended TiDB v8.x LTS
 ✓ Found 7 required databases (1 main + 6 additional)
-✓ tidb_skip_isolation_level_check is enabled
 
 ✓ All TiDB verification checks passed!
   TiDB is ready for Hibernate ORM tests
 ```
+
+> **Note:** With TiDBDialect (default), the `tidb_skip_isolation_level_check` setting is not checked because it's not required.
 
 ### Failure Case (Missing databases)
 
@@ -210,9 +214,17 @@ Verifying TiDB setup for Hibernate ORM tests...
 
 ### "tidb_skip_isolation_level_check is NOT enabled"
 
-- Bootstrap SQL didn't set the flag
-- Check if fixes were applied: `python3 scripts/patch_docker_db_tidb.py workspace/hibernate-orm`
-- Re-run database setup: `./docker_db.sh tidb`
+This warning is **only relevant when using `MySQLDialect`** instead of `TiDBDialect`:
+
+- **With TiDBDialect (default):** This setting is NOT needed. Hibernate's test framework skips SERIALIZABLE tests automatically via `@SkipForDialect(TiDBDialect.class)`.
+- **With MySQLDialect:** You need to enable this setting. Use the bootstrap-strict.sql template:
+
+  ```bash
+  python3 scripts/patch_docker_db_tidb.py "$WORKSPACE_DIR" --bootstrap-sql scripts/templates/bootstrap-strict.sql
+  ./docker_db.sh tidb
+  ```
+
+See [tidb-ci.md Section 11](../../tidb-ci.md#11-repeat-baseline-with-mysql-dialect) for details on MySQLDialect testing.
 
 ## References
 

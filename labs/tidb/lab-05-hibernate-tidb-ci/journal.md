@@ -298,6 +298,73 @@ Successfully ran MySQL test suite with clean Gradle cache.
 
 ---
 
+## Phase 4: Upstream PR Merge and tidb_skip_isolation_level_check Analysis (2025-12-17)
+
+### Upstream PR #11453 Merged
+
+**PR:** [hibernate/hibernate-orm#11453](https://github.com/hibernate/hibernate-orm/pull/11453) - "HHH-19997 Fix TiDB support in docker_db.sh and local.databases.gradle"
+
+**Merge Date:** 2025-12-17
+
+**Changes merged upstream:**
+
+1. **docker_db.sh:** New `tidb_8_5()` function with TiDB v8.5.4, proper readiness checks, non-interactive bootstrap SQL execution
+2. **local.databases.gradle:** Correct dialect path (`org.hibernate.community.dialect.TiDBDialect`) and JDBC driver (`com.mysql.cj.jdbc.Driver`)
+
+**Impact on local setup:**
+
+- The TiDB-specific patches (`patch_docker_db_tidb.py`, `patch_local_databases_gradle.py`) are no longer needed for basic TiDB testing
+- Only `patch_docker_db_common.py` (DB_COUNT fix) is still required for containerized execution
+
+### tidb_skip_isolation_level_check Analysis
+
+Ran targeted tests to determine if `tidb_skip_isolation_level_check=1` is needed with the new upstream configuration.
+
+**Test Module:** `hibernate-agroal` (contains `AgroalTransactionIsolationConfigTest` which tests SERIALIZABLE isolation)
+
+**Results:**
+
+| Dialect | SERIALIZABLE Tests | Result | Reason |
+|---------|-------------------|--------|--------|
+| **TiDBDialect** | 4 tests | ✅ SKIPPED | `@SkipForDialect(TiDBDialect.class, reason = "Doesn't support SERIALIZABLE isolation")` annotation |
+| **MySQLDialect** | 4 tests | ❌ FAILED | TiDB rejects SERIALIZABLE: `The isolation level 'SERIALIZABLE' is not supported. Set tidb_skip_isolation_level_check=1 to skip this error` |
+
+**Key Finding:** `tidb_skip_isolation_level_check=1` is:
+
+- **NOT needed** when using `TiDBDialect` (Hibernate ORM's test framework skips SERIALIZABLE tests via `@SkipForDialect` annotation)
+- **REQUIRED** when using `MySQLDialect` with TiDB to avoid SERIALIZABLE isolation errors
+
+**Implication for TiDBDialect Deprecation:**
+If TiDBDialect is deprecated and users migrate to MySQLDialect, they must configure `tidb_skip_isolation_level_check=1` on the TiDB server side. This is a TiDB configuration setting, not a Hibernate/Java-side configuration.
+
+### Dialect Override Discovery
+
+Discovered that the `-Pdb.dialect` Gradle property does NOT override the dialect at runtime. The Hibernate ORM test infrastructure sets the dialect via resource filtering (`ReplaceTokens` in `local.java-module.gradle`) during build time.
+
+**To test with a different dialect:**
+
+1. Modify `local.databases.gradle` directly, OR
+2. Use `patch_local_databases_gradle.py --dialect mysql`
+
+The lab's `patch_local_databases_gradle.py` script supports three presets:
+
+- `tidb-community`: `org.hibernate.community.dialect.TiDBDialect` (default, recommended)
+- `tidb-core`: `org.hibernate.dialect.TiDBDialect` (legacy, fails in Hibernate 7.x)
+- `mysql`: `org.hibernate.dialect.MySQLDialect` (for comparison testing)
+
+### Documentation Updates
+
+Updated `tidb-ci.md`:
+
+- Added Section 5 "Verify Dialect Configuration" with commands to confirm the correct dialect is in use
+- Rewrote Section 11 "Repeat Baseline with MySQL Dialect" with proper patch script instructions (removed non-working `-Pdb.dialect` approach)
+- Added `tidb_skip_isolation_level_check` analysis with dialect comparison table
+- Added note about Docker volume mount path requirements (no spaces)
+- Fixed section numbering and link fragments
+- Updated Appendix A to note that most issues are now fixed upstream
+
+---
+
 ## Related Issues
 
 ### Keycloak Issue #41897 Context

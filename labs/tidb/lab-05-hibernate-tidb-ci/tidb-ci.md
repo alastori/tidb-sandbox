@@ -1,6 +1,8 @@
 # Running Hibernate's Test Suite Against TiDB
 
-This guide runs the complete Hibernate ORM test suite against TiDB using the same workflow as Hibernate's Jenkins CI pipeline (`ci/build.sh`), with necessary fixes applied to upstream tooling.
+This guide runs the complete Hibernate ORM test suite against TiDB using the same workflow as Hibernate's Jenkins CI pipeline (`ci/build.sh`).
+
+> **Upstream Status (December 2025):** TiDB support in Hibernate ORM's test infrastructure was fixed in [PR #11453](https://github.com/hibernate/hibernate-orm/pull/11453) (merged 2025-12-17). The upstream `docker_db.sh` and `local.databases.gradle` now include proper TiDB v8.5.4 configuration. Only the DB_COUNT patch is needed for containerized execution.
 
 ## Prerequisites
 
@@ -8,10 +10,10 @@ Complete the general setup first: [Local Setup Guide](./local-setup.md)
 
 This guide assumes you have:
 
-- Workspace cloned and built
+- Workspace cloned and built (from upstream `main` branch including PR #11453)
 - Paths defined (`$WORKSPACE_DIR`, `$LAB_HOME_DIR`, `$TEMP_DIR`)
 - Completed the smoke test successfully
-- TiDB fixes applied and verified (see sections below)
+- DB_COUNT patch applied (see Section 2 below)
 
 ## 1. Define Paths
 
@@ -25,30 +27,18 @@ export TEMP_DIR="${WORKSPACE_DIR}/tmp"
 
 > **Note:** If continuing from [local-setup.md](./local-setup.md) in the same shell, these variables are already set.
 
-## 2. Apply TiDB Fixes (Baseline Only)
+## 2. Apply DB_COUNT Patch (Containerized Execution Only)
 
-TiDB cannot run through Hibernate's stock `docker_db.sh` without a few structural updates (headless compatibility, readiness checks, TiDB v8.5.3 image, etc.). Apply the patched script and keep the **baseline configuration** (no behavioral flags) for this phase.
+When running tests in Docker containers, the upstream `docker_db.sh` calculates `DB_COUNT` from the host's CPU count, which doesn't match the container's limited CPU allocation. Apply the patch to respect the `DB_COUNT` environment variable:
 
 ```bash
 cd "$LAB_HOME_DIR"
-python3 scripts/patch_docker_db_tidb.py "$WORKSPACE_DIR"
+python3 scripts/patch_docker_db_common.py "$WORKSPACE_DIR"
 ```
 
-The installer applies the structural fixes and appends any optional bootstrap SQL you provide. Running it with no `--bootstrap-sql` flag keeps the default baseline behavior (no TiDB overrides) required for Step 3.
+This patch affects all databases (MySQL, TiDB, PostgreSQL, etc.) and is documented in [local-setup.md Appendix: Docker CPU Count Mismatch](./local-setup.md#appendix-docker-cpu-count-mismatch-upstream-design-limitation).
 
-The installer now also hardens TiDB readiness:
-
-- Wait up to ~75 seconds for logs plus active `mysqladmin ping` checks before executing SQL
-- Retry the bootstrap SQL up to three times (with explicit error messages) if TiDB is still warming up
-- Run a final verification query as `hibernate_orm_test` so the script only reports success when the schema/user exist
-- When you pass a bootstrap SQL file (strict/permissive templates or your own), the installer writes the additional statements to `$WORKSPACE_DIR/tmp/patch_docker_db_tidb-last.sql` (or the path you choose via `--snapshot-path`/`PATCH_TIDB_SNAPSHOT_FILE`) and teaches `docker_db.sh` to source that file at runtime. Baseline runs skip this file entirely, just like the upstream MySQL workflow.
-- Need an alternate temp directory? Export `PATCH_TIDB_TMP_DIR=/my/fast/tmp` before running `./docker_db.sh tidb` and the script will mirror the bootstrap file into that path.
-
-> **Note:** Do not change TiDB configurations before running baseline tests; only apply configuration changes after capturing baseline results. For future work on configuration testing, see [findings.md Section 3: Investigation Priorities](./findings.md#3-investigation-priorities).
->
-> **Swapping configurations later?** Re-run `python3 scripts/patch_docker_db_tidb.py "$WORKSPACE_DIR" --bootstrap-sql scripts/templates/bootstrap-strict.sql` (or `bootstrap-permissive.sql`). Use `--dry-run` to preview changes or `--no-download` if you already have an up-to-date `docker_db.sh`.
-
-For details on what these fixes address, see [Appendix A: Why Fixes Are Needed](#appendix-a-why-fixes-are-needed).
+> **Note:** The TiDB-specific patches (`patch_docker_db_tidb.py`) are no longer needed since upstream PR #11453 was merged. See [Appendix A: Why Fixes Are Needed](#appendix-a-why-fixes-are-needed) for historical context on what was fixed upstream.
 
 ## 3. Start TiDB and Verify Configuration
 
@@ -59,49 +49,33 @@ cd "$WORKSPACE_DIR"
 DB_COUNT=4 ./docker_db.sh tidb
 ```
 
-> **Note:** We override `DB_COUNT=4` to match the container's CPU allocation. This requires the `patch_docker_db_common.py` patch applied in [local-setup.md Section 4](./local-setup.md#patch-docker_dbsh-for-containerized-execution).
+> **Note:** We override `DB_COUNT=4` to match the container's CPU allocation. This requires the `patch_docker_db_common.py` patch applied in Section 2.
 
-Expected duration: ~5-10 seconds. The script displays "TiDB successfully started" when complete.
+Expected duration: ~30-60 seconds. The script displays "TiDB databases were successfully setup" when complete.
 
-Now verify the container matches the baseline bootstrap SQL:
+**Verify TiDB is running:**
 
 ```bash
-cd "$LAB_HOME_DIR"
-./scripts/verify_tidb.sh
+docker run --rm --network container:tidb mysql:8.0 \
+  mysql -h 127.0.0.1 -P 4000 -uroot -e "SELECT VERSION(); SHOW DATABASES LIKE 'hibernate%';"
 ```
 
-The verification tool confirms:
-
-- Database connectivity and TiDB version (v8.x LTS)
-- User authentication
-- Required databases exist (dynamically calculated based on CPU count)
-- TiDB behavioral settings (when a bootstrap SQL snapshot is supplied)
-
-> **Bootstrap verification:** If you rerun the installer with `--bootstrap-sql path/to/file.sql`, pass the generated snapshot file into the verifier:
->
-> ```bash
-> ./scripts/verify_tidb.sh "$WORKSPACE_DIR/tmp/patch_docker_db_tidb-last.sql"
-> ```
-
-**Expected output (baseline):**
+**Expected output:**
 
 ```text
-✓ Successfully connected to TiDB
-✓ TiDB version: 8.0.11-TiDB-v8.5.3
-  ✓ Running recommended TiDB v8.x LTS
-✓ Found 7 required databases (1 main + 6 additional)
-
-✓ All TiDB verification checks passed!
-  TiDB is ready for Hibernate ORM tests
+VERSION()
+8.0.11-TiDB-v8.5.4
+Database (hibernate%)
+hibernate_orm_test
+hibernate_orm_test_1
+hibernate_orm_test_2
+hibernate_orm_test_3
+hibernate_orm_test_4
 ```
 
-If verification fails, check `docker logs tidb` and re-run `./docker_db.sh tidb`.
-
 > **Note:** Leave the TiDB container running for the test execution steps.
->
-> **If `docker_db.sh tidb` reports a readiness/bootstrap error:** Wait a few seconds for `docker logs tidb | grep "server is running"` to appear, then rerun the command. The hardened script exits before creating any schema when TiDB is not ready, so restarting it re-applies the bootstrap SQL safely.
 
-## 4. Clean Previous Test Results for the Baseline
+## 4. Clean Previous Test Results (Optional)
 
 For a fresh baseline run, clean previous test artifacts:
 
@@ -120,33 +94,62 @@ Expected duration: ~1-2 minutes.
 
 > **Note:** Skip this step if you want to use cache from previous runs.
 
-## 5. Start TiDB Container
+## 5. Verify Dialect Configuration
 
-TiDB should be running from Section 3 (Verify TiDB Fixes). If you stopped it, restart with:
+Before running tests, confirm the correct dialect is configured. The upstream `local.databases.gradle` (after PR #11453) should have:
+
+```bash
+grep -A 8 "tidb :" "$WORKSPACE_DIR/local-build-plugins/src/main/groovy/local.databases.gradle"
+```
+
+**Expected output:**
+
+```groovy
+tidb : [
+        'db.dialect' : 'org.hibernate.community.dialect.TiDBDialect',
+        'jdbc.driver': 'com.mysql.cj.jdbc.Driver',
+        ...
+]
+```
+
+To verify the generated `hibernate.properties` has the correct dialect after a test run:
+
+```bash
+cat "$WORKSPACE_DIR/hibernate-agroal/target/resources/test/hibernate.properties" | grep dialect
+```
+
+**Expected output:**
+
+```text
+hibernate.dialect org.hibernate.community.dialect.TiDBDialect
+```
+
+> **Note:** The dialect is set at resource processing time (via Gradle's `ReplaceTokens` filter), not at runtime. The `-Pdb.dialect` Gradle property does NOT override the dialect in `hibernate.properties`. To test with a different dialect (e.g., MySQLDialect), you must modify `local.databases.gradle` directly or use `patch_local_databases_gradle.py`. See [Section 11](#11-repeat-baseline-with-mysql-dialect) for details.
+
+## 6. Restart TiDB Container (If Needed)
+
+TiDB should be running from Section 3. If you stopped it, restart with:
 
 ```bash
 cd "$WORKSPACE_DIR"
 DB_COUNT=4 ./docker_db.sh tidb
 ```
 
-> **Note:** Uses `DB_COUNT=4` to match the container's CPU allocation (see Section 3).
-
-This script (after patched in Section 2):
+The upstream `tidb_8_5()` function:
 
 - Removes any existing `tidb` container
-- Creates a TiDB v8.5.3 LTS container
-- Runs the optional bootstrap SQL saved in `$WORKSPACE_DIR/tmp/patch_docker_db_tidb-last.sql` (strict/permissive/custom modes only)
+- Creates a TiDB v8.5.4 LTS container
+- Waits for TiDB to be ready (~75 seconds timeout)
 - Creates main database: `hibernate_orm_test` with user `hibernate_orm_test`/`hibernate_orm_test`
-- Creates additional test databases (half of CPU count): `hibernate_orm_test_1`, `hibernate_orm_test_2`, etc.
-- Waits for TiDB to be ready before exiting
+- Creates additional test databases based on `DB_COUNT`
 
-Expected duration: ~5-10 seconds. The script displays "TiDB successfully started" when complete.
+Expected duration: ~30-60 seconds. The script displays "TiDB databases were successfully setup" when complete.
 
-> **Note:** If TiDB is already running from Section 3, the script automatically removes and recreates it with fresh data.
-
-## 6. Run Full Test Suite
+## 7. Run Full Test Suite
 
 > **Note:** Ensure Docker has at least 16GB memory allocated. Check with `docker info | grep "Total Memory"`. See [docker-runtime/configuration.md](./docker-runtime/configuration.md) for resource tuning.
+>
+> **Important:** Ensure `$WORKSPACE_DIR` does not contain spaces. Docker volume mounts with spaces in the path will fail. The lab's `.env` uses `TEMP_DIR="/Users/.../tmp/hibernate-tidb"` which avoids this issue.
 
 Run the complete test suite using Hibernate's CI build script:
 
@@ -195,7 +198,7 @@ tail -f "$TEMP_DIR"/tidb-ci-run-*.log
 
 > **Note:** Alternatively, use `docker logs -f hibernate-tidb-ci-runner` to follow container output directly, or save logs at any time with `docker logs hibernate-tidb-ci-runner > "$TEMP_DIR/tidb-ci-run-$(date +%Y%m%d-%H%M%S).log" 2>&1`
 
-## 7. View Results
+## 8. View Results
 
 After the full test suite completes, verify results at different levels depending on your needs.
 
@@ -278,9 +281,9 @@ The script archives HTML reports to `$TEMP_DIR/tidb-results-{timestamp}/` for la
 
 See [scripts/README.md](./scripts/README.md) for more details on the summary scripts.
 
-> **Note:** TiDB results will show some failures due to compatibility differences with MySQL. See Section 8 for comparison and [findings.md](./findings.md) for detailed failure analysis.
+> **Note:** TiDB results will show some failures due to compatibility differences with MySQL. See [Section 9](#9-compare-with-mysql-optional) for comparison and [findings.md](./findings.md) for detailed failure analysis.
 
-## 8. Compare with MySQL (Optional)
+## 9. Compare with MySQL (Optional)
 
 Compare TiDB results against your local MySQL run from [mysql-ci.md](./mysql-ci.md):
 
@@ -300,7 +303,7 @@ Sample comparison (MySQL vs TiDB with fixes):
 
 > **Note:** TiDB typically has some test failures due to compatibility differences with MySQL (async DDL, isolation levels, etc.). For detailed failure analysis, see [findings.md](./findings.md).
 
-## 9. Cleanup
+## 10. Cleanup
 
 Stop and remove the TiDB container:
 
@@ -310,34 +313,92 @@ docker rm -f tidb
 
 For more extensive cleanup (build artifacts, test reports, Gradle caches), see [local-setup.md Cleanup](./local-setup.md#6-cleanup).
 
-## 10. Repeat Baseline with MySQL Dialect
+## 11. Repeat Baseline with MySQL Dialect
 
-Run identical tests against TiDB again, but now using `MySQLDialect`. This comparison helps identify where TiDB's SQL handling differs from MySQL, highlighting potential compatibility considerations.
+Run identical tests against TiDB again, but now using `MySQLDialect`. This comparison helps identify where TiDB's SQL handling differs from MySQL, and is relevant for evaluating TiDBDialect deprecation.
 
-1. Run `DB_COUNT=4 ./docker_db.sh tidb` again to ensure the database starts clean.
+> **Important:** The `-Pdb.dialect` Gradle property does NOT override the dialect. Hibernate ORM's test infrastructure sets the dialect via resource filtering at build time (using `ReplaceTokens` in `local.java-module.gradle`). You must modify `local.databases.gradle` to change the dialect.
 
-2. Run the same containerized CI command, but change the container name and log file so each dialect's output is easy to identify:
+### Step 1: Apply MySQLDialect Patch
 
-   ```bash
-   cd "$WORKSPACE_DIR"
-   mkdir -p "$TEMP_DIR"
-   docker run --rm \
-     --name hibernate-tidb-ci-runner-mysqldialect \
-     --memory=16g \
-     --cpus=6 \
-     --network container:tidb \
-     -e RDBMS=tidb \
-     -e GRADLE_OPTS="-Xmx6g -XX:MaxMetaspaceSize=1g" \
-     -v "$WORKSPACE_DIR":/workspace \
-     -v "$TEMP_DIR":/workspace/tmp \
-     -w /workspace \
-    eclipse-temurin:25-jdk \
-     bash -lc 'RDBMS=tidb ./ci/build.sh -Pdb.dialect=org.hibernate.dialect.MySQLDialect' 2>&1 | tee "$TEMP_DIR/tidb-mysql-dialect-run-$(date +%Y%m%d-%H%M%S).log"
-   ```
+Use the lab's patch script to modify the tidb profile:
 
-    This command sets the dialect for the test run without editing any files. You can revert to `TiDBDialect` by omitting the `-Pdb.dialect` property or specifying `-Pdb.dialect=org.hibernate.community.dialect.TiDBDialect`. The command also changes the container name and log file so each dialect's output is easy to identify.
+```bash
+cd "$LAB_HOME_DIR"
+python3 scripts/patch_local_databases_gradle.py "$WORKSPACE_DIR" --dialect mysql
+```
 
-## 11. Compare TiDBDialect vs MySQLDialect
+**Expected output:**
+
+```text
+✓ local.databases.gradle has been configured!
+  Dialect preset: mysql
+    Changed: org.hibernate.community.dialect.TiDBDialect
+          → org.hibernate.dialect.MySQLDialect
+```
+
+### Step 2: Verify the Change
+
+```bash
+grep -A 3 "tidb :" "$WORKSPACE_DIR/local-build-plugins/src/main/groovy/local.databases.gradle" | head -4
+```
+
+**Expected output:**
+
+```groovy
+tidb : [
+        'db.dialect' : 'org.hibernate.dialect.MySQLDialect',
+        'jdbc.driver': 'com.mysql.cj.jdbc.Driver',
+```
+
+### Step 3: Clean and Run Tests
+
+Restart TiDB and run tests with the MySQLDialect configuration:
+
+```bash
+cd "$WORKSPACE_DIR"
+DB_COUNT=4 ./docker_db.sh tidb
+
+docker run --rm \
+  --name hibernate-tidb-ci-runner-mysqldialect \
+  --memory=16g \
+  --cpus=6 \
+  --network container:tidb \
+  -e RDBMS=tidb \
+  -e GRADLE_OPTS="-Xmx6g -XX:MaxMetaspaceSize=1g" \
+  -v "$WORKSPACE_DIR":/workspace \
+  -v "$TEMP_DIR":/workspace/tmp \
+  -w /workspace \
+  eclipse-temurin:25-jdk \
+  bash -lc 'RDBMS=tidb ./ci/build.sh' 2>&1 | tee "$TEMP_DIR/tidb-mysql-dialect-run-$(date +%Y%m%d-%H%M%S).log"
+```
+
+### Step 4: Restore TiDBDialect (After Testing)
+
+```bash
+cd "$LAB_HOME_DIR"
+python3 scripts/patch_local_databases_gradle.py "$WORKSPACE_DIR" --dialect tidb-community
+```
+
+### Key Difference: SERIALIZABLE Isolation Handling
+
+When using **MySQLDialect** instead of **TiDBDialect**, tests that use SERIALIZABLE isolation will **fail** instead of being skipped:
+
+| Dialect | SERIALIZABLE Tests | Reason |
+|---------|-------------------|--------|
+| **TiDBDialect** | ✅ SKIPPED (4 tests) | `@SkipForDialect(TiDBDialect.class)` annotation |
+| **MySQLDialect** | ❌ FAILED (4 tests) | TiDB rejects SERIALIZABLE without `tidb_skip_isolation_level_check=1` |
+
+**Error with MySQLDialect:**
+
+```text
+java.sql.SQLException: The isolation level 'SERIALIZABLE' is not supported.
+Set tidb_skip_isolation_level_check=1 to skip this error
+```
+
+**Implication for TiDBDialect deprecation:** If TiDBDialect is deprecated and users switch to MySQLDialect, they must set `tidb_skip_isolation_level_check=1` in their TiDB configuration to avoid SERIALIZABLE isolation errors. This is a TiDB-side setting, not a Hibernate/Java configuration.
+
+## 12. Compare TiDBDialect vs MySQLDialect
 
 After running both dialect tests, archive and compare the results:
 
@@ -369,7 +430,7 @@ Most common issues are covered in [local-setup.md Troubleshooting](./local-setup
 
 - **Verification script fails:** Check `docker logs tidb` for startup errors. Ensure fixes were applied correctly in Section 2.
 - **Installer exits with readiness/bootstrap error:** Leave TiDB running, watch `docker logs tidb` until it reports `server is running`, then rerun `./docker_db.sh tidb` so the bootstrap SQL can execute.
-- **SERIALIZABLE isolation errors:** Verify bootstrap SQL ran successfully. Check `tidb_skip_isolation_level_check` with verify script.
+- **SERIALIZABLE isolation errors:** Only occurs when using `MySQLDialect` instead of `TiDBDialect`. With `TiDBDialect`, these tests are automatically skipped via `@SkipForDialect`. If you must use `MySQLDialect`, set `tidb_skip_isolation_level_check=1` on TiDB server side. See [Section 11](#11-repeat-baseline-with-mysql-dialect) for details.
 - **Tests timeout or hang:** TiDB's async DDL can cause timing issues. Check container is running with `docker ps`.
 - **Connection refused errors:** Verify network mode is `--network container:tidb` in the runner command.
 
