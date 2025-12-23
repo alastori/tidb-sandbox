@@ -1,0 +1,38 @@
+Summary
+
+
+
+Source Database
+
+
+
+host = "127.0.0.1"
+port = 4000
+user = "root"
+snapshot = "463066080215040000"
+
+Target Databases
+
+
+
+host = "127.0.0.1"
+port = 14000
+user = "root"
+snapshot = "463066080328548384"
+
+Comparison Result
+
+
+
+The table structure and data in following tables are equivalent
+
++----------------------+---------+-----------+
+|        TABLE         | UPCOUNT | DOWNCOUNT |
++----------------------+---------+-----------+
+| `syncpoint_lab`.`t1` |       5 |         5 |
++----------------------+---------+-----------+
+
+
+
+Time Cost: 17.312375ms
+Average Speed: 0.000000MB/s

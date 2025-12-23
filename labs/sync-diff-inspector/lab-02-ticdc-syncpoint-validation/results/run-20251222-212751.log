@@ -1,0 +1,229 @@
+============================================
+TiCDC Syncpoint + sync-diff-inspector Lab
+============================================
+Using mysql client: /opt/homebrew/opt/mysql-client/bin/mysql
+
+
+>>> Step 0: Starting TiDB clusters...
+=== Pre-flight: Cleaning up stale instances ===
+=== Starting upstream TiDB cluster ===
+Waiting for upstream TiDB on port 4000...
+upstream TiDB is ready on port 4000
+
+=== Starting downstream TiDB cluster ===
+Waiting for downstream TiDB on port 14000...
+  Attempt 1/30...
+  Attempt 2/30...
+downstream TiDB is ready on port 14000
+
+=== Verifying connectivity ===
+status
+upstream OK
+status
+downstream OK
+=== Clusters started successfully ===
+
+>>> Step 1: Starting TiCDC...
+=== Starting TiCDC (new architecture) ===
+Starting component [1mcdc[0m: /Users/alastori/.tiup/components/cdc/v8.5.5-release.3/cdc server --pd=http://127.0.0.1:2379 --addr=0.0.0.0:8300 --advertise-addr=127.0.0.1:8300 --log-file=/Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/results/ticdc-20251222-212805.log
+[0m[2025/12/22 21:28:05.210 -05:00] [INFO] [server.go:251] ["parse config file path from os.Args"] [config=]
+[2025/12/22 21:28:05.210 -05:00] [INFO] [server.go:342] ["Running TiCDC server in old architecture"]
+[WARN] TiCDC server data-dir is not set. Please use `cdc server --data-dir` to start the cdc server if possible.
+=== Verifying TiCDC is running ===
+Starting component [1mcdc[0m: /Users/alastori/.tiup/components/cdc/v8.5.5-release.3/cdc cli capture list --pd=http://127.0.0.1:2379
+[0m[
+  {
+    "id": "6b1d9149-9daf-4110-89cd-f4baa437c8ab",
+    "is-owner": true,
+    "address": "127.0.0.1:8300",
+    "cluster-id": "default"
+  }
+]
+=== TiCDC started successfully ===
+
+>>> Step 2: Creating changefeed with syncpoint enabled...
+=== Creating changefeed with syncpoint enabled ===
+Starting component [1mcdc[0m: /Users/alastori/.tiup/components/cdc/v8.5.5-release.3/cdc cli changefeed create --pd=http://127.0.0.1:2379 --changefeed-id=syncpoint-lab-cf --sink-uri=mysql://root@127.0.0.1:14000/ --config=/dev/stdin
+[0mCreate changefeed successfully!
+ID: syncpoint-lab-cf
+Info: {"upstream_id":7586874517039048810,"id":"syncpoint-lab-cf","keyspace":"","sink_uri":"mysql://root@127.0.0.1:14000/","create_time":"2025-12-22T21:28:15.368068-05:00","start_ts":463066076367290369,"config":{"memory_quota":1073741824,"case_sensitive":false,"force_replicate":false,"ignore_ineligible_table":false,"check_gc_safe_point":true,"enable_sync_point":true,"enable_table_monitor":false,"bdr_mode":false,"sync_point_interval":30000000000,"sync_point_retention":3600000000000,"filter":{"rules":["*.*"]},"mounter":{"worker_num":16},"sink":{"csv":{"delimiter":",","quote":"\"","null":"\\N","include_commit_ts":false,"binary_encoding_method":"base64","output_old_value":false,"output_handle_key":false,"output_field_header":false},"encoder_concurrency":32,"terminator":"\r\n","date_separator":"day","enable_partition_separator":true,"enable_kafka_sink_v2":false,"only_output_updated_columns":false,"delete_only_output_handle_key_columns":false,"content_compatible":false,"advance_timeout":150,"send_bootstrap_interval_in_sec":120,"send_bootstrap_in_msg_count":10000,"send_bootstrap_to_all_partition":true,"send-all-bootstrap-at-start":false,"debezium_disable_schema":false,"debezium":{"output_old_value":true},"open":{"output_old_value":true}},"consistent":{"level":"none","max_log_size":64,"flush_interval":2000,"meta_flush_interval":200,"encoding_worker_num":16,"flush_worker_num":8,"use_file_backend":false,"memory_usage":{"memory_quota_percentage":50}},"scheduler":{"enable_table_across_nodes":false,"region_threshold":10000,"write_key_threshold":0},"integrity":{"integrity_check_level":"none","corruption_handle_level":"warn"},"changefeed_error_stuck_duration":1800000000000,"synced_status":{"synced_check_interval":300,"checkpoint_interval":15}},"state":"normal","creator_version":"v8.5.5","resolved_ts":463066076367290369,"checkpoint_ts":463066076367290369,"checkpoint_time":"2025-12-22 21:28:15.322","gid":{"low":0,"high":0}}
+=== Verifying changefeed status ===
+Starting component [1mcdc[0m: /Users/alastori/.tiup/components/cdc/v8.5.5-release.3/cdc cli changefeed query --pd=http://127.0.0.1:2379 --changefeed-id=syncpoint-lab-cf
+[0m{
+  "upstream_id": 7586874517039048810,
+  "id": "syncpoint-lab-cf",
+  "keyspace": "",
+  "sink_uri": "mysql://root@127.0.0.1:14000/",
+  "config": {
+    "memory_quota": 1073741824,
+    "case_sensitive": false,
+    "force_replicate": false,
+    "ignore_ineligible_table": false,
+    "check_gc_safe_point": true,
+    "enable_sync_point": true,
+    "enable_table_monitor": false,
+    "bdr_mode": false,
+    "sync_point_interval": 30000000000,
+    "sync_point_retention": 3600000000000,
+    "filter": {
+      "rules": [
+        "*.*"
+      ]
+    },
+    "mounter": {
+      "worker_num": 16
+    },
+    "sink": {
+      "delete_only_output_handle_key_columns": null,
+      "content_compatible": null,
+      "advance_timeout": 150,
+      "send_bootstrap_interval_in_sec": 120,
+      "send_bootstrap_in_msg_count": 10000,
+      "send_bootstrap_to_all_partition": true,
+      "send-all-bootstrap-at-start": false,
+      "debezium_disable_schema": false,
+      "debezium": {
+        "output_old_value": true
+      },
+      "open": {
+        "output_old_value": true
+      }
+    },
+    "consistent": {
+      "level": "none",
+      "max_log_size": 64,
+      "flush_interval": 2000,
+      "meta_flush_interval": 200,
+      "encoding_worker_num": 16,
+      "flush_worker_num": 8,
+      "use_file_backend": false,
+      "memory_usage": {
+        "memory_quota_percentage": 50
+      }
+    },
+    "scheduler": {
+      "enable_table_across_nodes": false,
+      "region_threshold": 10000,
+      "write_key_threshold": 0
+    },
+    "integrity": {
+      "integrity_check_level": "none",
+      "corruption_handle_level": "warn"
+    },
+    "changefeed_error_stuck_duration": 1800000000000,
+    "synced_status": {
+      "synced_check_interval": 300,
+      "checkpoint_interval": 15
+    }
+  },
+  "create_time": "2025-12-22 21:28:15.368",
+  "start_ts": 463066076367290369,
+  "resolved_ts": 463066077638950916,
+  "target_ts": 0,
+  "checkpoint_tso": 463066077638950916,
+  "checkpoint_time": "2025-12-22 21:28:20.173",
+  "state": "normal",
+  "creator_version": "v8.5.5",
+  "task_status": [
+    {
+      "capture_id": "6b1d9149-9daf-4110-89cd-f4baa437c8ab"
+    }
+  ]
+}
+=== Changefeed created successfully ===
+
+>>> Step 3: Loading initial data...
+=== Loading data to upstream ===
+Loading /Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/sql/s1_basic_setup.sql...
+Loading /Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/sql/s2_continuous_setup.sql...
+Loading /Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/sql/s3_ddl_setup.sql...
+=== Data loaded successfully ===
+
+>>> Step 4: Waiting for syncpoint after data load...
+Waiting 35s for new syncpoint to capture loaded data...
+=== Waiting for syncpoint to be written ===
+=== Syncpoint found! ===
+ticdc_cluster_id	changefeed	primary_ts	secondary_ts	created_at
+default	syncpoint-lab-cf	463066080215040000	463066080328548384	2025-12-22 21:28:30
+
+>>> Step 5a: Running S1 (basic syncpoint)...
+
+========================================
+Running sync-diff-inspector: s1_basic
+========================================
+Syncpoint TSOs: 463066080215040000	463066080328548384
+
+Starting component [1msync-diff-inspector[0m: /Users/alastori/.tiup/components/sync-diff-inspector/v9.0.0-beta.1/sync_diff_inspector --config=/Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/conf/s1_basic_tmp_20251223T022855Z.toml
+[0mA total of 1 tables need to be compared
+
+
+[0A[JComparing the table structure of `syncpoint_lab`.`t1` ... equivalent
+Comparing the table data of `syncpoint_lab`.`t1` ...
+_____________________________________________________________________________
+Progress [>------------------------------------------------------------] 0% 0/1
+[3A[JComparing the table data of `syncpoint_lab`.`t1` ... equivalent
+_____________________________________________________________________________
+Progress [============================================================>] 100% 0/0
+[1A[JProgress [============================================================>] 100% 0/0
+A total of 1 table have been compared and all are equal.
+You can view the comparison details through '/Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/results/sync_diff_s1_basic-20251223T022855Z/sync_diff.log'
+PASSED: s1_basic
+
+>>> Step 5b: S2 - Inserting post-syncpoint data...
+Waiting for data to replicate and new syncpoint...
+>>> Running S2 (continuous writes)...
+
+========================================
+Running sync-diff-inspector: s2_continuous
+========================================
+Syncpoint TSOs: 463066095943680000	463066096070295555
+
+Checking updates for component [1msync-diff-inspector[0m... [0mStarting component [1msync-diff-inspector[0m: /Users/alastori/.tiup/components/sync-diff-inspector/v9.0.0-beta.1/sync_diff_inspector --config=/Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/conf/s2_continuous_tmp_20251223T022931Z.toml
+[0mA total of 1 tables need to be compared
+
+
+[0A[JComparing the table structure of `syncpoint_lab`.`t2` ... equivalent
+Comparing the table data of `syncpoint_lab`.`t2` ...
+_____________________________________________________________________________
+Progress [>------------------------------------------------------------] 0% 0/1
+[3A[JComparing the table data of `syncpoint_lab`.`t2` ... equivalent
+_____________________________________________________________________________
+Progress [============================================================>] 100% 0/0
+[1A[JProgress [============================================================>] 100% 0/0
+A total of 1 table have been compared and all are equal.
+You can view the comparison details through '/Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/results/sync_diff_s2_continuous-20251223T022931Z/sync_diff.log'
+PASSED: s2_continuous
+
+>>> Step 5c: S3 - Running DDL and inserting more data...
+Waiting for new syncpoint after DDL...
+
+========================================
+Running sync-diff-inspector: s3_ddl
+========================================
+Syncpoint TSOs: 463066103808000000	463066103961092097
+
+Starting component [1msync-diff-inspector[0m: /Users/alastori/.tiup/components/sync-diff-inspector/v9.0.0-beta.1/sync_diff_inspector --config=/Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/conf/s3_ddl_tmp_20251223T023007Z.toml
+[0mA total of 1 tables need to be compared
+
+
+[0A[JComparing the table structure of `syncpoint_lab`.`t3` ... equivalent
+Comparing the table data of `syncpoint_lab`.`t3` ...
+_____________________________________________________________________________
+Progress [>------------------------------------------------------------] 0% 0/1
+[3A[JComparing the table data of `syncpoint_lab`.`t3` ... equivalent
+_____________________________________________________________________________
+Progress [============================================================>] 100% 0/0
+[1A[JProgress [============================================================>] 100% 0/0
+A total of 1 table have been compared and all are equal.
+You can view the comparison details through '/Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/results/sync_diff_s3_ddl-20251223T023007Z/sync_diff.log'
+PASSED: s3_ddl
+
+============================================
+Lab complete! Check ./results/ for details.
+============================================
+=== Cleaning up ===
+Kill instance of `playground`, pid: 59059
+Clean instance of `playground`, directory: /Users/alastori/.tiup/data/upstream
+Kill instance of `playground`, pid: 59058
+Clean instance of `playground`, directory: /Users/alastori/.tiup/data/downstream
+=== Cleanup complete ===

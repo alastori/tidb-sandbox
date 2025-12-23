@@ -1,0 +1,13 @@
+]0;TiUP Playground: downstream[90mStart pd instance: v8.5.1[0m
+[0m[90mStart tikv instance: v8.5.1[0m
+[0m[90mStart tidb instance: v8.5.1[0m
+[0m
+
+[1A[2K- TiDB: 127.0.0.1:14000 ... ⠋ [1B[2K[1A[2K- TiDB: 127.0.0.1:14000 ... Done[1B[2K[90mStart tiflash instance: v8.5.1[0m
+[0m
+
+[1A[2K- TiFlash: 127.0.0.1:13930 ... Done[1B[2K
+🎉 TiDB Playground Cluster is started, enjoy!
+
+Connect TiDB:    mysql --comments --host 127.0.0.1 --port 14000 -u root
+TiDB Dashboard:  http://127.0.0.1:12379/dashboard

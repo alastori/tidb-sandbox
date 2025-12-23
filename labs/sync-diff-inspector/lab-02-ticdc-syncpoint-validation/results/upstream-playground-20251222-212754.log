@@ -1,0 +1,12 @@
+]0;TiUP Playground: upstream[90mStart pd instance: v8.5.1[0m
+[0m[90mStart tikv instance: v8.5.1[0m
+[0m[90mStart tidb instance: v8.5.1[0m
+[0m
+
+[1A[2K- TiDB: 127.0.0.1:4000 ... Done[1B[2K[90mStart tiflash instance: v8.5.1[0m
+[0m
+
+[1A[2K- TiFlash: 127.0.0.1:3930 ... Done[1B[2K
+🎉 TiDB Playground Cluster is started, enjoy!
+
+Connect TiDB:    mysql --comments --host 127.0.0.1 --port 4000 -u root

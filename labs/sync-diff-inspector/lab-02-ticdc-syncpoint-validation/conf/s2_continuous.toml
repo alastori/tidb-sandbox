@@ -1,0 +1,26 @@
+# S2: Continuous writes validation
+# Uses snapshot = "auto" to read from tidb_cdc.syncpoint_v1
+
+check-thread-count = 4
+export-fix-sql = true
+
+[data-sources]
+[data-sources.upstream]
+    host = "127.0.0.1"
+    port = 4000
+    user = "root"
+    password = ""
+    snapshot = "auto"
+
+[data-sources.downstream]
+    host = "127.0.0.1"
+    port = 14000
+    user = "root"
+    password = ""
+    snapshot = "auto"
+
+[task]
+    output-dir = "./results/sync_diff_s2"
+    source-instances = ["upstream"]
+    target-instance = "downstream"
+    target-check-tables = ["syncpoint_lab.t2"]

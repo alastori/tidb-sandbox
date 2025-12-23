@@ -1,0 +1,14 @@
+Starting component [1msync-diff-inspector[0m: /Users/alastori/.tiup/components/sync-diff-inspector/v9.0.0-beta.1/sync_diff_inspector --config=/Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/conf/s3_ddl_tmp_20251223T023007Z.toml
+[0mA total of 1 tables need to be compared
+
+
+[0A[JComparing the table structure of `syncpoint_lab`.`t3` ... equivalent
+Comparing the table data of `syncpoint_lab`.`t3` ...
+_____________________________________________________________________________
+Progress [>------------------------------------------------------------] 0% 0/1
+[3A[JComparing the table data of `syncpoint_lab`.`t3` ... equivalent
+_____________________________________________________________________________
+Progress [============================================================>] 100% 0/0
+[1A[JProgress [============================================================>] 100% 0/0
+A total of 1 table have been compared and all are equal.
+You can view the comparison details through '/Users/alastori/Library/Mobile Documents/com~apple~CloudDocs/Sandbox/tidb-sandbox/labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation/results/sync_diff_s3_ddl-20251223T023007Z/sync_diff.log'
