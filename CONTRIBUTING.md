@@ -2,8 +2,6 @@
 
 This document provides comprehensive guidelines for creating new labs in the tidb-sandbox repository. Follow these conventions to ensure consistency, reproducibility, and maintainability.
 
----
-
 ## Table of Contents
 
 1. [First Principles](#1-first-principles)
@@ -13,8 +11,6 @@ This document provides comprehensive guidelines for creating new labs in the tid
 5. [Infrastructure Patterns](#5-infrastructure-patterns)
 6. [Environment Configuration](#6-environment-configuration)
 7. [Quality Checklist](#7-quality-checklist)
-
----
 
 ## 1. First Principles
 
@@ -77,8 +73,6 @@ Full commands with all parameters:
 - Full Docker commands with all flags
 - No assumed environment or aliases
 
----
-
 ## 2. Directory Structure
 
 ### 2.1 Standard Layout
@@ -125,8 +119,6 @@ Labs are organized by TiDB ecosystem component:
 | `labs/import-into/` | Data import operations |
 | `labs/sync-diff-inspector/` | Data consistency validation |
 | `labs/tidb/` | Core TiDB features and compatibility |
-
----
 
 ## 3. Documentation Standards
 
@@ -338,7 +330,11 @@ Use blockquotes for important notes:
 > **Tip:** Set `MYSQL_ROOT_PASSWORD` environment variable to use a custom password.
 ```
 
----
+### 3.7 Formatting Rules
+
+- **No horizontal rules** (`---`): Use headings to separate sections, not horizontal rules
+- **Single blank line**: Use one blank line between sections, not multiple
+- **No trailing whitespace**: Remove trailing spaces from lines
 
 ## 4. Script Conventions
 
@@ -511,8 +507,6 @@ clean_log() {
 export MYSQL_IMAGE MYSQL_ROOT_PASSWORD TIDB_IMAGE
 export SCRIPT_DIR LAB_DIR RESULTS_DIR TS
 ```
-
----
 
 ## 5. Infrastructure Patterns
 
@@ -694,8 +688,6 @@ rm -f "${LAB_DIR}/conf/"*_tmp_*.toml
 echo "=== Cleanup completed ==="
 ```
 
----
-
 ## 6. Environment Configuration
 
 ### 6.1 .env.example Template
@@ -747,8 +739,6 @@ fi
 | TiUP components | Version variable | `TIDB_VERSION=v8.5.4` |
 | Never | `:latest` tag | ❌ `mysql:latest` |
 
----
-
 ## 7. Quality Checklist
 
 Use this checklist before submitting a new lab.
@@ -799,8 +789,6 @@ Use this checklist before submitting a new lab.
 - [ ] Config files are in `conf/` directory
 - [ ] No sensitive data (passwords in `.env.example` are examples only)
 
----
-
 ## Quick Start
 
 To create a new lab:
@@ -830,8 +818,6 @@ To create a new lab:
    ./scripts/stepN-cleanup.sh
    ./scripts/run-all.sh
    ```
-
----
 
 ## References
 
