@@ -1,0 +1,5 @@
+# Ignore all result files
+*
+
+# But keep this .gitignore
+!.gitignore
