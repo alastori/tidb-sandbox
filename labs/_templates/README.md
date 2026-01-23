@@ -25,7 +25,7 @@ cd labs/<product>/lab-XX-your-topic
 
 ## Directory Structure
 
-```
+```text
 _templates/
 ├── README.md              # This file
 ├── lab-XX-template.md     # Documentation skeleton

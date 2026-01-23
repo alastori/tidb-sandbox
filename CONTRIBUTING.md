@@ -23,6 +23,7 @@ These principles guide all design decisions in lab creation:
 ### 1.1 Reproducibility
 
 Any engineer should be able to reproduce results from a clean state. This means:
+
 - All dependencies are explicitly declared
 - All versions are pinned (no `:latest` tags)
 - Steps are documented in executable order
@@ -31,6 +32,7 @@ Any engineer should be able to reproduce results from a clean state. This means:
 ### 1.2 Self-Containment
 
 Each lab is independent and complete:
+
 - All required files live within the lab directory
 - No hidden dependencies on other labs
 - Shared utilities are copied, not linked (unless in `_templates/`)
@@ -38,6 +40,7 @@ Each lab is independent and complete:
 ### 1.3 Show, Don't Tell
 
 Concrete examples over abstract explanations:
+
 - Include actual commands, not pseudocode
 - Show real output, not descriptions of output
 - Provide complete code blocks, not fragments
@@ -45,6 +48,7 @@ Concrete examples over abstract explanations:
 ### 1.4 Fail-Fast
 
 Scripts should fail immediately on errors:
+
 - Use `set -euo pipefail` in all bash scripts
 - Validate prerequisites before starting work
 - Provide clear error messages with context
@@ -52,6 +56,7 @@ Scripts should fail immediately on errors:
 ### 1.5 UTC Timestamps
 
 All timestamps use UTC ISO format for timezone independence:
+
 ```bash
 TS=$(date -u +%Y%m%dT%H%M%SZ)  # Example: 20250115T143022Z
 ```
@@ -59,6 +64,7 @@ TS=$(date -u +%Y%m%dT%H%M%SZ)  # Example: 20250115T143022Z
 ### 1.6 Clean Code Blocks
 
 Code blocks contain only executable code:
+
 - No inline comments in SQL/shell snippets within documentation
 - Explanations go in surrounding prose
 - Keep code focused on the specific example
@@ -66,6 +72,7 @@ Code blocks contain only executable code:
 ### 1.7 Explicit Over Implicit
 
 Full commands with all parameters:
+
 - Complete connection strings (host, port, user, password)
 - Full Docker commands with all flags
 - No assumed environment or aliases
@@ -76,7 +83,7 @@ Full commands with all parameters:
 
 ### 2.1 Standard Layout
 
-```
+```text
 labs/<product>/<lab-XX-descriptive-name>/
 ├── lab-XX-descriptive-name.md    # Primary documentation
 ├── scripts/
@@ -252,7 +259,7 @@ CREATE TABLE orders (
 
 Show command output in plain code blocks or with the same language specifier:
 
-```
+```text
 +----+---------+-------+-------+
 | id | quantity| price | total |
 +----+---------+-------+-------+
@@ -315,6 +322,7 @@ When documenting workarounds, use a consistent pattern:
 3. **Separate files** - Each variant has its own SQL/config files
 
 Naming convention:
+
 - `s1_blob.sql` / `s1_blob.toml` - Base scenario
 - `s1b_blob_workaround.sql` / `s1b_blob_workaround.toml` - With fix
 
@@ -798,11 +806,13 @@ Use this checklist before submitting a new lab.
 To create a new lab:
 
 1. Copy the template directory:
+
    ```bash
    cp -r labs/_templates labs/<product>/lab-XX-your-topic
    ```
 
 2. Rename the documentation file:
+
    ```bash
    mv labs/<product>/lab-XX-your-topic/lab-XX-template.md \
       labs/<product>/lab-XX-your-topic/lab-XX-your-topic.md
@@ -815,6 +825,7 @@ To create a new lab:
 5. Run the quality checklist above
 
 6. Test with a clean run:
+
    ```bash
    ./scripts/stepN-cleanup.sh
    ./scripts/run-all.sh

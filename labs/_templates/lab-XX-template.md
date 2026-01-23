@@ -66,7 +66,7 @@ TODO: Describe what this step does.
 
 Expected output:
 
-```
+```text
 TODO: Show expected output
 ```
 
