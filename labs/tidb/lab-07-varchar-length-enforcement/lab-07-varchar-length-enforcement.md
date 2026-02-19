@@ -372,14 +372,14 @@ The debug runbook is designed to determine which of these three explanations app
 ### Rebuild failure (reproducible)
 
 ```text
-+-----------+     +----------+     +-------------+
++-----------+     +----------+      +-------------+
 | Source    |---->| Dumpling  |---->| Target TiDB |
-| TiDB     |     | (export)  |     | (default)   |
+| TiDB      |     | (export)  |     | (default)   |
 | non-strict|     | faithful  |     |             |
 |           |     | raw dump  |     | IMPORT INTO |
 | VARCHAR   |     | 500 chars |     | STRICT mode |
 | rptd >120 |     |           |     | -> ERROR    |
-+-----------+     +----------+     +-------------+
++-----------+     +-----------+     +-------------+
 ```
 
 Phase 2 Test C reproduces the exact IMPORT INTO error. The mismatch between source and target sql_mode causes the rebuild failure.
