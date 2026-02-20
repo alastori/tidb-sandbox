@@ -576,7 +576,7 @@ When a utf8mb4 character (e.g., emoji `📝`, 4 bytes: `F0 9F 93 9D`) is inserte
 - Source: e-commerce integration addresses containing emoji/special characters
 - Data inserted after migration to TiDB (not inherited from source DB)
 
-### Phase 9 Results
+### Phase 9 Results — Core Tests (E1-E12)
 
 | # | Test | Limit | char_len | Result |
 | --- | ---- | ----- | -------- | ------ |
@@ -595,16 +595,40 @@ When a utf8mb4 character (e.g., emoji `📝`, 4 bytes: `F0 9F 93 9D`) is inserte
 
 E1 hex detail: `ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ` (30 chars) stored as `ABCDE?FGHIJ?KLMNO?PQRST?UVWXYZ` — each 4-byte emoji replaced with `?` (0x3F), full 30-char string stored in VARCHAR(10) without truncation.
 
+### Phase 9 Results — Code-Analysis Scenarios (E13-E24)
+
+Additional scenarios targeting different write paths and expression types:
+
+| # | Test | Limit | char_len | Result |
+| --- | ---- | ----- | -------- | ------ |
+| E13 | INSERT...SELECT from utf8mb4 source | 10 | 30 | **BUG** |
+| E14 | User variable with emoji | 10 | 30 | **BUG** |
+| E15 | CONCAT with emoji components | 10 | 17 | **BUG** |
+| E16 | CHAR(10) column (not VARCHAR) | 10 | 30 | **BUG** |
+| E17 | Binary collation source → utf8 column | 10 | 10 | CORRECT |
+| E18 | LOAD DATA with emoji content | 10 | 30 | **BUG** |
+| E19 | pymysql binary protocol INSERT | 10 | 30 | **BUG** |
+| E20 | Multi-row INSERT mixed emoji/ASCII | 10 | 21 | **BUG** (emoji rows only) |
+| E21 | `check_mb4_value_in_utf8=OFF` | 10 | 10 | CORRECT (workaround) |
+| E22 | NOT NULL column with emoji | 10 | 30 | **BUG** |
+| E23 | PREPARE/EXECUTE with emoji | 10 | 30 | **BUG** |
+| E24 | JSON_EXTRACT emoji → utf8 column | 10 | 30 | **BUG** |
+
 ### Key Findings
 
 1. **The bypass requires a charset mismatch**: utf8mb4 data into a utf8 column. When the column charset is utf8mb4 (E6), truncation works correctly — the emoji bytes are valid, no Warning 1366 fires, and the normal truncation path runs.
-2. **INSERT and REPLACE INTO are affected**: INSERT (E1, E3, E4, E8, E9) and REPLACE INTO (E12) bypass truncation through the Warning 1366 code path.
-3. **UPDATE and ODKU are NOT affected**: UPDATE (E10) and ON DUPLICATE KEY UPDATE (E11) correctly truncate even with emoji content. The bug is specific to the INSERT/REPLACE execution path.
-4. **STRICT mode blocks it**: With `STRICT_TRANS_TABLES`, the insert fails with an error (E5), preventing the bypass entirely.
-5. **ASCII data unaffected**: Pure ASCII strings still truncate correctly (E2), confirming the bug is specific to the charset conversion error path.
-6. **`tidb_skip_utf8_check=ON` avoids the bug** (E7): Skipping UTF-8 validation means no Warning 1366 fires, so the normal truncation path runs and enforces the limit.
-7. **Partitioned tables affected equally**: The partitioned gnre schema (E4) shows the same bypass — partitioning is not a factor, as confirmed in Phase 7.
-8. **Replacement is 1:1**: Each 4-byte emoji → single `?` (0x3F). The character count is preserved from the original input, not expanded. A 30-char input with 4 emojis stores as 30 chars.
+2. **Nearly all INSERT-family paths are affected**: Direct INSERT (E1), INSERT...SELECT (E13), LOAD DATA (E18), pymysql binary protocol (E19), PREPARE/EXECUTE (E23), and REPLACE INTO (E12) all bypass truncation.
+3. **UPDATE and ODKU are NOT affected**: UPDATE (E10) and ON DUPLICATE KEY UPDATE (E11) correctly truncate even with emoji content. These operations handle charset conversion before length enforcement, so both steps run correctly.
+4. **CHAR(N) is also affected** (E16): Not just VARCHAR — the CHAR column type has the same bypass, storing 30 chars in CHAR(10).
+5. **Expression paths are affected**: CONCAT (E15), user variables (E14), and JSON_EXTRACT (E24) all trigger the bug when the resulting expression contains utf8mb4 data going into a utf8 column.
+6. **LOAD DATA is affected** (E18): File-based imports with emoji data also bypass truncation.
+7. **Multi-row INSERT**: Only emoji-containing rows bypass (E20) — ASCII rows in the same batch truncate correctly. The bug is per-value, not per-statement.
+8. **STRICT mode blocks it**: With `STRICT_TRANS_TABLES`, the insert fails with an error (E5).
+9. **Binary collation source is NOT affected** (E17): `SET NAMES binary` sends raw bytes through a different conversion path that handles truncation correctly.
+10. **Two workarounds avoid the bug**:
+    - `tidb_skip_utf8_check=ON` (E7): Skips all UTF-8 validation — no Warning 1366, truncation runs. Stores raw 4-byte emoji bytes in utf8 column.
+    - `tidb_check_mb4_value_in_utf8=OFF` (E21): Skips MB4-specific validation only — same effect, but narrower scope. Stores raw emoji bytes but allows other UTF-8 checks.
+11. **Replacement is 1:1**: Each 4-byte emoji → single `?` (0x3F). Character count preserved from input.
 
 ### Why Phases 1-8 Missed This
 
@@ -628,21 +652,21 @@ The customer's environment matched all three: `utf8` table charset, non-strict `
 
 ## Updated Summary
 
-**Total tests: 178** (91 Phases 1-6 + 61 Phase 7 + 14 Phase 8 + 12 Phase 9).
+**Total tests: 190** (91 Phases 1-6 + 61 Phase 7 + 14 Phase 8 + 24 Phase 9).
 
 - **Phases 1-8:** 166 tests, **0 bypasses** — every standard SQL path with valid-charset data enforces VARCHAR correctly
-- **Phase 9:** 12 tests, **6 bypasses confirmed** — utf8mb4→utf8 charset mismatch in non-strict mode skips truncation on INSERT/REPLACE INTO paths
+- **Phase 9:** 24 tests, **16 bypasses confirmed** — utf8mb4→utf8 charset mismatch in non-strict mode skips truncation across INSERT, REPLACE INTO, LOAD DATA, INSERT...SELECT, prepared statements, expression paths, and CHAR(N) columns
 
 ## Root Cause Analysis
 
 ### The Bug
 
-TiDB's non-strict `sql_mode` VARCHAR write path has two independent validation steps:
+TiDB's non-strict `sql_mode` string write path has two independent validation steps:
 
 1. **Charset validation** — detects invalid multibyte sequences (e.g., utf8mb4 bytes in a utf8 column)
-2. **Length enforcement** — truncates values exceeding `VARCHAR(N)` limit
+2. **Length enforcement** — truncates values exceeding `VARCHAR(N)` or `CHAR(N)` limit
 
-When charset validation fires (Warning 1366), the length enforcement step is **skipped**. The two steps are not properly chained — the Warning 1366 handler returns the mangled string without passing it through truncation.
+When charset validation fires (Warning 1366), the length enforcement step is **skipped**. The charset error from step 1 short-circuits the truncation logic — the replacement string (with `?` substitutions) is stored as-is, regardless of column length.
 
 ### Why It Matters
 
@@ -653,8 +677,8 @@ When charset validation fires (Warning 1366), the length enforcement step is **s
 ### Severity
 
 - **Affected versions:** At least v8.5.1 (tested); likely affects earlier versions
-- **Affected operations:** INSERT, REPLACE INTO (UPDATE and ODKU truncate correctly)
-- **Not affected:** Strict mode (errors correctly), utf8mb4 columns (no charset mismatch), `tidb_skip_utf8_check=ON` (skips validation entirely)
+- **Affected operations:** INSERT, REPLACE INTO, INSERT...SELECT, LOAD DATA, PREPARE/EXECUTE — also CHAR(N) columns, not just VARCHAR(N). UPDATE and ODKU truncate correctly.
+- **Not affected:** Strict mode (errors correctly), utf8mb4 columns (no charset mismatch), `tidb_skip_utf8_check=ON` (skips validation entirely), `tidb_check_mb4_value_in_utf8=OFF` (skips mb4 check), binary collation source
 
 ### Previous Hypotheses — Now Resolved
 
@@ -664,7 +688,7 @@ The following hypotheses from Phases 1-8 are no longer needed:
 2. ~~TiDB build or patch~~ — reproducible on stock v8.5.1
 3. ~~Proxy or middleware~~ — not a factor
 4. ~~DM syncer~~ — not a factor (though DM may trigger the same bug if it sends utf8mb4 data)
-5. ~~Internal metadata corruption~~ — Flen is correct; the bug is in the runtime code path
+5. ~~Internal metadata corruption~~ — column metadata is correct; the bug is in the runtime write path
 6. ~~Novel bug~~ — **confirmed**: this is a novel, unreported bug in TiDB's charset conversion + truncation interaction
 
 ## Recommended Follow-Up Debugging

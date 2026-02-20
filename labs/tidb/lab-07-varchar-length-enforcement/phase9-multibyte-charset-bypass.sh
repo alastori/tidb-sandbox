@@ -294,10 +294,303 @@ mysql_cmd phase9_test -e "
 check_result 12 "REPLACE INTO with emoji into VARCHAR(10)" 10
 echo ""
 
+# ===========================================================================
+# Additional scenarios — different write paths and expression types (E13-E24)
+# ===========================================================================
+echo "--- Additional write-path scenarios ---"
+echo ""
+
+# ---------------------------------------------------------------------------
+# E13: INSERT ... SELECT from utf8mb4 source table
+# Source table has utf8mb4 column, target has utf8 — charset mismatch
+# triggers Warning 1366 when data crosses charset boundary
+# ---------------------------------------------------------------------------
+echo "--- E13: INSERT ... SELECT from utf8mb4 source ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS src;
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE src (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
+  );
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  INSERT INTO src (val) VALUES ('ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ');
+  INSERT INTO t (val) SELECT val FROM src;
+" 2>/dev/null
+check_result 13 "INSERT...SELECT from utf8mb4 source into VARCHAR(10) utf8" 10
+echo ""
+
+# ---------------------------------------------------------------------------
+# E14: User variable with emoji
+# SET @v = emoji_string; INSERT INTO t VALUES (@v);
+# User variables may have utf8mb4 collation
+# ---------------------------------------------------------------------------
+echo "--- E14: User variable with emoji ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES utf8mb4;
+  SET @v = 'ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ';
+  INSERT INTO t (val) VALUES (@v);
+" 2>/dev/null
+check_result 14 "User variable with emoji into VARCHAR(10) utf8" 10
+echo ""
+
+# ---------------------------------------------------------------------------
+# E15: CONCAT producing oversized string with emoji
+# Expression path: CONCAT(ascii, emoji) → utf8 column
+# ---------------------------------------------------------------------------
+echo "--- E15: CONCAT with emoji components ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES (CONCAT('ABCDE', '📝', 'FGHIJ', '📓', 'KLMNO'));
+" 2>/dev/null
+check_result 15 "CONCAT with emoji into VARCHAR(10) utf8" 10
+echo ""
+
+# ---------------------------------------------------------------------------
+# E16: CHAR(N) column (not VARCHAR) — different truncation/padding logic
+# CHAR has different truncation/padding logic (right-pads with spaces)
+# ---------------------------------------------------------------------------
+echo "--- E16: CHAR(10) column with emoji ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val CHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES ('ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ');
+" 2>/dev/null
+check_result 16 "CHAR(10) utf8 + emoji" 10
+echo ""
+
+# ---------------------------------------------------------------------------
+# E17: Binary source collation → utf8 target
+# Binary collation uses a different conversion path that may handle
+# truncation differently
+# ---------------------------------------------------------------------------
+echo "--- E17: Binary collation source → utf8 column ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES binary;
+  INSERT INTO t (val) VALUES ('ABCDE\xF0\x9F\x93\x9DFGHIJ\xF0\x9F\x93\x93KLMNO\xF0\x9F\x96\x8DPQRST');
+" 2>/dev/null
+check_result 17 "Binary collation source with mb4 bytes into VARCHAR(10)" 10
+echo ""
+
+# ---------------------------------------------------------------------------
+# E18: LOAD DATA with emoji content
+# LOAD DATA imports file data through the same write path as INSERT
+# ---------------------------------------------------------------------------
+echo "--- E18: LOAD DATA with emoji ---"
+TMPCSV=$(mktemp "$TMPDIR/phase9_XXXXXX.csv")
+printf '1,ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ\n' > "$TMPCSV"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET GLOBAL local_infile = 1;
+" 2>/dev/null
+mysql_cmd --local-infile=1 phase9_test -e "
+  LOAD DATA LOCAL INFILE '$TMPCSV' INTO TABLE t
+  FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' (id, val);
+" 2>/dev/null
+check_result 18 "LOAD DATA with emoji into VARCHAR(10) utf8" 10
+rm -f "$TMPCSV"
+echo ""
+
+# ---------------------------------------------------------------------------
+# E19: Prepared statement (pymysql binary protocol) with emoji
+# Binary protocol may handle charset differently at network layer
+# ---------------------------------------------------------------------------
+echo "--- E19: pymysql binary protocol INSERT with emoji ---"
+if command -v python3 &>/dev/null; then
+  mysql_cmd phase9_test -e "
+    DROP TABLE IF EXISTS t;
+    CREATE TABLE t (
+      id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+    );
+  " 2>/dev/null
+
+  python3 -c "
+import sys
+try:
+    import pymysql
+except ImportError:
+    sys.exit(99)
+conn = pymysql.connect(host='127.0.0.1', port=$TIDB_PORT, user='root', database='phase9_test', charset='utf8mb4')
+cur = conn.cursor()
+cur.execute(\"SET SESSION sql_mode='$NONSTRICT'\")
+emoji_str = 'ABCDE\U0001F4DDFGHIJ\U0001F4D3KLMNO\U0001F58DPQRST\U0001F4DDUVWXYZ'
+cur.execute('INSERT INTO t (val) VALUES (%s)', (emoji_str,))
+conn.commit()
+conn.close()
+" 2>/dev/null
+  rc=$?
+
+  if [ "$rc" -eq 99 ]; then
+    printf "  E%-2s %-58s -> SKIPPED (pymysql not installed)\n" "19" "pymysql binary protocol + emoji"
+  else
+    check_result 19 "pymysql binary protocol INSERT with emoji" 10
+  fi
+else
+  printf "  E%-2s %-58s -> SKIPPED (python3 not available)\n" "19" "pymysql binary protocol + emoji"
+fi
+echo ""
+
+# ---------------------------------------------------------------------------
+# E20: Multi-row INSERT — some rows with emoji, some without
+# Tests whether per-row charset error affects truncation of other rows
+# ---------------------------------------------------------------------------
+echo "--- E20: Multi-row INSERT mixed emoji/ASCII ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES
+    (REPEAT('A', 30)),
+    ('Short📝Long📓Extra🖍Data'),
+    (REPEAT('B', 25)),
+    ('No emoji but very long string exceeding limit');
+" 2>/dev/null
+# Check each row individually
+mysql_cmd -N phase9_test -e "
+  SELECT id,
+    CHAR_LENGTH(val) AS char_len
+  FROM t ORDER BY id;
+" 2>/dev/null | {
+  any_bug=0
+  while read -r id clen; do
+    if [ "$clen" -gt 10 ]; then
+      printf "       id=%s char_len=%-3s (BUG!)\n" "$id" "$clen"
+      any_bug=1
+    else
+      printf "       id=%s char_len=%-3s (correct)\n" "$id" "$clen"
+    fi
+  done
+  if [ "$any_bug" -eq 1 ]; then
+    printf "  E%-2s %-58s -> BUG (some rows exceed limit)\n" "20" "Multi-row INSERT mixed emoji/ASCII"
+  else
+    printf "  E%-2s %-58s -> CORRECT\n" "20" "Multi-row INSERT mixed emoji/ASCII"
+  fi
+}
+# Fix counter outside subshell
+max_len=$(mysql_cmd -N phase9_test -e "SELECT MAX(CHAR_LENGTH(val)) FROM t;" 2>/dev/null)
+if [ -n "$max_len" ] && [ "$max_len" -gt 10 ]; then
+  BUG=$((BUG + 1))
+else
+  PASS=$((PASS + 1))
+fi
+echo ""
+
+# ---------------------------------------------------------------------------
+# E21: check_mb4_value_in_utf8=OFF as workaround
+# When OFF, skips MB4-in-UTF8 validation → no charset error →
+# truncation runs normally → should be CORRECT
+# ---------------------------------------------------------------------------
+echo "--- E21: check_mb4_value_in_utf8=OFF (potential workaround) ---"
+# Note: this is a global config, not a session variable. Use tidb_check_mb4_value_in_utf8
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET GLOBAL tidb_check_mb4_value_in_utf8 = OFF;
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES ('ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ');
+" 2>/dev/null
+check_result 21 "check_mb4_value_in_utf8=OFF + emoji (workaround?)" 10
+mysql_cmd -e "SET GLOBAL tidb_check_mb4_value_in_utf8 = ON;" 2>/dev/null
+echo ""
+
+# ---------------------------------------------------------------------------
+# E22: NOT NULL column (production uses NOT NULL, E1 uses DEFAULT NULL)
+# ---------------------------------------------------------------------------
+echo "--- E22: NOT NULL column with emoji ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci NOT NULL DEFAULT ''
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES ('ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ');
+" 2>/dev/null
+check_result 22 "NOT NULL VARCHAR(10) utf8 + emoji" 10
+echo ""
+
+# ---------------------------------------------------------------------------
+# E23: Prepared statement via SQL PREPARE/EXECUTE with emoji
+# Server-side prepared statement path
+# ---------------------------------------------------------------------------
+echo "--- E23: Server-side PREPARE/EXECUTE with emoji ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES utf8mb4;
+  SET @v = 'ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ';
+  PREPARE stmt FROM 'INSERT INTO t (val) VALUES (?)';
+  EXECUTE stmt USING @v;
+  DEALLOCATE PREPARE stmt;
+" 2>/dev/null
+check_result 23 "PREPARE/EXECUTE with emoji into VARCHAR(10)" 10
+echo ""
+
+# ---------------------------------------------------------------------------
+# E24: JSON_EXTRACT producing emoji → utf8 column
+# JSON stores utf8mb4 natively; extracting into utf8 column crosses charset
+# ---------------------------------------------------------------------------
+echo "--- E24: JSON_EXTRACT emoji → utf8 column ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS src;
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE src (
+    id INT PRIMARY KEY,
+    doc JSON
+  );
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO src VALUES (1, JSON_OBJECT('addr', 'ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ'));
+  INSERT INTO t (val) SELECT JSON_UNQUOTE(JSON_EXTRACT(doc, '\$.addr')) FROM src;
+" 2>/dev/null
+check_result 24 "JSON_EXTRACT emoji into VARCHAR(10) utf8" 10
+echo ""
+
 # ---------------------------------------------------------------------------
 # Cleanup & Summary
 # ---------------------------------------------------------------------------
 mysql_cmd -e "SET GLOBAL sql_mode = '$STRICT';"
+mysql_cmd -e "SET GLOBAL tidb_check_mb4_value_in_utf8 = ON;" 2>/dev/null
+mysql_cmd -e "SET GLOBAL tidb_skip_utf8_check = OFF;" 2>/dev/null
 mysql_cmd -e "DROP DATABASE IF EXISTS phase9_test;"
 
 echo "=== Phase 9 Summary ==="
@@ -308,7 +601,7 @@ echo ""
 if [ "$BUG" -gt 0 ]; then
   echo "  *** BYPASS CONFIRMED ***"
   echo "  utf8mb4 chars into utf8 column bypasses VARCHAR truncation"
-  echo "  Root cause: Warning 1366 code path skips length enforcement"
+  echo "  Root cause: Warning 1366 code path short-circuits length enforcement"
 else
   echo "  No bypasses detected in this run."
 fi
