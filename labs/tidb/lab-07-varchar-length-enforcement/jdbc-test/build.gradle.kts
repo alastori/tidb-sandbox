@@ -12,7 +12,16 @@ dependencies {
 }
 
 application {
-    mainClass.set("VarcharJdbcTest")
+    mainClass.set(System.getProperty("mainClass") ?: "VarcharJdbcTest")
+}
+
+tasks.register<JavaExec>("runPartitioned") {
+    mainClass.set("VarcharPartitionedJdbcTest")
+    classpath = sourceSets["main"].runtimeClasspath
+}
+
+tasks.named<JavaExec>("run") {
+    // Allow override: ./gradlew run -DmainClass=VarcharPartitionedJdbcTest
 }
 
 java {

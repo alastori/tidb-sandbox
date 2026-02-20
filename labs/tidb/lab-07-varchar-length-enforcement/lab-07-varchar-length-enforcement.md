@@ -409,14 +409,163 @@ Yet the report has direct evidence: captured INSERT statement in application log
 - **No existing GitHub issue** matches user-table VARCHAR bypass via standard SQL
 - **System variables are not the cause** — `tidb_skip_utf8_check`, `tidb_enable_mutation_checker`, `tidb_check_mb4_value_in_utf8`, `tidb_batch_insert`, `SET NAMES binary`, and all combinations thereof still enforce VARCHAR truncation
 
+## Phase 7: Partitioned Table Reproduction
+
+**Date:** 2026-02-19
+**Context:** New evidence from `gnre.enderecoDestinatario` (VARCHAR(70)) confirmed `CHAR_LENGTH = 141` — 2x the column limit. DDL history verified: no schema change ever touched this column. Data is recent (Feb 7-17, 2026).
+
+### Key difference from Phases 1-6
+
+All prior tests used **non-partitioned tables** with simple PKs. The production tables use:
+
+- `PARTITION BY KEY(idEmpresa) PARTITIONS 128`
+- Composite PK: `PRIMARY KEY (id, idEmpresa) CLUSTERED`
+- `AUTO_ID_CACHE 1`
+- `utf8` table charset with `utf8mb4` connection charset (mismatch)
+- `NOT NULL` columns (Phases 1-6 tested `DEFAULT NULL`)
+
+### Phase 7 Results — Shell Tests (P1-P43)
+
+| # | Test Path | char_len | Result |
+| --- | --------- | -------- | ------ |
+| P1 | INSERT REPEAT — partitioned, NOT NULL | 70 | Truncated |
+| P2 | SET NAMES utf8mb4 → utf8 partitioned | 70 | Truncated |
+| P3 | Exact charset config (utf8mb4 client/conn) | 70 | Truncated |
+| P4 | Real address data (141 chars) | 70 | Truncated |
+| P5 | UPDATE to oversized — partitioned | 70 | Truncated |
+| P6 | INSERT...SELECT from TEXT — partitioned | 70 | Truncated |
+| P7 | REPLACE INTO — partitioned | 70 | Truncated |
+| P8 | ON DUPLICATE KEY UPDATE — partitioned | 70 | Truncated |
+| P9 | Multi-row INSERT across 5 partitions | 70 | Truncated |
+| P10 | INSERT IGNORE — partitioned | 70 | Truncated |
+| P11 | skip_utf8_check=ON — partitioned | 70 | Truncated |
+| P12 | skip_utf8+NAMES utf8mb4 — partitioned | 70 | Truncated |
+| P13 | mutation_checker=OFF — partitioned | 70 | Truncated |
+| P14 | skip_utf8+mutation OFF+utf8mb4 | 70 | Truncated |
+| P15 | batch_insert+dml_batch=10 — partitioned | 70 | Truncated |
+| P16 | opt_write_row_id=ON — partitioned | 70 | Truncated |
+| P17 | check_mb4=OFF+utf8mb4 — partitioned | 70 | Truncated |
+| P18 | PREPARE/EXECUTE+utf8mb4 — partitioned | 70 | Truncated |
+| P19 | pessimistic+constraint OFF — partitioned | 70 | Truncated |
+| P20 | optimistic txn — partitioned | 70 | Truncated |
+| P21 | 20 concurrent INSERTs across partitions | 70 | 0 overflow |
+| P22 | Concurrent DDL+50 INSERTs — partitioned | 70 | 0 overflow |
+| P23 | pymysql binary (utf8mb4) — partitioned | 70 | Truncated |
+| P24 | pymysql executemany 50 rows — partitioned | 70 | 0 overflow |
+| P25 | mysql-connector-python C ext — partitioned | 70 | Truncated |
+| P26 | LOAD DATA LOCAL 100 rows — partitioned | 70 | 0 overflow |
+| P27 | JSON_EXTRACT → partitioned VARCHAR(70) | 70 | Truncated |
+| P28 | GROUP_CONCAT → partitioned VARCHAR(70) | 70 | Truncated |
+| P29 | CONCAT address fields — partitioned | 70 | Truncated |
+| P30 | VARCHAR(70) DEFAULT NULL — partitioned | 70 | Truncated |
+| P31 | VARCHAR(120) NOT NULL — partitioned | 120 | Truncated |
+| P32 | PARTITION BY KEY, 1 partition | 70 | Truncated |
+| P33 | PARTITION BY HASH, 128 partitions | 70 | Truncated |
+| P34 | PARTITION BY RANGE | 70 | Truncated |
+| P35 | Full gnre schema replica (all 39 cols) | 70 | Truncated |
+| P36 | Full gnre schema + 20 concurrent inserts | 70 | 0 overflow |
+| P37 | tidb_dml_type='bulk' — partitioned | 70 | Truncated |
+| P38 | bulk DML + multi-row across partitions | 70 | 0 overflow |
+| P39 | bulk DML + full gnre schema | 70 | Truncated |
+| P40 | SET NAMES binary — partitioned | 70 | Truncated |
+| P41 | kitchen sink (all bypasses) — partitioned | 70 | Truncated |
+| P42 | sql_mode='' (empty) — partitioned | 70 | Truncated |
+| P43 | 4-byte emoji+skip_utf8 → utf8 partitioned | 70 | Truncated |
+
+### Phase 7 Results — JDBC Tests (J1-J18)
+
+MySQL Connector/J 9.1.0 against partitioned tables:
+
+| # | Test Path | char_len | Result |
+| --- | --------- | -------- | ------ |
+| J1 | setString (text, no prep) | 70 | Truncated |
+| J2 | setString (serverPrepStmts) | 70 | Truncated |
+| J3 | setString (prep + rewriteBatch) | 70 | Truncated |
+| J4 | setString (rewriteBatch only) | 70 | Truncated |
+| J5 | setCharacterStream (LONG_DATA) | 70 | Truncated |
+| J6 | setCharacterStream (text) | 70 | Truncated |
+| J7 | setClob StringReader | 70 | Truncated |
+| J8 | executeBatch (prep, 50 rows) | 70 | 0 overflow |
+| J9 | executeBatch (rewrite, 50 rows) | 70 | 0 overflow |
+| J10 | executeBatch (prep+rewrite, 50) | 70 | 0 overflow |
+| J11 | 1MB string via server prep | 70 | Truncated |
+| J12 | setObject(String) | 70 | Truncated |
+| J13 | setNString | 70 | Truncated |
+| J14 | characterEncoding=UTF-8 | 70 | Truncated |
+| J15 | characterEncoding=latin1 | 70 | Truncated |
+| J16 | batch across 20 partitions (prep) | 70 | 0 overflow |
+| J17 | batch across 20 partitions (rewrite) | 70 | 0 overflow |
+| J18 | full gnre schema INSERT — JDBC | 70 | Truncated |
+
+**Phase 7 conclusion:** Partitioned tables are NOT the cause. All 61 new tests (43 shell + 18 JDBC) enforce VARCHAR(70) correctly, including the exact production schema (all 39 columns, all indexes, PARTITION BY KEY 128, composite clustered PK, AUTO_ID_CACHE=1, utf8mb4→utf8 charset mismatch).
+
+## Phase 8: Targeted Hypothesis Testing
+
+Three hypotheses identified by specialist review (TiDB internals, QA, bug triage), tested locally.
+
+### Phase 8a: MODIFY COLUMN Metadata Corruption
+
+**Hypothesis:** Known bugs [#39915](https://github.com/pingcap/tidb/issues/39915), [#40620](https://github.com/pingcap/tidb/issues/40620) — `MODIFY COLUMN` on partitioned tables with indexes can corrupt adjacent column metadata (Flen → -1), disabling truncation. Production DDL shows `MODIFY COLUMN codigoBarras VARCHAR(48)` in Dec 2025, oversized data appears Feb 2026.
+
+**Tests:** Exact gnre schema (39 cols, PARTITION BY KEY 128, composite clustered PK, 4 indexes) with production DDL sequence (CREATE → ADD INDEX → MODIFY COLUMN codigoBarras 44→48), concurrent DDL+inserts, rapid DDL cycling (5 rounds of 44→48→44→48).
+
+| # | Test | char_len | Result |
+| --- | ---- | -------- | ------ |
+| 8a-1 | MODIFY COLUMN exact prod sequence | 70 | Truncated |
+| 8a-2 | Concurrent DDL + inserts (50 threads) | 70 | Truncated |
+| 8a-3 | Rapid DDL cycling (5 rounds × 10 inserts) | 70 | Truncated |
+
+**Result: 0 bypasses.** MODIFY COLUMN on v8.5.1 does not corrupt adjacent column Flen in our tests.
+
+### Phase 8b: ON DUPLICATE KEY UPDATE + CONCAT
+
+**Hypothesis:** ODKU with CONCAT expressions could bypass truncation if the concatenated result exceeds limits.
+
+| # | Test | char_len | Result |
+| --- | ---- | -------- | ------ |
+| 8b-1 | ODKU CONCAT of two literals (100+100) | 70 | Truncated |
+| 8b-2 | ODKU CONCAT from TEXT source column | 70 | Truncated |
+| 8b-3 | ODKU CONCAT user variables | 70 | Truncated |
+| 8b-4 | ODKU CONCAT via prepared statement | 70 | Truncated |
+| 8b-5 | pymysql binary protocol ODKU CONCAT | 70 | Truncated |
+
+**Result: 0 bypasses.**
+
+### Phase 8c: Multi-Node Schema Cache Divergence
+
+**Hypothesis:** In multi-TiDB-node clusters, DDL on one node could cause stale schema cache on other nodes, leading to different truncation behavior.
+
+**Setup:** `tiup playground v8.5.1 --db 2` (2 TiDB nodes from start, ports 63274 + 63276).
+
+| # | Test | Rows | Oversized | Result |
+| --- | ---- | ---- | --------- | ------ |
+| 8c-1 | Baseline: INSERT from both nodes (pre-DDL) | 4 | 0 | Truncated |
+| 8c-2 | MODIFY COLUMN on Node 1, INSERT from Node 2 | 4 | 0 | Truncated |
+| 8c-3 | Rapid DDL toggle (5 cycles) + concurrent inserts both nodes | 100 | 0 | Truncated |
+| 8c-4 | DDL race (ADD/DROP INDEX + MODIFY) while Node 2 inserts | 100 | 0 | Truncated |
+| 8c-5 | Bulk DML (tidb_dml_type='bulk') + multi-node + DDL | 50 | 0 | Truncated |
+| 8c-6 | ADMIN CHECK TABLE | — | — | Passed (no corruption) |
+
+**Result: 0 bypasses.** Multi-node schema propagation does not cause truncation failure in v8.5.1.
+
+### Phase 8 Summary
+
+**14 additional tests, 0 bypasses.** None of the three specialist-identified hypotheses reproduce the issue locally.
+
+## Updated Summary
+
+**Total tests: 166** (91 Phases 1-6 + 61 Phase 7 + 14 Phase 8), **0 bypasses.**
+
 ## What Remains Unknown
 
-How the application is writing oversized data to TiDB v8.5.1 right now. Since every standard path we tested enforces VARCHAR (91 tests, 0 bypasses), the gap is likely **environment-specific**:
+How the application is writing oversized data to TiDB v8.5.1 right now. Since every standard path we tested enforces VARCHAR (166 tests, 0 bypasses), the gap is likely **environment-specific**:
 
 1. **Application DB driver** — specific JDBC connector version, connection pool settings, or protocol-level behavior that we cannot reproduce
-2. **TiDB build or patch** — a custom or patched TiDB binary with different behavior
-3. **Undocumented session variable** — set by a proxy, connection pool, or init script that we haven't tested
-4. **Novel bug** — no existing GitHub issue matches; this may be unreported
+2. **TiDB build or patch** — a custom or patched TiDB binary with different behavior (customer confirmed Dumpling was modified)
+3. **Proxy or middleware** — ProxySQL, HAProxy, TiProxy, service mesh between app and TiDB
+4. **DM (Data Migration) syncer** — if still running incremental replication from MariaDB, the DM syncer writes directly to TiKV and may bypass SQL-layer validation
+5. **Internal metadata corruption** — Flen=-1 on affected columns due to a DDL bug not reproducible in our test setup (requires tidb-ctl to confirm/rule out)
+6. **Novel bug** — no existing GitHub issue matches; this may be unreported
 
 ## Recommended Follow-Up Debugging
 
