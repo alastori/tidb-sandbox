@@ -630,6 +630,51 @@ Additional scenarios targeting different write paths and expression types:
     - `tidb_check_mb4_value_in_utf8=OFF` (E21): Skips MB4-specific validation only — same effect, but narrower scope. Stores raw emoji bytes but allows other UTF-8 checks.
 11. **Replacement is 1:1**: Each 4-byte emoji → single `?` (0x3F). Character count preserved from input.
 
+### Phase 9 Results — Edge Cases (E25-E30)
+
+Real-world consequences of oversized data stored via the bypass:
+
+| # | Test | Limit | char_len | Result | Notes |
+| --- | ---- | ----- | -------- | ------ | ----- |
+| E25 | Extreme length REPEAT('A📝', 5000) | 10 | 10,000 | **BUG** | No upper bound — 10K chars stored in VARCHAR(10), byte_len=10,000 |
+| E26 | Secondary index on oversized column | 10 | 30 | **BUG** | Index stores oversized data; `USE INDEX` SELECT returns char_len=30 |
+| E27 | Unique index + two different oversized values | 10 | 17 | **BUG** | Both `AAAAA?BBBBB?CCCCC` and `XXXXX?YYYYY?ZZZZZ` coexist (2 rows) under unique constraint |
+| E28 | ADMIN CHECK TABLE after oversized writes | — | — | PASSED | TiDB's integrity checker does **not** detect the violation — blind spot |
+| E29 | SELECT with WHERE on oversized column | 10 | 30 | **BUG** | Oversized data fully queryable: `CHAR_LENGTH > 10` (1 row), `LIKE 'ABCDE%'` (1 row), `= 'ABCDE?FGHIJ?...'` (1 row) |
+| E30 | ALTER TABLE MODIFY COLUMN VARCHAR(10)→(5) | 10→5 | 30→5 | Accepted | ALTER silently truncates oversized data (pre=30, post=5) — retroactive fix but also data loss risk |
+
+E25 is the most striking: **10,000 characters in a VARCHAR(10) column** with zero enforcement. The bypass scales linearly with input size.
+
+E28 reveals an operational blind spot: `ADMIN CHECK TABLE` passes even with an indexed VARCHAR(10) column containing 30-char values. There is no built-in tool to detect this violation after the fact.
+
+E30 shows that `ALTER TABLE MODIFY COLUMN` to a smaller size will silently truncate the oversized data, which can serve as a retroactive fix — but also means data loss if applied unknowingly.
+
+### MySQL 8.0 Comparison
+
+Side-by-side comparison of all 16 TiDB bypass scenarios against MySQL 8.0 (Docker), using identical non-strict `sql_mode` and `SET NAMES utf8mb4` on both systems.
+
+| # | Test | TiDB char_len | MySQL char_len | TiDB | MySQL |
+| --- | ---- | ------------- | -------------- | ---- | ----- |
+| E1 | VARCHAR(10) utf8 + emoji (core repro) | 30 | 10 | **BUG** | CORRECT |
+| E3 | Multiple emoji types into VARCHAR(10) | 15 | 10 | **BUG** | CORRECT |
+| E4 | Partitioned gnre VARCHAR(70) + emoji | 95 | 70 | **BUG** | CORRECT |
+| E8 | Mixed utf8 + embedded emoji | 21 | 10 | **BUG** | CORRECT |
+| E9 | Brazilian addresses + emoji VARCHAR(70) | 93 | 70 | **BUG** | CORRECT |
+| E12 | REPLACE INTO + emoji | 23 | 10 | **BUG** | CORRECT |
+| E13 | INSERT...SELECT from utf8mb4 source | 30 | 10 | **BUG** | CORRECT |
+| E14 | User variable with emoji | 30 | 10 | **BUG** | CORRECT |
+| E15 | CONCAT with emoji components | 17 | 10 | **BUG** | CORRECT |
+| E16 | CHAR(10) utf8 + emoji | 30 | 10 | **BUG** | CORRECT |
+| E18 | LOAD DATA with emoji | 30 | 10 | **BUG** | CORRECT |
+| E20 | Multi-row INSERT mixed emoji/ASCII | 21 | 10 | **BUG** | CORRECT |
+| E22 | NOT NULL VARCHAR(10) + emoji | 30 | 10 | **BUG** | CORRECT |
+| E23 | PREPARE/EXECUTE with emoji | 30 | ERROR | **BUG** | CORRECT (rejects utf8mb4→utf8 collation conversion) |
+| E24 | JSON_EXTRACT emoji → utf8 VARCHAR(10) | 30 | 10 | **BUG** | CORRECT |
+
+**Result:** MySQL correctly handles all 15 scenarios where TiDB bypasses — 14 by truncating to the VARCHAR limit, and E23 by rejecting the utf8mb4→utf8 collation conversion outright (ERROR 3988, stricter than TiDB). Both systems used equivalent non-strict `sql_mode` (no `STRICT_TRANS_TABLES`) and `SET NAMES utf8mb4`. MySQL 8.0 does not support `NO_AUTO_CREATE_USER`, so that flag was omitted from MySQL's `sql_mode`.
+
+Script: `phase9-mysql-comparison.sh` (requires Docker + TiDB playground).
+
 ### Why Phases 1-8 Missed This
 
 All 166 prior tests used either:
@@ -652,10 +697,11 @@ The customer's environment matched all three: `utf8` table charset, non-strict `
 
 ## Updated Summary
 
-**Total tests: 190** (91 Phases 1-6 + 61 Phase 7 + 14 Phase 8 + 24 Phase 9).
+**Total tests: 196** (91 Phases 1-6 + 61 Phase 7 + 14 Phase 8 + 30 Phase 9).
 
 - **Phases 1-8:** 166 tests, **0 bypasses** — every standard SQL path with valid-charset data enforces VARCHAR correctly
-- **Phase 9:** 24 tests, **16 bypasses confirmed** — utf8mb4→utf8 charset mismatch in non-strict mode skips truncation across INSERT, REPLACE INTO, LOAD DATA, INSERT...SELECT, prepared statements, expression paths, and CHAR(N) columns
+- **Phase 9:** 30 tests (E1-E30), **20 bypasses confirmed** — utf8mb4→utf8 charset mismatch in non-strict mode skips truncation across INSERT, REPLACE INTO, LOAD DATA, INSERT...SELECT, prepared statements, expression paths, and CHAR(N) columns. Edge cases (E25-E30) confirm no upper bound on oversized data, index and unique constraint behavior with oversized values, and ADMIN CHECK TABLE blind spot.
+- **MySQL 8.0 comparison:** 15 side-by-side tests confirm MySQL correctly handles every bypass scenario (14 truncate, 1 rejects with ERROR)
 
 ## Root Cause Analysis
 

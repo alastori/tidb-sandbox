@@ -585,6 +585,168 @@ mysql_cmd phase9_test -e "
 check_result 24 "JSON_EXTRACT emoji into VARCHAR(10) utf8" 10
 echo ""
 
+# ===========================================================================
+# Edge-case scenarios — real-world consequences of the bypass (E25-E30)
+# ===========================================================================
+echo "--- Edge-case scenarios (E25-E30) ---"
+echo ""
+
+# ---------------------------------------------------------------------------
+# E25: Extreme length — how far can the bypass go?
+# Is there any upper bound on oversized data stored via this path?
+# ---------------------------------------------------------------------------
+echo "--- E25: Extreme length REPEAT('A📝', 5000) into VARCHAR(10) ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES (REPEAT('A📝', 5000));
+" 2>/dev/null
+char_len_e25=$(mysql_cmd -N phase9_test -e "SELECT MAX(CHAR_LENGTH(val)) FROM t;" 2>/dev/null)
+byte_len_e25=$(mysql_cmd -N phase9_test -e "SELECT MAX(LENGTH(val)) FROM t;" 2>/dev/null)
+if [ -z "$char_len_e25" ] || [ "$char_len_e25" = "NULL" ]; then
+  printf "  E%-2s %-58s -> char_len=NULL\n" "25" "Extreme length REPEAT('A📝', 5000)"
+  PASS=$((PASS + 1))
+elif [ "$char_len_e25" -le 10 ]; then
+  printf "  E%-2s %-58s -> char_len=%-3s (CORRECT)\n" "25" "Extreme length REPEAT('A📝', 5000)" "$char_len_e25"
+  PASS=$((PASS + 1))
+else
+  printf "  E%-2s %-58s -> char_len=%-5s byte_len=%-5s (BUG! limit=10)\n" "25" "Extreme length REPEAT('A📝', 5000)" "$char_len_e25" "$byte_len_e25"
+  BUG=$((BUG + 1))
+fi
+echo ""
+
+# ---------------------------------------------------------------------------
+# E26: Secondary index on oversized column
+# Does an indexed VARCHAR(10) with oversized data cause index issues?
+# Can we SELECT via the index?
+# ---------------------------------------------------------------------------
+echo "--- E26: Secondary index on oversized column ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL,
+    INDEX idx_val (val)
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES ('ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ');
+" 2>/dev/null
+check_result 26 "Secondary index on oversized VARCHAR(10)" 10
+
+# Check if index-based SELECT works
+idx_result=$(mysql_cmd -N phase9_test -e "SELECT CHAR_LENGTH(val) FROM t USE INDEX (idx_val) WHERE val IS NOT NULL;" 2>/dev/null || echo "ERROR")
+printf "       Index SELECT result: char_len=%s\n" "$idx_result"
+echo ""
+
+# ---------------------------------------------------------------------------
+# E27: Unique index + two different oversized values
+# Can two distinct oversized strings coexist under a unique constraint?
+# ---------------------------------------------------------------------------
+echo "--- E27: Unique index + two different oversized values ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL,
+    UNIQUE INDEX uq_val (val)
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES ('AAAAA📝BBBBB📓CCCCC');
+  INSERT INTO t (val) VALUES ('XXXXX📝YYYYY📓ZZZZZ');
+" 2>/dev/null
+row_count=$(mysql_cmd -N phase9_test -e "SELECT COUNT(*) FROM t;" 2>/dev/null)
+max_len=$(mysql_cmd -N phase9_test -e "SELECT MAX(CHAR_LENGTH(val)) FROM t;" 2>/dev/null)
+if [ -n "$max_len" ] && [ "$max_len" -gt 10 ]; then
+  printf "  E%-2s %-58s -> rows=%s max_char_len=%s (BUG!)\n" "27" "Unique index + two oversized values" "$row_count" "$max_len"
+  BUG=$((BUG + 1))
+else
+  printf "  E%-2s %-58s -> rows=%s max_char_len=%s (CORRECT)\n" "27" "Unique index + two oversized values" "$row_count" "$max_len"
+  PASS=$((PASS + 1))
+fi
+echo ""
+
+# ---------------------------------------------------------------------------
+# E28: ADMIN CHECK TABLE after oversized writes
+# Does TiDB's own integrity checker detect the violation?
+# ---------------------------------------------------------------------------
+echo "--- E28: ADMIN CHECK TABLE after oversized writes ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL,
+    INDEX idx_val (val)
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES ('ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ');
+  INSERT INTO t (val) VALUES ('SHORT📝OK📓END');
+" 2>/dev/null
+admin_result=$(mysql_cmd phase9_test -e "ADMIN CHECK TABLE t;" 2>&1 || true)
+if echo "$admin_result" | grep -qiE "ERROR|inconsist|corrupt"; then
+  printf "  E%-2s %-58s -> DETECTED (integrity error)\n" "28" "ADMIN CHECK TABLE after oversized writes"
+else
+  printf "  E%-2s %-58s -> PASSED (no error detected)\n" "28" "ADMIN CHECK TABLE after oversized writes"
+fi
+# Not a pass/bug counter — this is a diagnostic test
+echo ""
+
+# ---------------------------------------------------------------------------
+# E29: SELECT with WHERE on oversized column
+# Can the oversized data be queried/filtered normally?
+# ---------------------------------------------------------------------------
+echo "--- E29: SELECT with WHERE on oversized column ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES ('ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ');
+  INSERT INTO t (val) VALUES ('short');
+" 2>/dev/null
+
+# Test various WHERE conditions on oversized data
+where_gt10=$(mysql_cmd -N phase9_test -e "SELECT COUNT(*) FROM t WHERE CHAR_LENGTH(val) > 10;" 2>/dev/null)
+where_like=$(mysql_cmd -N phase9_test -e "SELECT COUNT(*) FROM t WHERE val LIKE 'ABCDE%';" 2>/dev/null)
+where_eq=$(mysql_cmd -N phase9_test -e "SELECT COUNT(*) FROM t WHERE val = 'ABCDE?FGHIJ?KLMNO?PQRST?UVWXYZ';" 2>/dev/null)
+check_result 29 "SELECT WHERE on oversized column" 10
+printf "       WHERE CHAR_LENGTH>10: %s rows | WHERE LIKE: %s rows | WHERE = mangled: %s rows\n" \
+  "$where_gt10" "$where_like" "$where_eq"
+echo ""
+
+# ---------------------------------------------------------------------------
+# E30: ALTER TABLE MODIFY COLUMN after oversized writes
+# What happens when you shrink the column after storing oversized data?
+# ---------------------------------------------------------------------------
+echo "--- E30: ALTER TABLE MODIFY COLUMN after oversized writes ---"
+mysql_cmd phase9_test -e "
+  DROP TABLE IF EXISTS t;
+  CREATE TABLE t (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    val VARCHAR(10) COLLATE utf8_general_ci DEFAULT NULL
+  );
+  SET NAMES utf8mb4;
+  INSERT INTO t (val) VALUES ('ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ');
+" 2>/dev/null
+
+pre_len=$(mysql_cmd -N phase9_test -e "SELECT CHAR_LENGTH(val) FROM t WHERE id = 1;" 2>/dev/null)
+alter_result=$(mysql_cmd phase9_test -e "ALTER TABLE t MODIFY COLUMN val VARCHAR(5) COLLATE utf8_general_ci DEFAULT NULL;" 2>&1 || true)
+
+if echo "$alter_result" | grep -qiE "ERROR|1406|Data too long"; then
+  printf "  E%-2s %-58s -> ALTER rejected (ERROR)\n" "30" "MODIFY COLUMN VARCHAR(10)→(5) after oversized"
+  printf "       Pre-ALTER char_len=%s | ALTER blocked by oversized data\n" "$pre_len"
+else
+  post_len=$(mysql_cmd -N phase9_test -e "SELECT CHAR_LENGTH(val) FROM t WHERE id = 1;" 2>/dev/null)
+  printf "  E%-2s %-58s -> ALTER accepted\n" "30" "MODIFY COLUMN VARCHAR(10)→(5) after oversized"
+  printf "       Pre-ALTER char_len=%s | Post-ALTER char_len=%s\n" "$pre_len" "$post_len"
+fi
+echo ""
+
 # ---------------------------------------------------------------------------
 # Cleanup & Summary
 # ---------------------------------------------------------------------------
