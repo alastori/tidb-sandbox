@@ -552,20 +552,120 @@ Three hypotheses identified by specialist review (TiDB internals, QA, bug triage
 
 **14 additional tests, 0 bypasses.** None of the three specialist-identified hypotheses reproduce the issue locally.
 
+## Phase 9: Multi-byte Charset Bypass Reproduction
+
+**Date:** 2026-02-20
+**Context:** Customer live demo session revealed the root cause: inserting strings containing utf8mb4 characters (emojis) into a `utf8` column in non-strict `sql_mode`. TiDB generates Warning 1366 ("Incorrect string value") and replaces the invalid bytes, but **skips VARCHAR length truncation**. The mangled string lands in full, exceeding the column limit.
+
+### Root Cause Mechanism
+
+When a utf8mb4 character (e.g., emoji `📝`, 4 bytes: `F0 9F 93 9D`) is inserted into a `utf8` column (3-byte max per character):
+
+1. TiDB detects the invalid multibyte sequence
+2. Generates **Warning 1366**: "Incorrect string value"
+3. Replaces each invalid multibyte sequence with `?` (0x3F) — character count is preserved, not expanded
+4. **BUG:** Skips the VARCHAR length enforcement step
+5. The mangled string is stored in full, regardless of `VARCHAR(N)` limit
+
+**MySQL comparison:** MySQL performs both operations — replaces invalid characters AND truncates to the VARCHAR limit. TiDB only does step 3, missing step 4.
+
+### Customer Evidence
+
+- `VARCHAR(10)` column storing `CHAR_LENGTH = 44` (customer test), `CHAR_LENGTH = 30` (lab E1 repro)
+- Production `gnre.enderecoDestinatario VARCHAR(70)` storing up to 141 characters
+- Source: e-commerce integration addresses containing emoji/special characters
+- Data inserted after migration to TiDB (not inherited from source DB)
+
+### Phase 9 Results
+
+| # | Test | Limit | char_len | Result |
+| --- | ---- | ----- | -------- | ------ |
+| E1 | VARCHAR(10) utf8 + emoji (core repro) | 10 | 30 | **BUG** |
+| E2 | ASCII-only baseline (no emoji) | 10 | 10 | CORRECT |
+| E3 | Multiple emoji types (📝📓🖍😀) | 10 | 15 | **BUG** |
+| E4 | Partitioned gnre schema + emoji | 70 | 95 | **BUG** |
+| E5 | STRICT_TRANS_TABLES mode | 10 | — | CORRECT (ERROR) |
+| E6 | utf8mb4 column charset (no mismatch) | 10 | 10 | CORRECT |
+| E7 | tidb_skip_utf8_check=ON | 10 | 10 | CORRECT |
+| E8 | Mixed utf8 text + embedded emoji | 10 | 21 | **BUG** |
+| E9 | Brazilian addresses + emoji | 70 | 93 | **BUG** |
+| E10 | UPDATE with emoji content | 10 | 10 | CORRECT |
+| E11 | ON DUPLICATE KEY UPDATE + emoji | 10 | 10 | CORRECT |
+| E12 | REPLACE INTO + emoji | 10 | 23 | **BUG** |
+
+E1 hex detail: `ABCDE📝FGHIJ📓KLMNO🖍PQRST📝UVWXYZ` (30 chars) stored as `ABCDE?FGHIJ?KLMNO?PQRST?UVWXYZ` — each 4-byte emoji replaced with `?` (0x3F), full 30-char string stored in VARCHAR(10) without truncation.
+
+### Key Findings
+
+1. **The bypass requires a charset mismatch**: utf8mb4 data into a utf8 column. When the column charset is utf8mb4 (E6), truncation works correctly — the emoji bytes are valid, no Warning 1366 fires, and the normal truncation path runs.
+2. **INSERT and REPLACE INTO are affected**: INSERT (E1, E3, E4, E8, E9) and REPLACE INTO (E12) bypass truncation through the Warning 1366 code path.
+3. **UPDATE and ODKU are NOT affected**: UPDATE (E10) and ON DUPLICATE KEY UPDATE (E11) correctly truncate even with emoji content. The bug is specific to the INSERT/REPLACE execution path.
+4. **STRICT mode blocks it**: With `STRICT_TRANS_TABLES`, the insert fails with an error (E5), preventing the bypass entirely.
+5. **ASCII data unaffected**: Pure ASCII strings still truncate correctly (E2), confirming the bug is specific to the charset conversion error path.
+6. **`tidb_skip_utf8_check=ON` avoids the bug** (E7): Skipping UTF-8 validation means no Warning 1366 fires, so the normal truncation path runs and enforces the limit.
+7. **Partitioned tables affected equally**: The partitioned gnre schema (E4) shows the same bypass — partitioning is not a factor, as confirmed in Phase 7.
+8. **Replacement is 1:1**: Each 4-byte emoji → single `?` (0x3F). The character count is preserved from the original input, not expanded. A 30-char input with 4 emojis stores as 30 chars.
+
+### Why Phases 1-8 Missed This
+
+All 166 prior tests used either:
+
+- Pure ASCII/Latin characters (valid in utf8, no Warning 1366 triggered)
+- `REPEAT('ã', N)` — `ã` (U+00E3) is a 2-byte character, valid in utf8
+- `tidb_skip_utf8_check=ON` (P43) — skips validation entirely, no Warning 1366 path
+
+None combined: (a) actual 4-byte utf8mb4 characters + (b) utf8 column charset + (c) default utf8 validation enabled. This specific combination triggers the Warning 1366 code path where VARCHAR length enforcement is missing.
+
+### Production Conditions for Bypass
+
+All three conditions must be true simultaneously:
+
+1. **Table column uses `utf8` charset** (not `utf8mb4`)
+2. **`STRICT_TRANS_TABLES` absent** from `sql_mode`
+3. **Application sends utf8mb4 data** (emoji, CJK Extension B, musical symbols, etc.)
+
+The customer's environment matched all three: `utf8` table charset, non-strict `sql_mode`, and e-commerce integration data containing emoji characters from marketplace platforms.
+
 ## Updated Summary
 
-**Total tests: 166** (91 Phases 1-6 + 61 Phase 7 + 14 Phase 8), **0 bypasses.**
+**Total tests: 178** (91 Phases 1-6 + 61 Phase 7 + 14 Phase 8 + 12 Phase 9).
 
-## What Remains Unknown
+- **Phases 1-8:** 166 tests, **0 bypasses** — every standard SQL path with valid-charset data enforces VARCHAR correctly
+- **Phase 9:** 12 tests, **6 bypasses confirmed** — utf8mb4→utf8 charset mismatch in non-strict mode skips truncation on INSERT/REPLACE INTO paths
 
-How the application is writing oversized data to TiDB v8.5.1 right now. Since every standard path we tested enforces VARCHAR (166 tests, 0 bypasses), the gap is likely **environment-specific**:
+## Root Cause Analysis
 
-1. **Application DB driver** — specific JDBC connector version, connection pool settings, or protocol-level behavior that we cannot reproduce
-2. **TiDB build or patch** — a custom or patched TiDB binary with different behavior (customer confirmed Dumpling was modified)
-3. **Proxy or middleware** — ProxySQL, HAProxy, TiProxy, service mesh between app and TiDB
-4. **DM (Data Migration) syncer** — if still running incremental replication from MariaDB, the DM syncer writes directly to TiKV and may bypass SQL-layer validation
-5. **Internal metadata corruption** — Flen=-1 on affected columns due to a DDL bug not reproducible in our test setup (requires tidb-ctl to confirm/rule out)
-6. **Novel bug** — no existing GitHub issue matches; this may be unreported
+### The Bug
+
+TiDB's non-strict `sql_mode` VARCHAR write path has two independent validation steps:
+
+1. **Charset validation** — detects invalid multibyte sequences (e.g., utf8mb4 bytes in a utf8 column)
+2. **Length enforcement** — truncates values exceeding `VARCHAR(N)` limit
+
+When charset validation fires (Warning 1366), the length enforcement step is **skipped**. The two steps are not properly chained — the Warning 1366 handler returns the mangled string without passing it through truncation.
+
+### Why It Matters
+
+- Any application inserting utf8mb4 data (emojis, certain CJK characters, musical symbols) into `utf8` columns with non-strict `sql_mode` will silently store oversized data
+- The oversized data only surfaces during cluster rebuild (Dumpling → IMPORT INTO with strict mode) as ERROR 1406
+- MySQL handles this correctly, so applications migrating from MySQL may not expect this behavior
+
+### Severity
+
+- **Affected versions:** At least v8.5.1 (tested); likely affects earlier versions
+- **Affected operations:** INSERT, REPLACE INTO (UPDATE and ODKU truncate correctly)
+- **Not affected:** Strict mode (errors correctly), utf8mb4 columns (no charset mismatch), `tidb_skip_utf8_check=ON` (skips validation entirely)
+
+### Previous Hypotheses — Now Resolved
+
+The following hypotheses from Phases 1-8 are no longer needed:
+
+1. ~~Application DB driver~~ — the bypass is in TiDB's SQL layer, not driver-specific
+2. ~~TiDB build or patch~~ — reproducible on stock v8.5.1
+3. ~~Proxy or middleware~~ — not a factor
+4. ~~DM syncer~~ — not a factor (though DM may trigger the same bug if it sends utf8mb4 data)
+5. ~~Internal metadata corruption~~ — Flen is correct; the bug is in the runtime code path
+6. ~~Novel bug~~ — **confirmed**: this is a novel, unreported bug in TiDB's charset conversion + truncation interaction
 
 ## Recommended Follow-Up Debugging
 
