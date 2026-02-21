@@ -296,7 +296,7 @@ For multi-cluster setups, use the +10000 offset pattern:
 tiup playground v8.5.4 --tag upstream --pd.port 2379 --db.port 4000
 
 # Downstream (+10000)
-tiup playground v8.5.4 --tag downstream --port-offset 10000
+tiup playground v8.5.4 --tag downstream --db.port 14000 --pd.port 12379
 ```
 
 ### 4.3 Health Check Pattern
@@ -388,7 +388,7 @@ run_step() {
 Every bash script starts with:
 
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -398,11 +398,11 @@ LAB_DIR="$(dirname "${SCRIPT_DIR}")"
 ### 5.2 common.sh (Scripted Validation)
 
 For labs with multiple step scripts, centralize shared state in `common.sh`.
-Since `common.sh` is sourced (not executed directly), it omits `set -euo pipefail`
-— the calling script's flags apply:
+Since `common.sh` is sourced (not executed directly), it omits the shebang and
+`set -euo pipefail` — the calling script's flags apply:
 
 ```bash
-#!/bin/bash
+# Sourced by step scripts — not executed directly
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LAB_DIR="$(dirname "${SCRIPT_DIR}")"
@@ -439,7 +439,7 @@ Step scripts source it:
 Investigation labs use numbered phase scripts instead of step scripts:
 
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

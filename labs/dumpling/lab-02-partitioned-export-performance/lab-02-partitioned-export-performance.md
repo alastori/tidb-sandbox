@@ -1,7 +1,7 @@
 <!-- lab-meta
 archetype: investigation
 status: released
-products: [dumpling]
+products: [dumpling, tidb]
 -->
 
 # Lab 02 – Dumpling Partitioned Export Performance (ORDER BY + Composite Key)

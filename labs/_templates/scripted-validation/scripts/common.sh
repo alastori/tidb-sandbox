@@ -1,6 +1,6 @@
-#!/bin/bash
 # Common utilities and environment variables for Lab XX
-# Source this file from other scripts: source "${SCRIPT_DIR}/common.sh"
+# Sourced by step scripts — not executed directly
+# Usage: source "${SCRIPT_DIR}/common.sh"
 
 # Path resolution
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
