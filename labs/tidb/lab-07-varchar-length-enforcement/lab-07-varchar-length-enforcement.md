@@ -8,6 +8,10 @@
 
 Reproduce reported issue: TiDB stores data beyond VARCHAR limit when `STRICT_TRANS_TABLES` is absent from `sql_mode`, and IMPORT INTO rejects it during cluster rebuild.
 
+## Summary
+
+**Root cause found in Phase 9:** Inserting utf8mb4 data (emojis) into a `utf8` column in non-strict `sql_mode` triggers Warning 1366, which short-circuits VARCHAR length enforcement. The mangled string is stored in full. MySQL handles this correctly. 196 tests total; 20 bypass scenarios confirmed. See [Phase 9](#phase-9-multi-byte-charset-bypass-reproduction) for details.
+
 ## Reported Configuration
 
 ```sql
@@ -25,6 +29,54 @@ CREATE TABLE `contato` (
   ...
 );
 ```
+
+### Important Constraint from Report
+
+The report explicitly states: the schemas never changed (no resize). The oversized data did **not** come from MySQL/MariaDB — it was inserted **after** switching writes to TiDB.
+
+Additionally:
+
+- They captured the INSERT statement from application logs and confirmed TiDB accepted it
+- Data **continues to be created** with oversized values (present tense, on v8.5.1)
+
+This rules out all migration-path hypotheses (Lightning, BR, DM, Dumpling, schema mismatch). The oversized writes are happening through TiDB's SQL layer on v8.5.1, right now.
+
+### Unverified Premises
+
+Two claims from the report have not been independently verified and could change the diagnosis:
+
+1. **"The schema never changed"** — needs proof via DDL history. Query `information_schema.DDL_JOBS` for the table to rule out a `MODIFY COLUMN` or `ALTER TABLE` that temporarily widened the column:
+
+   ```sql
+   SELECT JOB_ID, JOB_TYPE, STATE,
+     DB_NAME, TABLE_NAME,
+     SUBSTRING(QUERY, 1, 80) AS query_prefix,
+     START_TIME
+   FROM information_schema.DDL_JOBS
+   WHERE DB_NAME = '<database_name>'
+     AND TABLE_NAME = 'contato'
+   ORDER BY JOB_ID DESC
+   LIMIT 200;
+   ```
+
+   If any `modify column`, `change column`, or `create table ... like` appears, the "no schema change" premise is invalidated.
+
+2. **"TiDB stored 500+ chars"** — the app log shows TiDB *accepted* a 500-char INSERT, but non-strict mode *truncates + warns* (Warning 1406). The app may not check warnings. To confirm TiDB actually *stored* 500 chars, need client-proof evidence from the database itself:
+
+   ```sql
+   SELECT id,
+     CHAR_LENGTH(nome) AS char_len,
+     LENGTH(nome) AS byte_len,
+     COLLATION(nome) AS coll,
+     LEFT(nome, 80) AS preview,
+     LEFT(HEX(nome), 120) AS hex_prefix
+   FROM contato
+   WHERE CHAR_LENGTH(nome) > 120
+   ORDER BY char_len DESC
+   LIMIT 5;
+   ```
+
+   If this returns zero rows, the data was truncated as expected and the "stored 500+" premise is wrong — the app sent 500 chars, TiDB truncated to 120 + warned, and the app didn't check warnings.
 
 ## Lab Setup
 
@@ -281,11 +333,11 @@ Hypothesis: A specific `sql_mode` combination or mid-transaction change could by
 
 **Phase 6 conclusion:** sql_mode is exhaustively tested. Whether strict (error) or non-strict (truncate), TiDB v8.5.1 never stores data beyond VARCHAR(120). The 15 sql_mode variations add zero bypasses.
 
-## GitHub Issue Search
+### GitHub Issue Search
 
-Searched [pingcap/tidb](https://github.com/pingcap/tidb) for existing issues where VARCHAR length enforcement is bypassed. No exact match found for user-table VARCHAR bypass via standard SQL paths.
+Searched [pingcap/tidb](https://github.com/pingcap/tidb) for existing issues where VARCHAR length enforcement is bypassed. No exact match existed at the time of Phases 1-6. Bug report [#66319][i66319] was filed after Phase 9 confirmed the root cause.
 
-### Closest Matches
+#### Closest Matches
 
 | Issue | Summary |
 | ----- | ------- |
@@ -302,112 +354,11 @@ Searched [pingcap/tidb](https://github.com/pingcap/tidb) for existing issues whe
 [i21470]: https://github.com/pingcap/tidb/issues/21470
 [i33948]: https://github.com/pingcap/tidb/issues/33948
 [i65323]: https://github.com/pingcap/tidb/issues/65323
+[i66319]: https://github.com/pingcap/tidb/issues/66319
 
-### Key Observation
+#### Key Observation
 
-No existing issue describes data longer than `VARCHAR(N)` being stored **in full** (not truncated) via standard SQL INSERT/UPDATE on user tables. The symptom reported appears to be a novel, unreported behavior.
-
-## Important Constraint from Report
-
-The report explicitly states: the schemas never changed (no resize). The oversized data did **not** come from MySQL/MariaDB — it was inserted **after** switching writes to TiDB.
-
-Additionally:
-
-- They captured the INSERT statement from application logs and confirmed TiDB accepted it
-- Data **continues to be created** with oversized values (present tense, on v8.5.1)
-
-This rules out all migration-path hypotheses (Lightning, BR, DM, Dumpling, schema mismatch). The oversized writes are happening through TiDB's SQL layer on v8.5.1, right now.
-
-### Unverified Premises
-
-Two claims from the report have not been independently verified and could change the diagnosis:
-
-1. **"The schema never changed"** — needs proof via DDL history. Query `information_schema.DDL_JOBS` for the table to rule out a `MODIFY COLUMN` or `ALTER TABLE` that temporarily widened the column:
-
-   ```sql
-   SELECT JOB_ID, JOB_TYPE, STATE,
-     DB_NAME, TABLE_NAME,
-     SUBSTRING(QUERY, 1, 80) AS query_prefix,
-     START_TIME
-   FROM information_schema.DDL_JOBS
-   WHERE DB_NAME = '<database_name>'
-     AND TABLE_NAME = 'contato'
-   ORDER BY JOB_ID DESC
-   LIMIT 200;
-   ```
-
-   If any `modify column`, `change column`, or `create table ... like` appears, the "no schema change" premise is invalidated.
-
-2. **"TiDB stored 500+ chars"** — the app log shows TiDB *accepted* a 500-char INSERT, but non-strict mode *truncates + warns* (Warning 1406). The app may not check warnings. To confirm TiDB actually *stored* 500 chars, need client-proof evidence from the database itself:
-
-   ```sql
-   SELECT id,
-     CHAR_LENGTH(nome) AS char_len,
-     LENGTH(nome) AS byte_len,
-     COLLATION(nome) AS coll,
-     LEFT(nome, 80) AS preview,
-     LEFT(HEX(nome), 120) AS hex_prefix
-   FROM contato
-   WHERE CHAR_LENGTH(nome) > 120
-   ORDER BY char_len DESC
-   LIMIT 5;
-   ```
-
-   If this returns zero rows, the data was truncated as expected and the "stored 500+" premise is wrong — the app sent 500 chars, TiDB truncated to 120 + warned, and the app didn't check warnings.
-
-## The Central Contradiction
-
-If the source truly has `VARCHAR(120)` and uses non-strict `sql_mode`, TiDB should **truncate to 120 + emit Warning 1406** on every oversized INSERT. There is no standard MySQL/TiDB-compatible scenario where `VARCHAR(120)` stores 500 chars via normal SQL writes.
-
-Therefore, one of these must be true:
-
-1. **The schema at write time was not actually 120** — a DDL changed it to a larger value and was later reverted, or the reported DDL is from a different environment
-2. **The write path was not standard SQL** — a physical restore (BR), direct KV manipulation, or import tool preserved oversized data from a wider-column source
-3. **There is a specific, reproducible bug** in TiDB v8.5.1 that we have not triggered in 91 tests
-
-The debug runbook is designed to determine which of these three explanations applies.
-
-## Analysis
-
-### Rebuild failure (reproducible)
-
-```text
-+-----------+     +----------+      +-------------+
-| Source    |---->| Dumpling  |---->| Target TiDB |
-| TiDB      |     | (export)  |     | (default)   |
-| non-strict|     | faithful  |     |             |
-|           |     | raw dump  |     | IMPORT INTO |
-| VARCHAR   |     | 500 chars |     | STRICT mode |
-| rptd >120 |     |           |     | -> ERROR    |
-+-----------+     +-----------+     +-------------+
-```
-
-Phase 2 Test C reproduces the exact IMPORT INTO error. The mismatch between source and target sql_mode causes the rebuild failure.
-
-### Root cause (NOT reproducible)
-
-TiDB v8.5.1 is accepting INSERT statements that store data beyond VARCHAR(120) limit. We could not reproduce this in any of the 91 tested paths:
-
-- 16 SQL DML tests (Phase 1)
-- 5 Dumpling/IMPORT INTO tests (Phase 2)
-- 2 Lightning tests (Phase 3)
-- 40 environment-specific hypotheses (Phase 4)
-- 13 JDBC protocol tests (Phase 5)
-- 15 sql_mode variation tests (Phase 6)
-
-Every path truncates correctly. No GitHub issue describes this symptom for user tables.
-
-Yet the report has direct evidence: captured INSERT statement in application logs, confirmed accepted by TiDB, and data visible via SELECT with CHAR_LENGTH > 120.
-
-## What We Proved
-
-- **IMPORT INTO error is reproducible** (Phase 2, Test C) — strict mode + oversized data
-- **Dumpling exports raw data faithfully** — no validation against column constraints
-- **All 91 tested write paths enforce VARCHAR on v8.5.1** — SQL DML, IMPORT INTO, Lightning, environment-specific variables, JDBC protocol paths, and sql_mode variations
-- **Non-strict truncation emits Warning 1406** — every truncated INSERT produces `Warning 1406: Data too long for column 'nome'` (verified via `SHOW WARNINGS` and `@@warning_count`)
-- **`ADMIN CHECK TABLE` passes** after truncated writes — no data/index corruption detected
-- **No existing GitHub issue** matches user-table VARCHAR bypass via standard SQL
-- **System variables are not the cause** — `tidb_skip_utf8_check`, `tidb_enable_mutation_checker`, `tidb_check_mb4_value_in_utf8`, `tidb_batch_insert`, `SET NAMES binary`, and all combinations thereof still enforce VARCHAR truncation
+No existing issue described this symptom at the time of Phases 1-6. After Phase 9 identified the root cause (utf8mb4→utf8 charset mismatch bypassing truncation), [#66319][i66319] was filed.
 
 ## Phase 7: Partitioned Table Reproduction
 
@@ -555,6 +506,7 @@ Three hypotheses identified by specialist review (TiDB internals, QA, bug triage
 ## Phase 9: Multi-byte Charset Bypass Reproduction
 
 **Date:** 2026-02-20
+**Bug report:** [#66319](https://github.com/pingcap/tidb/issues/66319)
 **Context:** Customer live demo session revealed the root cause: inserting strings containing utf8mb4 characters (emojis) into a `utf8` column in non-strict `sql_mode`. TiDB generates Warning 1366 ("Incorrect string value") and replaces the invalid bytes, but **skips VARCHAR length truncation**. The mangled string lands in full, exceeding the column limit.
 
 ### Root Cause Mechanism
@@ -697,24 +649,9 @@ All three conditions must be true simultaneously:
 
 The customer's environment matched all three: `utf8` table charset, non-strict `sql_mode`, and e-commerce integration data containing emoji characters from marketplace platforms.
 
-## Updated Summary
-
-**Total tests: 196** (91 Phases 1-6 + 61 Phase 7 + 14 Phase 8 + 30 Phase 9).
-
-- **Phases 1-8:** 166 tests, **0 bypasses** — every standard SQL path with valid-charset data enforces VARCHAR correctly
-- **Phase 9:** 30 tests (E1-E30), **20 bypasses confirmed** — utf8mb4→utf8 charset mismatch in non-strict mode skips truncation across INSERT, REPLACE INTO, LOAD DATA, INSERT...SELECT, prepared statements, expression paths, and CHAR(N) columns. Edge cases (E25-E30) confirm no upper bound on oversized data, index and unique constraint behavior with oversized values, and ADMIN CHECK TABLE blind spot.
-- **MySQL 8.0 comparison:** 21 side-by-side tests (15 bypass scenarios + 6 edge cases) confirm MySQL correctly handles every scenario — truncates to VARCHAR limit in all cases where TiDB bypasses
-
 ## Root Cause Analysis
 
-### The Bug
-
-TiDB's non-strict `sql_mode` string write path has two independent validation steps:
-
-1. **Charset validation** — detects invalid multibyte sequences (e.g., utf8mb4 bytes in a utf8 column)
-2. **Length enforcement** — truncates values exceeding `VARCHAR(N)` or `CHAR(N)` limit
-
-When charset validation fires (Warning 1366), the length enforcement step is **skipped**. The charset error from step 1 short-circuits the truncation logic — the replacement string (with `?` substitutions) is stored as-is, regardless of column length.
+See [Phase 9: Root Cause Mechanism](#root-cause-mechanism) for the technical details.
 
 ### Why It Matters
 
@@ -742,3 +679,11 @@ The following hypotheses from Phases 1-8 are no longer needed:
 ## Recommended Follow-Up Debugging
 
 See [debug-runbook.md](debug-runbook.md) for an 11-step procedure ordered from least invasive (examine existing logs, verify table structure, DDL history, minimal isolated repro) to most invasive (general log). Designed for production use.
+
+## Summary
+
+**Total tests: 196** (91 Phases 1-6 + 61 Phase 7 + 14 Phase 8 + 30 Phase 9).
+
+- **Phases 1-8:** 166 tests, **0 bypasses** — every standard SQL path with valid-charset data enforces VARCHAR correctly
+- **Phase 9:** 30 tests (E1-E30), **20 bypasses confirmed** — utf8mb4→utf8 charset mismatch in non-strict mode skips truncation across INSERT, REPLACE INTO, LOAD DATA, INSERT...SELECT, prepared statements, expression paths, and CHAR(N) columns. Edge cases (E25-E30) confirm no upper bound on oversized data, index and unique constraint behavior with oversized values, and ADMIN CHECK TABLE blind spot.
+- **MySQL 8.0 comparison:** 21 side-by-side tests (15 bypass scenarios + 6 edge cases) confirm MySQL correctly handles every scenario — truncates to VARCHAR limit in all cases where TiDB bypasses
