@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: scripted-validation
+status: released
+products: [dm]
+-->
+
 # Lab 04 – DM Binlog Format Requirements (`ROW` / `STATEMENT` / `MIXED`)
 
 **Goal:** Demonstrate TiDB DM's hard architectural constraint requiring `binlog_format=ROW` by:

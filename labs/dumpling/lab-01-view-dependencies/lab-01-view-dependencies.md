@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: scripted-validation
+status: released
+products: [dumpling]
+-->
+
 # Lab 01 – Dumpling View Dependencies (Ordering + Restore Correctness)
 
 **Goal:** Show how view dependencies are emitted by different logical dump tools (mysqldump, mydumper, dumpling), and why restore ordering matters. Dumpling produces both a placeholder table (`*-schema.sql`) and a real view definition (`*-schema-view.sql`); if a loader applies only the schema file or applies it in the wrong order, the view becomes a table and downstream queries drift.

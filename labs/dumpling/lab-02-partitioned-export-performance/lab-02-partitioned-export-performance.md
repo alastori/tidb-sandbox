@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: investigation
+status: released
+products: [dumpling]
+-->
+
 # Lab 02 – Dumpling Partitioned Export Performance (ORDER BY + Composite Key)
 
 **Goal:** Reproduce the performance/OOM issue where Dumpling adds `ORDER BY` on composite primary keys when exporting partitioned tables, and document the gap where partition-aware chunking (`-r` per partition) is not supported upstream.

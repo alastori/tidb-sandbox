@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: manual-exploration
+status: released
+products: [tidb]
+-->
+
 # Lab 01 – TiDB v8.x: Base64 Decoding with `IMPORT INTO ... SET`
 
 Test the viability of using the `IMPORT INTO ... SET` syntax with the `FROM_BASE64()` function as a powerful workaround for selectively decoding Base64-encoded columns during data import.

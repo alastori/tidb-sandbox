@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: software-project
+status: released
+products: [tidb]
+-->
+
 # Lab-03 — TiDB Vector Store Basics: VECTOR Columns, TiFlash, and HNSW Indexes
 
 **Goal:** Demonstrate TiDB's native vector search capabilities, including the `VECTOR` data type, TiFlash replicas for vector indexes, HNSW index creation, and KNN queries using `VEC_COSINE_DISTANCE`.

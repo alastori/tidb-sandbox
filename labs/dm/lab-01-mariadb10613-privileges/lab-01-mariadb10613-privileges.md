@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: manual-exploration
+status: released
+products: [dm, mariadb]
+-->
+
 # Lab 01 – DM 8.5 + MariaDB 10.6.13: Privilege Fix & Workarounds
 
 Spin up TiDB DM 8.5.2 + MariaDB 10.6.13 and fix the privilege/precheck issues to prove incremental sync works.

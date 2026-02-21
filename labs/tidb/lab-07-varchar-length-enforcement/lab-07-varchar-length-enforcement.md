@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: investigation
+status: released
+products: [tidb]
+-->
+
 # Lab 07: VARCHAR Length Enforcement in Non-Strict SQL Mode
 
 **Date:** 2026-02-18

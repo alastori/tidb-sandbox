@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: software-project
+status: released
+products: [tidb]
+-->
+
 # Hibernate ORM TiDB CI Lab
 
 This lab focuses on analyzing and running the [Hibernate ORM](https://github.com/hibernate/hibernate-orm) test suite locally with TiDB.

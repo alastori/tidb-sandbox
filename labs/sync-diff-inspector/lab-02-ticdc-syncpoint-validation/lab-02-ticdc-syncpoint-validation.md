@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: scripted-validation
+status: released
+products: [ticdc, sync-diff-inspector]
+-->
+
 # TiCDC New Architecture Syncpoint + sync-diff-inspector Validation Lab
 
 Validates that sync-diff-inspector works correctly with TiCDC's new architecture Syncpoint feature for point-in-time data consistency checks.
