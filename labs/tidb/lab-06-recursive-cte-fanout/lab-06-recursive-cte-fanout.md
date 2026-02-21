@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: manual-exploration
+status: released
+products: [tidb, mysql, postgresql]
+-->
+
 # Recursive CTE Fan-Out: MySQL vs PostgreSQL
 
 Expanded scenarios to reproduce fan-out control patterns (and failures) for recursive CTEs across MySQL 8.0 (LTS), PostgreSQL 17, and TiDB v8.5.4 (current MySQL-protocol release).

@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: manual-exploration
+status: released
+products: [dm]
+-->
+
 # Lab 03 – DM Foreign Keys and Safe Mode (Short-Term Workaround)
 
 **Goal:** In TiDB DM, [Safe Mode](https://docs.pingcap.com/tidb/stable/dm-safe-mode/) guarantees operations are idempotent and can be replayed by rewriting DML. It's auto-enabled for \~60s at task (re)start or after resuming from a checkpoint, and can be enabled manually via config. Safe Mode wasn't originally designed with the possibility of enabling Foreign Key checks on the target. It can attempt to temporarily remove parent records generating FK failure errors. This lab will make it visible, then mitigate it.

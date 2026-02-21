@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: manual-exploration
+status: released
+products: [tidb]
+-->
+
 # Lab-01 — `SELECT ... FOR UPDATE OF` : Base Table vs Alias
 
 **Goal:** For each DBMS, verify whether the locking clause `SELECT ... FOR UPDATE OF` uses the  **base table name** or **alias** when one is defined. We’re testing syntax acceptance and name resolution, not lock behavior.

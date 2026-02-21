@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: manual-exploration
+status: released
+products: [tidb, mysql]
+-->
+
 # FK and Supporting Index MySQL 8.4 & TiDB 8.5+ Comparison
 
 This lab compares how MySQL and TiDB handle foreign keys and their supporting indexes across 4 scenarios.

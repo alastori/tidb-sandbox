@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: scripted-validation
+status: released
+products: [sync-diff-inspector, tidb, mysql]
+-->
+
 # Sync-Diff Inspector Data Type Validation Lab: MySQL vs TiDB
 
 Scenarios to validate sync-diff-inspector across canonical data type cases and a realistic sample schema. 

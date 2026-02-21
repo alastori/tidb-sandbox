@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: manual-exploration
+status: released
+products: [tidb]
+-->
+
 # Lab-02 — `CREATE TABLE` Constraints and Generated Columns
 
 **Goal:** For each DBMS, verify the syntax and behavior for column definitions involving `NOT NULL`, simple `DEFAULT` values, complex `DEFAULT` values (referencing other columns), and `GENERATED ALWAYS AS` columns.

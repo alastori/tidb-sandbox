@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lab-XX-TODO"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    # TODO: Add project dependencies
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]

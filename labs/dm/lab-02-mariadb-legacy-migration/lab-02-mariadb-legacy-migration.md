@@ -1,3 +1,9 @@
+<!-- lab-meta
+archetype: manual-exploration
+status: released
+products: [dm, mariadb]
+-->
+
 # Lab 02 – Legacy MariaDB Full-Load Precheck & Target Fixups
 
 Spin up TiDB DM + MariaDB and migrate a **long-lived** ("legacy") MariaDB schema that contains **common incompatibilities**. We will:

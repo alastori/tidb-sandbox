@@ -1,0 +1,12 @@
+services:
+  mysql:
+    image: mysql:8.0.44
+    environment:
+      MYSQL_ROOT_PASSWORD: Password_1234
+    ports:
+      - "3307:3306"
+
+  tidb:
+    image: pingcap/tidb:v8.5.4
+    ports:
+      - "4000:4000"
