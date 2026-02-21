@@ -632,22 +632,24 @@ Additional scenarios targeting different write paths and expression types:
 
 ### Phase 9 Results — Edge Cases (E25-E30)
 
-Real-world consequences of oversized data stored via the bypass:
+Real-world consequences of oversized data stored via the bypass, tested against both TiDB v8.5.1 and MySQL 8.0:
 
-| # | Test | Limit | char_len | Result | Notes |
-| --- | ---- | ----- | -------- | ------ | ----- |
-| E25 | Extreme length REPEAT('A📝', 5000) | 10 | 10,000 | **BUG** | No upper bound — 10K chars stored in VARCHAR(10), byte_len=10,000 |
-| E26 | Secondary index on oversized column | 10 | 30 | **BUG** | Index stores oversized data; `USE INDEX` SELECT returns char_len=30 |
-| E27 | Unique index + two different oversized values | 10 | 17 | **BUG** | Both `AAAAA?BBBBB?CCCCC` and `XXXXX?YYYYY?ZZZZZ` coexist (2 rows) under unique constraint |
-| E28 | ADMIN CHECK TABLE after oversized writes | — | — | PASSED | TiDB's integrity checker does **not** detect the violation — blind spot |
-| E29 | SELECT with WHERE on oversized column | 10 | 30 | **BUG** | Oversized data fully queryable: `CHAR_LENGTH > 10` (1 row), `LIKE 'ABCDE%'` (1 row), `= 'ABCDE?FGHIJ?...'` (1 row) |
-| E30 | ALTER TABLE MODIFY COLUMN VARCHAR(10)→(5) | 10→5 | 30→5 | Accepted | ALTER silently truncates oversized data (pre=30, post=5) — retroactive fix but also data loss risk |
+| # | Test | Limit | TiDB | MySQL | Notes |
+| --- | ---- | ----- | ---- | ----- | ----- |
+| E25 | Extreme length REPEAT('A📝', 5000) | 10 | char_len=**10,000** (BUG) | char_len=10 (CORRECT) | No upper bound on TiDB — 10K chars in VARCHAR(10). MySQL truncates to 10. |
+| E26 | Secondary index on oversized column | 10 | char_len=30, idx=30 (BUG) | char_len=10, idx=10 (CORRECT) | TiDB index stores and returns oversized data. MySQL truncates before indexing. |
+| E27 | Unique index + two different oversized values | 10 | rows=2, max_len=17 (BUG) | rows=2, max_len=10 (CORRECT) | TiDB stores `AAAAA?BBBBB?CCCCC` (17 chars). MySQL truncates to `AAAAA?BBBB` (10 chars). Both systems keep 2 distinct rows. |
+| E28 | ADMIN CHECK TABLE / CHECK TABLE | — | PASSED (no error) | OK | Neither system detects the violation — but MySQL has no violation to detect. |
+| E29 | SELECT with WHERE on oversized column | 10 | CHAR_LENGTH>10: 1 row (BUG) | CHAR_LENGTH>10: 0 rows (CORRECT) | TiDB's oversized data is fully queryable. MySQL has no oversized data. |
+| E30 | ALTER TABLE MODIFY COLUMN VARCHAR(10)→(5) | 10→5 | pre=30, post=5 (accepted) | pre=10, post=5 (accepted) | Both accept ALTER. TiDB loses 25 chars silently; MySQL loses 5. |
 
-E25 is the most striking: **10,000 characters in a VARCHAR(10) column** with zero enforcement. The bypass scales linearly with input size.
+E25 is the most striking: **10,000 characters in a VARCHAR(10) column** with zero enforcement. The bypass scales linearly with input size. MySQL truncates the same input to 10 characters.
+
+E27 shows a subtle difference in truncation behavior: MySQL truncates the mangled string to 10 chars (`AAAAA?BBBB`), so the unique constraint compares 10-char values. TiDB stores the full 17-char mangled string, so the unique constraint compares 17-char values. Both systems allow 2 rows because the values are distinct at either length.
 
 E28 reveals an operational blind spot: `ADMIN CHECK TABLE` passes even with an indexed VARCHAR(10) column containing 30-char values. There is no built-in tool to detect this violation after the fact.
 
-E30 shows that `ALTER TABLE MODIFY COLUMN` to a smaller size will silently truncate the oversized data, which can serve as a retroactive fix — but also means data loss if applied unknowingly.
+E30 shows that `ALTER TABLE MODIFY COLUMN` to a smaller size will silently truncate the oversized data, which can serve as a retroactive fix — but also means data loss if applied unknowingly. TiDB loses 25 characters of data (30→5) vs MySQL's 5 (10→5).
 
 ### MySQL 8.0 Comparison
 
@@ -701,7 +703,7 @@ The customer's environment matched all three: `utf8` table charset, non-strict `
 
 - **Phases 1-8:** 166 tests, **0 bypasses** — every standard SQL path with valid-charset data enforces VARCHAR correctly
 - **Phase 9:** 30 tests (E1-E30), **20 bypasses confirmed** — utf8mb4→utf8 charset mismatch in non-strict mode skips truncation across INSERT, REPLACE INTO, LOAD DATA, INSERT...SELECT, prepared statements, expression paths, and CHAR(N) columns. Edge cases (E25-E30) confirm no upper bound on oversized data, index and unique constraint behavior with oversized values, and ADMIN CHECK TABLE blind spot.
-- **MySQL 8.0 comparison:** 15 side-by-side tests confirm MySQL correctly handles every bypass scenario (14 truncate, 1 rejects with ERROR)
+- **MySQL 8.0 comparison:** 21 side-by-side tests (15 bypass scenarios + 6 edge cases) confirm MySQL correctly handles every scenario — truncates to VARCHAR limit in all cases where TiDB bypasses
 
 ## Root Cause Analysis
 
