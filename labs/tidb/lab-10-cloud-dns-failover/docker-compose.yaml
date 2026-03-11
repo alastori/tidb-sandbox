@@ -1,0 +1,41 @@
+networks:
+  lab10-net:
+    name: lab10-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+services:
+  coredns:
+    container_name: lab10-coredns
+    build:
+      context: .
+      dockerfile: Dockerfile.coredns
+    command: -conf /etc/coredns/Corefile
+    volumes:
+      - ./conf/coredns/Corefile:/etc/coredns/Corefile:ro
+      - ./conf/coredns/db.lab:/zones/db.lab
+    networks:
+      lab10-net:
+        ipv4_address: 172.30.0.10
+    ports:
+      - "5300:53/udp"
+      - "5300:53/tcp"
+
+  probe:
+    container_name: lab10-probe
+    build:
+      context: .
+      dockerfile: Dockerfile.probe
+    volumes:
+      - ./probe.py:/app/probe.py:ro
+      - ./results:/app/results
+    dns:
+      - 172.30.0.10
+    depends_on:
+      - coredns
+    networks:
+      lab10-net:
+    profiles:
+      - probe

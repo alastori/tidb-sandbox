@@ -1,0 +1,13 @@
+$ORIGIN tidb.lab.
+$TTL 5
+
+@     IN  SOA  ns.tidb.lab. admin.tidb.lab. (
+              1          ; serial
+              3600       ; refresh
+              600        ; retry
+              86400      ; expire
+              5 )        ; minimum
+
+@     IN  NS   ns.tidb.lab.
+ns    IN  A    172.30.0.10
+db    IN  CNAME PLACEHOLDER_HOST.
