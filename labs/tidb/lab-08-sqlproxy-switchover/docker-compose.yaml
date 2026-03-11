@@ -1,0 +1,166 @@
+# TiProxy vs ProxySQL vs HAProxy switchover comparison
+#
+# Architecture:
+#   PD ──────── TiKV
+#    │
+#    ├── tidb-1  (primary)
+#    └── tidb-2  (secondary)
+#         │
+#    ┌────┼────────┐
+#  TiProxy ProxySQL HAProxy
+#  :6000   :6002    :6001
+#
+# Host ports:
+#   4001 → tidb-1 direct    4002 → tidb-2 direct
+#   6000 → TiProxy          6001 → HAProxy
+#   6002 → ProxySQL          6032 → ProxySQL admin
+#   8404 → HAProxy stats
+
+services:
+  pd:
+    image: pingcap/pd:v8.5.4
+    container_name: lab08-pd
+    command:
+      - --name=pd
+      - --client-urls=http://0.0.0.0:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-client-urls=http://pd:2379
+      - --advertise-peer-urls=http://pd:2380
+      - --data-dir=/data/pd
+    volumes:
+      - pd-data:/data/pd
+    networks:
+      - lab08
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2379/health"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+
+  tikv:
+    image: pingcap/tikv:v8.5.4
+    container_name: lab08-tikv
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv:20160
+      - --status-addr=0.0.0.0:20180
+      - --pd=pd:2379
+      - --data-dir=/data/tikv
+    volumes:
+      - tikv-data:/data/tikv
+    networks:
+      - lab08
+    depends_on:
+      pd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:20180/status 2>/dev/null || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 15s
+
+  tidb-1:
+    image: pingcap/tidb:v8.5.4
+    container_name: lab08-tidb-1
+    command:
+      - --store=tikv
+      - --host=0.0.0.0
+      - --advertise-address=tidb-1
+      - --path=pd:2379
+      - -P=4000
+      - --status=10080
+    ports:
+      - "4001:4000"
+    networks:
+      - lab08
+    depends_on:
+      tikv:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:10080/status 2>/dev/null || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  tidb-2:
+    image: pingcap/tidb:v8.5.4
+    container_name: lab08-tidb-2
+    command:
+      - --store=tikv
+      - --host=0.0.0.0
+      - --advertise-address=tidb-2
+      - --path=pd:2379
+      - -P=4000
+      - --status=10080
+    ports:
+      - "4002:4000"
+    networks:
+      - lab08
+    depends_on:
+      tikv:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:10080/status 2>/dev/null || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  tiproxy:
+    image: pingcap/tiproxy:v1.3.0
+    container_name: lab08-tiproxy
+    entrypoint: ["/bin/tiproxy"]
+    command: ["--config", "/etc/tiproxy/tiproxy.toml"]
+    volumes:
+      - ./conf/tiproxy.toml:/etc/tiproxy/tiproxy.toml:ro
+    ports:
+      - "6000:6000"
+    networks:
+      - lab08
+    depends_on:
+      tidb-1:
+        condition: service_healthy
+      tidb-2:
+        condition: service_healthy
+
+  proxysql:
+    image: proxysql/proxysql:2.7.1
+    container_name: lab08-proxysql
+    volumes:
+      - ./conf/proxysql.cnf:/etc/proxysql.cnf:ro
+    ports:
+      - "6002:6033"
+      - "6032:6032"
+    networks:
+      - lab08
+    depends_on:
+      tidb-1:
+        condition: service_healthy
+      tidb-2:
+        condition: service_healthy
+
+  haproxy:
+    image: haproxy:2.9-alpine
+    container_name: lab08-haproxy
+    volumes:
+      - ./conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "6001:6001"
+      - "8404:8404"
+    networks:
+      - lab08
+    depends_on:
+      tidb-1:
+        condition: service_healthy
+      tidb-2:
+        condition: service_healthy
+
+networks:
+  lab08:
+    name: lab08-net
+
+volumes:
+  pd-data:
+  tikv-data:
