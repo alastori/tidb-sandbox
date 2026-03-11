@@ -1,0 +1,13 @@
+$ORIGIN lab.
+$TTL 1
+
+@     IN  SOA  ns.lab. admin.lab. (
+              1773242572 ; serial
+              3600      ; refresh
+              600       ; retry
+              86400     ; expire
+              1 )  ; minimum
+
+@     IN  NS   ns.lab.
+ns    IN  A    172.30.0.10
+tidb  IN  A    172.30.0.21

@@ -1,0 +1,8 @@
+FROM alpine:3.20
+COPY --from=coredns/coredns:1.12.0 /coredns /coredns
+# Zone file is embedded at build time (not bind-mounted).
+# dns_flip() updates it at runtime via docker cp + restart.
+# This avoids macOS Docker volume propagation delays that make
+# CoreDNS file plugin's mtime-based reload unreliable.
+COPY conf/coredns/db.lab /zones/db.lab
+ENTRYPOINT ["/coredns"]

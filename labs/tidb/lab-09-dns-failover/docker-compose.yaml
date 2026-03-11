@@ -1,0 +1,104 @@
+# DNS Failover Lab — Phase 1 (local)
+#
+# Two TiDB unistore instances + CoreDNS
+# CoreDNS resolves tidb.lab → tidb-1 initially, flipped via zone file update
+#
+# Host ports:
+#   4001 → tidb-1 direct    4002 → tidb-2 direct
+#   5300 → CoreDNS (for host-side dig verification)
+#
+# Probe runs inside Docker (macOS can't route to container IPs)
+#   docker compose run --rm probe <args>
+
+services:
+  coredns:
+    build:
+      context: .
+      dockerfile: Dockerfile.coredns
+    container_name: lab09-coredns
+    command: ["-conf", "/etc/coredns/Corefile"]
+    volumes:
+      - ./conf/coredns/Corefile:/etc/coredns/Corefile:ro
+    ports:
+      - "5300:53/udp"
+      - "5300:53/tcp"
+    healthcheck:
+      test: ["CMD-SHELL", "nslookup tidb.lab 127.0.0.1 >/dev/null 2>&1 || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      lab09:
+        ipv4_address: 172.30.0.10
+
+  tidb-1:
+    image: pingcap/tidb:v8.5.4
+    container_name: lab09-tidb-1
+    command:
+      - --store=unistore
+      - --host=0.0.0.0
+      - --advertise-address=tidb-1
+      - -P=4000
+      - --status=10080
+      - --path=
+    ports:
+      - "4001:4000"
+    networks:
+      lab09:
+        ipv4_address: 172.30.0.21
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:10080/status 2>/dev/null || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  tidb-2:
+    image: pingcap/tidb:v8.5.4
+    container_name: lab09-tidb-2
+    command:
+      - --store=unistore
+      - --host=0.0.0.0
+      - --advertise-address=tidb-2
+      - -P=4000
+      - --status=10080
+      - --path=
+    ports:
+      - "4002:4000"
+    networks:
+      lab09:
+        ipv4_address: 172.30.0.22
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:10080/status 2>/dev/null || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  probe:
+    build:
+      context: .
+      dockerfile: Dockerfile.probe
+    container_name: lab09-probe
+    volumes:
+      - ./probe.py:/app/probe.py:ro
+      - ./results:/app/results
+    networks:
+      lab09:
+    dns:
+      - 172.30.0.10
+    depends_on:
+      coredns:
+        condition: service_healthy
+      tidb-1:
+        condition: service_healthy
+      tidb-2:
+        condition: service_healthy
+    profiles:
+      - probe
+
+networks:
+  lab09:
+    name: lab09-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

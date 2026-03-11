@@ -45,6 +45,7 @@ and troubleshooting patterns.
 | [lab-05](labs/tidb/lab-05-hibernate-tidb-ci) | Hibernate ORM TiDB CI | Project |
 | [lab-06](labs/tidb/lab-06-recursive-cte-fanout) | Recursive CTE fan-out: MySQL vs PostgreSQL | Manual |
 | [lab-07](labs/tidb/lab-07-varchar-length-enforcement) | VARCHAR length enforcement in non-strict SQL mode | Investigation |
+| [lab-09](labs/tidb/lab-09-dns-failover) | DNS failover: client behavior during endpoint resolution changes | Scripted |
 | [lab-10](labs/tidb/lab-10-cloud-dns-failover) | Cloud DNS failover: Dedicated ↔ Essential via CoreDNS CNAME | Scripted |
 | [lab-11](labs/tidb/lab-11-cloud-proxy-failover) | Cloud proxy failover: HAProxy (L4) vs ProxySQL (L7) on EC2 | Scripted |
 
