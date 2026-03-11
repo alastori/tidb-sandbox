@@ -1,0 +1,4 @@
+.env
+results/*
+!results/.gitignore
+conf/proxysql/proxysql.cnf

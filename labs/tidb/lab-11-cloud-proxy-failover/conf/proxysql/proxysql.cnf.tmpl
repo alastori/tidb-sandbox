@@ -1,0 +1,48 @@
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+    admin_credentials="admin:admin;radmin:radmin"
+    mysql_ifaces="127.0.0.1:6032"
+}
+
+mysql_variables=
+{
+    threads=2
+    max_connections=128
+    default_query_delay=0
+    default_query_timeout=30000
+    monitor_enabled=true
+    monitor_username="PROXY_USER"
+    monitor_password="PROXY_PASSWORD"
+    monitor_connect_interval=2000
+    monitor_ping_interval=2000
+    monitor_connect_timeout=3000
+    monitor_ping_timeout=1000
+    interfaces="0.0.0.0:6033"
+    server_version="8.0.11-TiDB"
+    have_ssl=true
+}
+
+mysql_servers=
+(
+    {
+        address="DEDICATED_HOST"
+        port=4000
+        hostgroup=1
+        weight=1000
+        use_ssl=1
+    }
+)
+
+mysql_users=
+(
+    {
+        username="PROXY_USER"
+        password="PROXY_PASSWORD"
+        default_hostgroup=1
+        active=1
+    }
+)
+
+mysql_query_rules=()
