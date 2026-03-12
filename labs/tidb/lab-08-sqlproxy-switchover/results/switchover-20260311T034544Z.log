@@ -1,0 +1,226 @@
+
+======================================================================
+  SQL Proxy Switchover Probe
+  Targets: tiproxy (127.0.0.1:6000), proxysql (127.0.0.1:6002), haproxy (127.0.0.1:6001)
+  Duration: 30.0s  Interval: 0.5s
+======================================================================
+  [03:46:33.561] haproxy    #  1  OK   conn=2946498664  backend=b0476105b8a7  7ms
+  [03:46:33.562] proxysql   #  1  OK   conn=2946498666  backend=b0476105b8a7  7ms
+  [03:46:33.563] tiproxy    #  1  OK   conn=1954545760  backend=0fe5bbb2a7b2  8ms
+  [03:46:34.069] haproxy    #  2  OK   conn=2946498664  backend=b0476105b8a7  3ms
+  [03:46:34.070] tiproxy    #  2  OK   conn=1954545760  backend=0fe5bbb2a7b2  3ms
+  [03:46:34.070] proxysql   #  2  OK   conn=2946498666  backend=b0476105b8a7  3ms
+  [03:46:34.577] tiproxy    #  3  OK   conn=1954545760  backend=0fe5bbb2a7b2  3ms
+  [03:46:34.577] proxysql   #  3  OK   conn=2946498666  backend=b0476105b8a7  3ms
+  [03:46:34.577] haproxy    #  3  OK   conn=2946498664  backend=b0476105b8a7  3ms
+  [03:46:35.083] haproxy    #  4  OK   conn=2946498664  backend=b0476105b8a7  3ms
+  [03:46:35.083] proxysql   #  4  OK   conn=2946498666  backend=b0476105b8a7  3ms
+  [03:46:35.084] tiproxy    #  4  OK   conn=1954545760  backend=0fe5bbb2a7b2  3ms
+  [03:46:35.589] haproxy    #  5  OK   conn=2946498664  backend=b0476105b8a7  3ms
+  [03:46:35.589] proxysql   #  5  OK   conn=2946498666  backend=b0476105b8a7  3ms
+  [03:46:35.589] tiproxy    #  5  OK   conn=1954545760  backend=0fe5bbb2a7b2  3ms
+  [03:46:36.096] haproxy    #  6  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:36.096] proxysql   #  6  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:36.096] tiproxy    #  6  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:36.600] haproxy    #  7  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:36.600] proxysql   #  7  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:36.600] tiproxy    #  7  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:37.108] haproxy    #  8  OK   conn=2946498664  backend=b0476105b8a7  3ms
+  [03:46:37.108] tiproxy    #  8  OK   conn=1954545760  backend=0fe5bbb2a7b2  3ms
+  [03:46:37.108] proxysql   #  8  OK   conn=2946498666  backend=b0476105b8a7  3ms
+  [03:46:37.615] haproxy    #  9  OK   conn=2946498664  backend=b0476105b8a7  3ms
+  [03:46:37.615] proxysql   #  9  OK   conn=2946498666  backend=b0476105b8a7  3ms
+  [03:46:37.615] tiproxy    #  9  OK   conn=1954545760  backend=0fe5bbb2a7b2  3ms
+  [03:46:38.122] tiproxy    # 10  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:38.122] haproxy    # 10  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:38.122] proxysql   # 10  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:38.624] proxysql   # 11  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:38.624] haproxy    # 11  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:38.624] tiproxy    # 11  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:39.128] tiproxy    # 12  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:39.128] proxysql   # 12  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:39.129] haproxy    # 12  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:39.630] tiproxy    # 13  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:39.630] proxysql   # 13  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:39.631] haproxy    # 13  OK   conn=2946498664  backend=b0476105b8a7  1ms
+  [03:46:40.133] proxysql   # 14  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:40.134] haproxy    # 14  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:40.135] tiproxy    # 14  OK   conn=1954545760  backend=0fe5bbb2a7b2  1ms
+  [03:46:40.638] tiproxy    # 15  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:40.640] haproxy    # 15  OK   conn=2946498664  backend=b0476105b8a7  1ms
+  [03:46:40.640] proxysql   # 15  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:41.146] tiproxy    # 16  OK   conn=1954545760  backend=0fe5bbb2a7b2  3ms
+  [03:46:41.146] proxysql   # 16  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:41.146] haproxy    # 16  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:41.649] haproxy    # 17  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:41.649] proxysql   # 17  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:41.649] tiproxy    # 17  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:42.152] proxysql   # 18  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:42.153] tiproxy    # 18  OK   conn=1954545760  backend=0fe5bbb2a7b2  1ms
+  [03:46:42.154] haproxy    # 18  OK   conn=2946498664  backend=b0476105b8a7  1ms
+  [03:46:42.655] tiproxy    # 19  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:42.656] haproxy    # 19  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:42.658] proxysql   # 19  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:43.158] tiproxy    # 20  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:43.162] haproxy    # 20  OK   conn=2946498664  backend=b0476105b8a7  2ms
+  [03:46:43.162] proxysql   # 20  OK   conn=2946498666  backend=b0476105b8a7  2ms
+  [03:46:43.665] tiproxy    # 21  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:43.667] proxysql   # 21  OK   conn=1954545682  backend=0fe5bbb2a7b2  3ms  *** CONN_CHANGE 2946498666->1954545682, BACKEND_SWITCH b0476105b8a7->0fe5bbb2a7b2
+  [03:46:44.172] proxysql   # 22  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:44.172] tiproxy    # 22  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:44.679] proxysql   # 23  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:44.679] tiproxy    # 23  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:45.187] proxysql   # 24  OK   conn=1954545682  backend=0fe5bbb2a7b2  3ms
+  [03:46:45.187] tiproxy    # 24  OK   conn=1954545760  backend=0fe5bbb2a7b2  3ms
+  [03:46:45.689] proxysql   # 25  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:45.690] tiproxy    # 25  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:46.195] proxysql   # 26  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:46.195] tiproxy    # 26  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:46.701] tiproxy    # 27  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:46.702] proxysql   # 27  OK   conn=1954545682  backend=0fe5bbb2a7b2  1ms
+  [03:46:47.205] proxysql   # 28  OK   conn=1954545682  backend=0fe5bbb2a7b2  3ms
+  [03:46:47.206] tiproxy    # 28  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:47.708] proxysql   # 29  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:47.709] tiproxy    # 29  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:48.213] tiproxy    # 30  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:48.213] proxysql   # 30  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:48.665] haproxy    # 21  FAIL (2013, 'Lost connection to MySQL server during que
+  [03:46:48.716] proxysql   # 31  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:48.716] tiproxy    # 31  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:49.223] proxysql   # 32  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:49.223] tiproxy    # 32  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:49.727] proxysql   # 33  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:49.728] tiproxy    # 33  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:50.233] proxysql   # 34  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:50.233] tiproxy    # 34  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:50.740] proxysql   # 35  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:50.740] tiproxy    # 35  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:51.247] tiproxy    # 36  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:51.247] proxysql   # 36  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:51.752] proxysql   # 37  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:51.752] tiproxy    # 37  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:52.261] proxysql   # 38  OK   conn=1954545682  backend=0fe5bbb2a7b2  3ms
+  [03:46:52.261] tiproxy    # 38  OK   conn=1954545760  backend=0fe5bbb2a7b2  3ms
+  [03:46:52.765] tiproxy    # 39  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:52.766] proxysql   # 39  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:53.268] proxysql   # 40  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:53.268] tiproxy    # 40  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:53.774] tiproxy    # 41  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:53.774] proxysql   # 41  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:54.171] haproxy    # 22  FAIL (2013, 'Lost connection to MySQL server during que
+  [03:46:54.277] proxysql   # 42  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:54.277] tiproxy    # 42  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:54.677] haproxy    # 23  OK   conn=1954545816  backend=0fe5bbb2a7b2  5ms  *** CONN_CHANGE 2946498664->1954545816, BACKEND_SWITCH b0476105b8a7->0fe5bbb2a7b2
+  [03:46:54.779] proxysql   # 43  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:54.779] tiproxy    # 43  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:55.184] haproxy    # 24  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:55.282] proxysql   # 44  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:55.286] tiproxy    # 44  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:55.688] haproxy    # 25  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:55.786] proxysql   # 45  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:55.788] tiproxy    # 45  OK   conn=1954545760  backend=0fe5bbb2a7b2  1ms
+  [03:46:56.195] haproxy    # 26  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:56.293] proxysql   # 46  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:56.294] tiproxy    # 46  OK   conn=1954545760  backend=0fe5bbb2a7b2  1ms
+  [03:46:56.702] haproxy    # 27  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:56.800] proxysql   # 47  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:56.801] tiproxy    # 47  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:57.209] haproxy    # 28  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:57.303] proxysql   # 48  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:57.303] tiproxy    # 48  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:57.714] haproxy    # 29  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:57.809] proxysql   # 49  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:57.809] tiproxy    # 49  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:58.216] haproxy    # 30  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:58.313] proxysql   # 50  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:58.313] tiproxy    # 50  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:58.723] haproxy    # 31  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:58.820] proxysql   # 51  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:58.820] tiproxy    # 51  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:59.228] haproxy    # 32  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:59.322] proxysql   # 52  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:59.322] tiproxy    # 52  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:46:59.735] haproxy    # 33  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:46:59.829] proxysql   # 53  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:46:59.830] tiproxy    # 53  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:47:00.237] haproxy    # 34  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:47:00.333] proxysql   # 54  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:47:00.333] tiproxy    # 54  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:47:00.744] haproxy    # 35  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:47:00.840] proxysql   # 55  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:47:00.840] tiproxy    # 55  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:47:01.247] haproxy    # 36  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:47:01.344] tiproxy    # 56  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:47:01.345] proxysql   # 56  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:47:01.749] haproxy    # 37  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:47:01.849] proxysql   # 57  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:47:01.849] tiproxy    # 57  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:47:02.253] haproxy    # 38  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:47:02.353] proxysql   # 58  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:47:02.353] tiproxy    # 58  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:47:02.755] haproxy    # 39  OK   conn=1954545816  backend=0fe5bbb2a7b2  2ms
+  [03:47:02.860] tiproxy    # 59  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:47:02.860] proxysql   # 59  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+  [03:47:03.261] haproxy    # 40  OK   conn=1954545816  backend=0fe5bbb2a7b2  3ms
+  [03:47:03.364] tiproxy    # 60  OK   conn=1954545760  backend=0fe5bbb2a7b2  2ms
+  [03:47:03.364] proxysql   # 60  OK   conn=1954545682  backend=0fe5bbb2a7b2  2ms
+
+======================================================================
+  SWITCHOVER SMOKE TEST REPORT
+======================================================================
+
+  [tiproxy] 127.0.0.1:6000
+  ────────────────────────────────────────────────────────────
+  Probes:        60 total, 60 ok, 0 failed
+  Success rate:  100.0%
+  Latency:       avg 2.2ms  p99 3.3ms  max 7.9ms
+  Max gap:       0.51s
+  Conn IDs:      1 unique (0 changes)
+  Backends:      {'0fe5bbb2a7b2'} (0 switches)
+  Endpoint DNS:  STABLE ({'127.0.0.1'})
+
+  [proxysql] 127.0.0.1:6002
+  ────────────────────────────────────────────────────────────
+  Probes:        60 total, 60 ok, 0 failed
+  Success rate:  100.0%
+  Latency:       avg 2.1ms  p99 3.3ms  max 7.0ms
+  Max gap:       0.51s
+  Conn IDs:      2 unique (1 changes)
+  Backends:      {'b0476105b8a7', '0fe5bbb2a7b2'} (1 switches)
+  Endpoint DNS:  STABLE ({'127.0.0.1'})
+  Backend switchover timeline:
+    03:46:43: b0476105b8a7 -> 0fe5bbb2a7b2
+
+  [haproxy] 127.0.0.1:6001
+  ────────────────────────────────────────────────────────────
+  Probes:        40 total, 38 ok, 2 failed
+  Success rate:  95.0%
+  Latency:       avg 2.3ms  p99 4.9ms  max 6.6ms
+  Max gap:       11.51s
+  Conn IDs:      2 unique (1 changes)
+  Backends:      {'b0476105b8a7', '0fe5bbb2a7b2'} (1 switches)
+  Endpoint DNS:  STABLE ({'127.0.0.1'})
+  Failure windows:
+    03:46:48 — 6.01s
+  Backend switchover timeline:
+    03:46:54: b0476105b8a7 -> 0fe5bbb2a7b2
+
+  ──────────────────────────────────────────────────────────────────────
+  COMPARISON: tiproxy vs proxysql vs haproxy
+  ──────────────────────────────────────────────────────────────────────
+  Metric                           tiproxy       proxysql        haproxy
+  ──────────────────────────────────────────────────────────────────────
+  Success rate                      100.0%         100.0%          95.0%
+  Avg latency                        2.2ms          2.1ms          2.3ms
+  P99 latency                        3.3ms          3.3ms          4.9ms
+  Max gap                            0.51s          0.51s         11.51s
+  Conn ID changes                        0              1              1
+  Backend switches                       0              1              1
+  Failure windows                        0              0              1
+  Total failure time                 0.00s          0.00s          6.01s
+
+======================================================================
+  VERDICT: PASS — proxy endpoint(s) stable, no DNS changes
+======================================================================
+
+  Results saved to /Users/alastori/GitHub/alastori/tidb-sandbox/labs/tidb/draft-lab-08-sqlproxy-switchover/results/switchover-20260311T034544Z.json

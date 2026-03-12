@@ -1,0 +1,133 @@
+# SQL Proxy Switchover Lab
+#
+# Two TiDB unistore instances + three proxies (TiProxy, HAProxy, ProxySQL)
+# Tests how each proxy handles backend failover when one TiDB goes down.
+#
+# Host ports:
+#   4001 → tidb-1 direct    4002 → tidb-2 direct
+#   6000 → TiProxy (L7)     6001 → HAProxy (L4)    6002 → ProxySQL (L7)
+#   3080 → TiProxy API      6032 → ProxySQL admin
+#
+# Probe runs inside Docker alongside proxies:
+#   docker compose --profile probe run --rm -T probe <args>
+
+services:
+  tidb-1:
+    image: pingcap/tidb:v8.5.4
+    container_name: lab08-tidb-1
+    command:
+      - --store=unistore
+      - --host=0.0.0.0
+      - --advertise-address=tidb-1
+      - -P=4000
+      - --status=10080
+      - --path=
+    ports:
+      - "4001:4000"
+    networks:
+      lab08:
+        ipv4_address: 172.28.0.21
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:10080/status 2>/dev/null || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  tidb-2:
+    image: pingcap/tidb:v8.5.4
+    container_name: lab08-tidb-2
+    command:
+      - --store=unistore
+      - --host=0.0.0.0
+      - --advertise-address=tidb-2
+      - -P=4000
+      - --status=10080
+      - --path=
+    ports:
+      - "4002:4000"
+    networks:
+      lab08:
+        ipv4_address: 172.28.0.22
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:10080/status 2>/dev/null || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  tiproxy:
+    image: pingcap/tiproxy:v1.3.0
+    container_name: lab08-tiproxy
+    entrypoint: ["/bin/tiproxy"]
+    command: ["--config", "/etc/tiproxy/config.toml"]
+    volumes:
+      - ./conf/tiproxy/config.toml:/etc/tiproxy/config.toml:ro
+    ports:
+      - "6000:6000"
+      - "3080:3080"
+    networks:
+      lab08:
+        ipv4_address: 172.28.0.30
+    depends_on:
+      tidb-1:
+        condition: service_healthy
+      tidb-2:
+        condition: service_healthy
+
+  haproxy:
+    image: haproxy:2.9
+    container_name: lab08-haproxy
+    volumes:
+      - ./conf/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "6001:6001"
+    networks:
+      lab08:
+        ipv4_address: 172.28.0.31
+    depends_on:
+      tidb-1:
+        condition: service_healthy
+      tidb-2:
+        condition: service_healthy
+
+  proxysql:
+    image: proxysql/proxysql:2.7.1
+    container_name: lab08-proxysql
+    volumes:
+      - ./conf/proxysql/proxysql.cnf:/etc/proxysql.cnf:ro
+    ports:
+      - "6002:6002"
+      - "6032:6032"
+    networks:
+      lab08:
+        ipv4_address: 172.28.0.32
+    depends_on:
+      tidb-1:
+        condition: service_healthy
+      tidb-2:
+        condition: service_healthy
+
+  probe:
+    build:
+      context: .
+      dockerfile: Dockerfile.probe
+    container_name: lab08-probe
+    volumes:
+      - ./probe.py:/app/probe.py:ro
+      - ./results:/app/results
+    networks:
+      lab08:
+    depends_on:
+      tidb-1:
+        condition: service_healthy
+      tidb-2:
+        condition: service_healthy
+    profiles:
+      - probe
+
+networks:
+  lab08:
+    name: lab08-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

@@ -1,0 +1,1670 @@
+{
+  "tiproxy": {
+    "endpoint": "127.0.0.1:6000",
+    "total": 60,
+    "successes": 60,
+    "failures": 0,
+    "success_rate": 100.0,
+    "avg_latency_ms": 2.16,
+    "p99_latency_ms": 3.28,
+    "max_latency_ms": 7.87,
+    "max_gap_s": 0.508,
+    "conn_id_changes": 0,
+    "backend_changes": 0,
+    "unique_backends": [
+      "0fe5bbb2a7b2"
+    ],
+    "failure_windows": [],
+    "endpoint_stable": true,
+    "probes": [
+      {
+        "timestamp": 1773200793.563029,
+        "success": true,
+        "latency_ms": 7.870541000000002,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200794.070091,
+        "success": true,
+        "latency_ms": 2.819542000000008,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200794.577664,
+        "success": true,
+        "latency_ms": 2.7313749999999803,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200795.08404,
+        "success": true,
+        "latency_ms": 2.797916999999872,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200795.589919,
+        "success": true,
+        "latency_ms": 2.8368340000000103,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200796.0961778,
+        "success": true,
+        "latency_ms": 2.0381249999998907,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200796.600887,
+        "success": true,
+        "latency_ms": 2.297457999999697,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200797.108761,
+        "success": true,
+        "latency_ms": 2.894500000000022,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200797.6153972,
+        "success": true,
+        "latency_ms": 3.200542000000084,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200798.122195,
+        "success": true,
+        "latency_ms": 1.835250000000066,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200798.624852,
+        "success": true,
+        "latency_ms": 2.328792000000135,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200799.12832,
+        "success": true,
+        "latency_ms": 1.9856670000004684,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200799.630688,
+        "success": true,
+        "latency_ms": 2.0250000000006096,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200800.135201,
+        "success": true,
+        "latency_ms": 1.4410409999996432,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200800.638447,
+        "success": true,
+        "latency_ms": 1.909708000000343,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200801.146038,
+        "success": true,
+        "latency_ms": 2.5244170000000565,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200801.649934,
+        "success": true,
+        "latency_ms": 1.8104170000015074,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200802.1532428,
+        "success": true,
+        "latency_ms": 1.3524159999995788,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200802.6556292,
+        "success": true,
+        "latency_ms": 2.0556660000004,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200803.158473,
+        "success": true,
+        "latency_ms": 1.714083999999616,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200803.665344,
+        "success": true,
+        "latency_ms": 2.056916000000797,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200804.1724522,
+        "success": true,
+        "latency_ms": 2.039750000001561,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200804.679447,
+        "success": true,
+        "latency_ms": 1.9637079999998974,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200805.187645,
+        "success": true,
+        "latency_ms": 3.2081669999985962,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200805.690047,
+        "success": true,
+        "latency_ms": 1.9426249999998646,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200806.1959429,
+        "success": true,
+        "latency_ms": 1.873707999999752,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200806.701088,
+        "success": true,
+        "latency_ms": 2.0429590000006215,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200807.2069252,
+        "success": true,
+        "latency_ms": 2.094999999998848,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200807.7095108,
+        "success": true,
+        "latency_ms": 1.8508749999988083,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200808.2137332,
+        "success": true,
+        "latency_ms": 2.028000000001029,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200808.716645,
+        "success": true,
+        "latency_ms": 1.8210419999995509,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200809.223551,
+        "success": true,
+        "latency_ms": 1.881457999999725,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200809.728045,
+        "success": true,
+        "latency_ms": 2.044707999999673,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200810.233568,
+        "success": true,
+        "latency_ms": 2.1307079999992595,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200810.740546,
+        "success": true,
+        "latency_ms": 1.9638750000012806,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200811.247387,
+        "success": true,
+        "latency_ms": 1.8280409999995584,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200811.752921,
+        "success": true,
+        "latency_ms": 2.227958999998947,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200812.2612748,
+        "success": true,
+        "latency_ms": 3.275417000001113,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200812.7659378,
+        "success": true,
+        "latency_ms": 1.677540999999394,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200813.268758,
+        "success": true,
+        "latency_ms": 2.0642909999999404,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200813.774882,
+        "success": true,
+        "latency_ms": 1.6489170000006936,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200814.27752,
+        "success": true,
+        "latency_ms": 1.920416000000813,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200814.779833,
+        "success": true,
+        "latency_ms": 1.8042079999993632,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200815.286453,
+        "success": true,
+        "latency_ms": 1.569666999998276,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200815.788427,
+        "success": true,
+        "latency_ms": 1.4003749999993431,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200816.294952,
+        "success": true,
+        "latency_ms": 1.43470800000145,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200816.801213,
+        "success": true,
+        "latency_ms": 1.5404590000009932,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200817.303769,
+        "success": true,
+        "latency_ms": 1.9092910000004792,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200817.8099551,
+        "success": true,
+        "latency_ms": 2.105041000000085,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200818.313946,
+        "success": true,
+        "latency_ms": 1.9171250000020734,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200818.8202891,
+        "success": true,
+        "latency_ms": 1.9614590000003318,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200819.3229508,
+        "success": true,
+        "latency_ms": 2.132832999997447,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200819.830038,
+        "success": true,
+        "latency_ms": 2.093708000000305,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200820.333602,
+        "success": true,
+        "latency_ms": 1.762249999998744,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200820.840582,
+        "success": true,
+        "latency_ms": 2.002832999998816,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200821.344245,
+        "success": true,
+        "latency_ms": 2.0112499999989097,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200821.8495302,
+        "success": true,
+        "latency_ms": 2.159042000002387,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200822.3538141,
+        "success": true,
+        "latency_ms": 1.9802079999990951,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200822.860537,
+        "success": true,
+        "latency_ms": 1.8980000000006214,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200823.3641112,
+        "success": true,
+        "latency_ms": 2.016375000000181,
+        "connection_id": 1954545760,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      }
+    ]
+  },
+  "proxysql": {
+    "endpoint": "127.0.0.1:6002",
+    "total": 60,
+    "successes": 60,
+    "failures": 0,
+    "success_rate": 100.0,
+    "avg_latency_ms": 2.13,
+    "p99_latency_ms": 3.35,
+    "max_latency_ms": 6.99,
+    "max_gap_s": 0.508,
+    "conn_id_changes": 1,
+    "backend_changes": 1,
+    "unique_backends": [
+      "0fe5bbb2a7b2",
+      "b0476105b8a7"
+    ],
+    "failure_windows": [],
+    "endpoint_stable": true,
+    "probes": [
+      {
+        "timestamp": 1773200793.562243,
+        "success": true,
+        "latency_ms": 6.986040999999998,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200794.07016,
+        "success": true,
+        "latency_ms": 2.8540420000000566,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200794.577802,
+        "success": true,
+        "latency_ms": 2.795499999999951,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200795.083963,
+        "success": true,
+        "latency_ms": 2.8016659999998694,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200795.589848,
+        "success": true,
+        "latency_ms": 2.7410000000003265,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200796.096125,
+        "success": true,
+        "latency_ms": 2.0075419999998623,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200796.6008582,
+        "success": true,
+        "latency_ms": 2.233542000000366,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200797.1088462,
+        "success": true,
+        "latency_ms": 2.9520829999998277,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200797.6152902,
+        "success": true,
+        "latency_ms": 3.0453329999993173,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200798.122308,
+        "success": true,
+        "latency_ms": 1.971165999999691,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200798.62462,
+        "success": true,
+        "latency_ms": 2.026125000000434,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200799.128547,
+        "success": true,
+        "latency_ms": 2.2617499999997293,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200799.630817,
+        "success": true,
+        "latency_ms": 2.1028749999993934,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200800.133944,
+        "success": true,
+        "latency_ms": 1.5052500000001245,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200800.640521,
+        "success": true,
+        "latency_ms": 1.5245409999993242,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200801.146365,
+        "success": true,
+        "latency_ms": 1.9952080000003036,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200801.649772,
+        "success": true,
+        "latency_ms": 1.6175829999998115,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200802.152289,
+        "success": true,
+        "latency_ms": 1.7791250000005476,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200802.658453,
+        "success": true,
+        "latency_ms": 1.7623750000002047,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200803.162824,
+        "success": true,
+        "latency_ms": 1.607082999999676,
+        "connection_id": 2946498666,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200803.667337,
+        "success": true,
+        "latency_ms": 3.348000000000795,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200804.172364,
+        "success": true,
+        "latency_ms": 1.6724159999998989,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200804.679349,
+        "success": true,
+        "latency_ms": 1.9102909999997308,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200805.1875231,
+        "success": true,
+        "latency_ms": 3.021125000000069,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200805.689953,
+        "success": true,
+        "latency_ms": 1.893625000001009,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200806.19584,
+        "success": true,
+        "latency_ms": 1.8107080000007159,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200806.7022521,
+        "success": true,
+        "latency_ms": 1.3488329999997717,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200807.2053912,
+        "success": true,
+        "latency_ms": 2.9227919999996743,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200807.7089741,
+        "success": true,
+        "latency_ms": 2.1521250000002823,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200808.2138171,
+        "success": true,
+        "latency_ms": 1.7832919999989372,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200808.7165482,
+        "success": true,
+        "latency_ms": 1.7669580000010399,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200809.223468,
+        "success": true,
+        "latency_ms": 1.8460830000002204,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200809.7278788,
+        "success": true,
+        "latency_ms": 1.923500000000189,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200810.233474,
+        "success": true,
+        "latency_ms": 1.7243329999985235,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200810.7404501,
+        "success": true,
+        "latency_ms": 1.910209000001828,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200811.247479,
+        "success": true,
+        "latency_ms": 1.9632500000028585,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200811.752778,
+        "success": true,
+        "latency_ms": 2.030042000001231,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200812.2610922,
+        "success": true,
+        "latency_ms": 3.222333000000077,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200812.766023,
+        "success": true,
+        "latency_ms": 1.8105420000011918,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200813.2686532,
+        "success": true,
+        "latency_ms": 1.9052909999999201,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200813.77498,
+        "success": true,
+        "latency_ms": 1.7937500000009265,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200814.277411,
+        "success": true,
+        "latency_ms": 1.7663330000026178,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200814.7796679,
+        "success": true,
+        "latency_ms": 2.119957999997979,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200815.282439,
+        "success": true,
+        "latency_ms": 1.8269579999987684,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200815.786753,
+        "success": true,
+        "latency_ms": 2.0101249999981974,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200816.293464,
+        "success": true,
+        "latency_ms": 1.7303340000012213,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200816.800367,
+        "success": true,
+        "latency_ms": 1.8287089999979855,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200817.303669,
+        "success": true,
+        "latency_ms": 1.8555000000013422,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200817.809837,
+        "success": true,
+        "latency_ms": 2.0392079999993484,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200818.3138602,
+        "success": true,
+        "latency_ms": 1.8868330000003652,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200818.820195,
+        "success": true,
+        "latency_ms": 1.9096249999996928,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200819.3228219,
+        "success": true,
+        "latency_ms": 1.96179099999938,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200819.829798,
+        "success": true,
+        "latency_ms": 1.8917920000021127,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200820.333508,
+        "success": true,
+        "latency_ms": 1.7103749999982654,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200820.8404758,
+        "success": true,
+        "latency_ms": 1.8507089999992843,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200821.345581,
+        "success": true,
+        "latency_ms": 1.5206670000011968,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200821.849431,
+        "success": true,
+        "latency_ms": 2.017957999999709,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200822.353716,
+        "success": true,
+        "latency_ms": 1.8269169999989288,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200822.860642,
+        "success": true,
+        "latency_ms": 1.9534169999992912,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200823.364202,
+        "success": true,
+        "latency_ms": 2.054499999999848,
+        "connection_id": 1954545682,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      }
+    ]
+  },
+  "haproxy": {
+    "endpoint": "127.0.0.1:6001",
+    "total": 40,
+    "successes": 38,
+    "failures": 2,
+    "success_rate": 95.0,
+    "avg_latency_ms": 2.28,
+    "p99_latency_ms": 4.91,
+    "max_latency_ms": 6.61,
+    "max_gap_s": 11.515,
+    "conn_id_changes": 1,
+    "backend_changes": 1,
+    "unique_backends": [
+      "0fe5bbb2a7b2",
+      "b0476105b8a7"
+    ],
+    "failure_windows": [
+      {
+        "start": 1773200808.66509,
+        "end": 1773200814.677448,
+        "duration_s": 6.01
+      }
+    ],
+    "endpoint_stable": true,
+    "probes": [
+      {
+        "timestamp": 1773200793.561909,
+        "success": true,
+        "latency_ms": 6.607000000000002,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200794.069945,
+        "success": true,
+        "latency_ms": 2.7395420000000392,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200794.577869,
+        "success": true,
+        "latency_ms": 3.3712910000001095,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200795.083849,
+        "success": true,
+        "latency_ms": 2.5777499999999343,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200795.589705,
+        "success": true,
+        "latency_ms": 2.703708999999943,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200796.096004,
+        "success": true,
+        "latency_ms": 1.9377920000001048,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200796.6006951,
+        "success": true,
+        "latency_ms": 2.1725829999996726,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200797.10834,
+        "success": true,
+        "latency_ms": 2.547874999999866,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200797.615093,
+        "success": true,
+        "latency_ms": 2.633375000000271,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200798.122257,
+        "success": true,
+        "latency_ms": 2.0798749999997312,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200798.624751,
+        "success": true,
+        "latency_ms": 2.179499999999557,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200799.129216,
+        "success": true,
+        "latency_ms": 2.0849170000003525,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200799.63111,
+        "success": true,
+        "latency_ms": 1.4945419999996545,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200800.134024,
+        "success": true,
+        "latency_ms": 1.8777500000002334,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200800.640369,
+        "success": true,
+        "latency_ms": 1.3526249999999962,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200801.146454,
+        "success": true,
+        "latency_ms": 2.1380420000003397,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200801.649358,
+        "success": true,
+        "latency_ms": 2.127917000001034,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200802.154491,
+        "success": true,
+        "latency_ms": 1.3569159999988756,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200802.65614,
+        "success": true,
+        "latency_ms": 1.5244590000005331,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200803.162731,
+        "success": true,
+        "latency_ms": 1.5483329999987916,
+        "connection_id": 2946498664,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "b0476105b8a7",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200808.66509,
+        "success": false,
+        "latency_ms": 5001.436791000002,
+        "connection_id": null,
+        "tidb_version": "",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "",
+        "error": "(2013, 'Lost connection to MySQL server during query (timed out)')"
+      },
+      {
+        "timestamp": 1773200814.1716359,
+        "success": false,
+        "latency_ms": 5001.453332999999,
+        "connection_id": null,
+        "tidb_version": "",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "",
+        "error": "(2013, 'Lost connection to MySQL server during query (timed out)')"
+      },
+      {
+        "timestamp": 1773200814.677448,
+        "success": true,
+        "latency_ms": 4.9123330000000465,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200815.184371,
+        "success": true,
+        "latency_ms": 1.857292000000399,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200815.68892,
+        "success": true,
+        "latency_ms": 1.9425000000019566,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200816.195828,
+        "success": true,
+        "latency_ms": 2.231334000001084,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200816.702774,
+        "success": true,
+        "latency_ms": 1.873250000002713,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200817.20975,
+        "success": true,
+        "latency_ms": 1.9047500000013429,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200817.714756,
+        "success": true,
+        "latency_ms": 1.988624999999189,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200818.21699,
+        "success": true,
+        "latency_ms": 2.1352079999985563,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200818.723867,
+        "success": true,
+        "latency_ms": 1.7962499999981674,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200819.2284591,
+        "success": true,
+        "latency_ms": 2.167458999998928,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200819.735487,
+        "success": true,
+        "latency_ms": 1.9498749999975473,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200820.237909,
+        "success": true,
+        "latency_ms": 1.9337909999990188,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200820.7449229,
+        "success": true,
+        "latency_ms": 1.9402500000005318,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200821.247466,
+        "success": true,
+        "latency_ms": 1.9922919999970645,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200821.749436,
+        "success": true,
+        "latency_ms": 1.840459000000294,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200822.253657,
+        "success": true,
+        "latency_ms": 1.821416999998604,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200822.755859,
+        "success": true,
+        "latency_ms": 1.947041000001093,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      },
+      {
+        "timestamp": 1773200823.261167,
+        "success": true,
+        "latency_ms": 3.237625000000577,
+        "connection_id": 1954545816,
+        "tidb_version": "8.0.11-TiDB-v8.5.4",
+        "resolved_ip": "127.0.0.1",
+        "server_addr": "0fe5bbb2a7b2",
+        "error": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+FROM python:3.12-slim
+RUN pip install --no-cache-dir pymysql==1.1.1
+WORKDIR /app
+ENTRYPOINT ["python3", "/app/probe.py"]

@@ -1,0 +1,38 @@
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+    admin_credentials="admin:admin;radmin:radmin"
+    mysql_ifaces="0.0.0.0:6032"
+}
+
+mysql_variables=
+{
+    threads=2
+    max_connections=256
+    default_query_delay=0
+    default_query_timeout=30000
+    interfaces="0.0.0.0:6002"
+    server_version="8.0.11-TiDB"
+    monitor_username="root"
+    monitor_password=""
+    monitor_history=60000
+    monitor_connect_interval=2000
+    monitor_ping_interval=2000
+}
+
+mysql_servers=
+(
+    { address="tidb-1", port=4000, hostgroup=10, max_connections=100, weight=1000 },
+    { address="tidb-2", port=4000, hostgroup=10, max_connections=100, weight=1000 }
+)
+
+mysql_users=
+(
+    { username="root", password="", default_hostgroup=10, max_connections=100 }
+)
+
+mysql_query_rules=
+(
+    { rule_id=1, active=1, match_digest=".*", destination_hostgroup=10, apply=1 }
+)

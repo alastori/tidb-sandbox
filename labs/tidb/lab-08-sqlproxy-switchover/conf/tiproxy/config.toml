@@ -1,0 +1,15 @@
+# TiProxy static backend configuration (no PD required)
+#
+# In this lab TiDB runs in unistore mode without PD/TiKV.
+# TiProxy starts with pd-addrs="" and backends are configured
+# via the namespace API after startup (see step0-start.sh).
+
+[proxy]
+addr = "0.0.0.0:6000"
+pd-addrs = ""
+
+[api]
+addr = "0.0.0.0:3080"
+
+[log]
+level = "warn"
