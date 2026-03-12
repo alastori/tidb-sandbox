@@ -1,0 +1,12 @@
+[proxy]
+addr = "0.0.0.0:6000"
+pd-addrs = "pd:2379"
+
+[api]
+addr = "0.0.0.0:3080"
+
+[log]
+level = "info"
+
+[security]
+# No TLS for local testing
