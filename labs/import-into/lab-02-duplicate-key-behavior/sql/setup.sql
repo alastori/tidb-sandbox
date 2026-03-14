@@ -1,0 +1,16 @@
+CREATE DATABASE IF NOT EXISTS smoke_test;
+USE smoke_test;
+
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+  id INT PRIMARY KEY,
+  name VARCHAR(50),
+  email VARCHAR(100)
+);
+
+DROP TABLE IF EXISTS users_uk;
+CREATE TABLE users_uk (
+  id INT PRIMARY KEY,
+  name VARCHAR(50),
+  email VARCHAR(100) UNIQUE KEY
+);
