@@ -1,0 +1,6 @@
+source-id: "shard2"
+from:
+  host: "mysql-shard2"
+  user: "root"
+  password: "Pass_1234"
+  port: 3306

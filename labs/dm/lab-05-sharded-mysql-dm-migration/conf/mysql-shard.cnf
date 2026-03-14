@@ -1,0 +1,14 @@
+[mysqld]
+# Binlog + GTID — required for DM
+log-bin                     = mysql-bin
+binlog-format               = ROW
+gtid-mode                   = ON
+enforce-gtid-consistency    = ON
+
+# Character set
+character-set-server        = utf8mb4
+collation-server            = utf8mb4_bin
+skip-character-set-client-handshake
+
+# Auth plugin (MySQL 8.0 compat with DM)
+default-authentication-plugin = mysql_native_password

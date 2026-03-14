@@ -1,0 +1,151 @@
+services:
+  # ---------------------------------------------------------------------------
+  # MySQL shards (3x) — simulating sharded upstream
+  # ---------------------------------------------------------------------------
+  mysql-shard1:
+    image: ${MYSQL_IMAGE:-mysql:8.0.44}
+    container_name: lab05-mysql-shard1
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Pass_1234}
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./conf/mysql-shard.cnf:/etc/mysql/conf.d/shard.cnf:ro
+    command: --server-id=101
+    networks:
+      - lab05-net
+
+  mysql-shard2:
+    image: ${MYSQL_IMAGE:-mysql:8.0.44}
+    container_name: lab05-mysql-shard2
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Pass_1234}
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./conf/mysql-shard.cnf:/etc/mysql/conf.d/shard.cnf:ro
+    command: --server-id=102
+    networks:
+      - lab05-net
+
+  mysql-shard3:
+    image: ${MYSQL_IMAGE:-mysql:8.0.44}
+    container_name: lab05-mysql-shard3
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Pass_1234}
+    ports:
+      - "3309:3306"
+    volumes:
+      - ./conf/mysql-shard.cnf:/etc/mysql/conf.d/shard.cnf:ro
+    command: --server-id=103
+    networks:
+      - lab05-net
+
+  # ---------------------------------------------------------------------------
+  # TiDB cluster (PD + TiKV + TiDB)
+  # ---------------------------------------------------------------------------
+  pd:
+    image: pingcap/pd:${TIDB_VERSION:-v8.5.4}
+    container_name: lab05-pd
+    command:
+      - --name=pd
+      - --data-dir=/pd-data
+      - --client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://pd:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-peer-urls=http://pd:2380
+    networks:
+      - lab05-net
+
+  tikv:
+    image: pingcap/tikv:${TIDB_VERSION:-v8.5.4}
+    container_name: lab05-tikv
+    depends_on:
+      - pd
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv:20160
+      - --data-dir=/tikv-data
+      - --pd=pd:2379
+    networks:
+      - lab05-net
+
+  tidb:
+    image: pingcap/tidb:${TIDB_VERSION:-v8.5.4}
+    container_name: lab05-tidb
+    ports:
+      - "4000:4000"
+    depends_on:
+      - tikv
+    command:
+      - --store=tikv
+      - --path=pd:2379
+    networks:
+      - lab05-net
+
+  # ---------------------------------------------------------------------------
+  # DM cluster (dm-master + 3 dm-workers)
+  # ---------------------------------------------------------------------------
+  dm-master:
+    image: pingcap/dm:${DM_VERSION:-v8.5.4}
+    container_name: lab05-dm-master
+    ports:
+      - "8261:8261"
+    command:
+      - /dm-master
+      - --master-addr=0.0.0.0:8261
+      - --advertise-addr=dm-master:8261
+      - --name=dm-master
+      - --initial-cluster=dm-master=http://dm-master:8291
+      - --peer-urls=http://0.0.0.0:8291
+      - --advertise-peer-urls=http://dm-master:8291
+    depends_on:
+      - tidb
+    networks:
+      - lab05-net
+
+  dm-worker1:
+    image: pingcap/dm:${DM_VERSION:-v8.5.4}
+    container_name: lab05-dm-worker1
+    command:
+      - /dm-worker
+      - --worker-addr=0.0.0.0:8262
+      - --advertise-addr=dm-worker1:8262
+      - --name=dm-worker1
+      - --join=dm-master:8261
+    depends_on:
+      - dm-master
+    networks:
+      - lab05-net
+
+  dm-worker2:
+    image: pingcap/dm:${DM_VERSION:-v8.5.4}
+    container_name: lab05-dm-worker2
+    command:
+      - /dm-worker
+      - --worker-addr=0.0.0.0:8262
+      - --advertise-addr=dm-worker2:8262
+      - --name=dm-worker2
+      - --join=dm-master:8261
+    depends_on:
+      - dm-master
+    networks:
+      - lab05-net
+
+  dm-worker3:
+    image: pingcap/dm:${DM_VERSION:-v8.5.4}
+    container_name: lab05-dm-worker3
+    command:
+      - /dm-worker
+      - --worker-addr=0.0.0.0:8262
+      - --advertise-addr=dm-worker3:8262
+      - --name=dm-worker3
+      - --join=dm-master:8261
+    depends_on:
+      - dm-master
+    networks:
+      - lab05-net
+
+networks:
+  lab05-net:
+    driver: bridge

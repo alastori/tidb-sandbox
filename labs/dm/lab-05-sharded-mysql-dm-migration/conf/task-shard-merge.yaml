@@ -1,0 +1,33 @@
+name: "shard-merge"
+task-mode: "all"
+shard-mode: "pessimistic"
+
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+
+mysql-instances:
+  - source-id: "shard1"
+    block-allow-list: "allow-contact-book"
+    route-rules: ["shard-to-merged"]
+
+  - source-id: "shard2"
+    block-allow-list: "allow-contact-book"
+    route-rules: ["shard-to-merged"]
+
+  - source-id: "shard3"
+    block-allow-list: "allow-contact-book"
+    route-rules: ["shard-to-merged"]
+
+block-allow-list:
+  allow-contact-book:
+    do-dbs: ["contact_book"]
+
+routes:
+  shard-to-merged:
+    schema-pattern: "contact_book"
+    table-pattern: "contacts"
+    target-schema: "contact_book"
+    target-table: "contacts"
