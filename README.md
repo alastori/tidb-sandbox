@@ -13,6 +13,7 @@ and troubleshooting patterns.
 | [lab-02](labs/dm/lab-02-mariadb-legacy-migration) | Legacy MariaDB full-load precheck & target fixups | Manual |
 | [lab-03](labs/dm/lab-03-foreign-key-safe-mode) | Foreign keys and safe mode (short-term workaround) | Manual |
 | [lab-04](labs/dm/lab-04-binlog-format) | Binlog format requirements (ROW / STATEMENT / MIXED) | Scripted |
+| [lab-05](labs/dm/lab-05-sharded-mysql-dm-migration) | Shard merge migration (3 MySQL shards → TiDB, pessimistic mode) | Scripted |
 
 ### Dumpling
 
