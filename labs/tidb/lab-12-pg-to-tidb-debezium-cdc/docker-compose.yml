@@ -1,0 +1,78 @@
+services:
+
+  zookeeper:
+    image: ${ZK_IMAGE:-confluentinc/cp-zookeeper:7.6.0}
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: ${KAFKA_IMAGE:-confluentinc/cp-kafka:7.6.0}
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  postgres:
+    image: ${PG_IMAGE:-postgres:16.6}
+    command: postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4
+    environment:
+      POSTGRES_DB: ${PG_DB:-smoketest}
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-postgres}
+    ports: ["${PG_PORT:-5432}:5432"]
+
+  pd:
+    image: ${PD_IMAGE:-pingcap/pd:v8.5.4}
+    command:
+      - --name=pd
+      - --client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://pd:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-peer-urls=http://pd:2380
+      - --data-dir=/data/pd
+
+  tikv:
+    image: ${TIKV_IMAGE:-pingcap/tikv:v8.5.4}
+    depends_on: [pd]
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv:20160
+      - --pd=pd:2379
+      - --data-dir=/data/tikv
+
+  tidb:
+    image: ${TIDB_IMAGE:-pingcap/tidb:v8.5.4}
+    depends_on: [tikv]
+    command:
+      - --store=tikv
+      - --path=pd:2379
+    ports: ["${TIDB_PORT:-4000}:4000"]
+
+  connect:
+    build:
+      context: .
+      dockerfile: connect.Dockerfile
+    depends_on: [kafka, postgres, tidb]
+    ports: ["${CONNECT_PORT:-8083}:8083"]
+    restart: on-failure
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: cdc-connect
+      CONFIG_STORAGE_TOPIC: _connect-configs
+      OFFSET_STORAGE_TOPIC: _connect-offsets
+      STATUS_STORAGE_TOPIC: _connect-status
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      ADVERTISED_HOST_NAME: connect
+      OFFSET_FLUSH_INTERVAL_MS: 10000
+
+  mysql-client:
+    image: ${MYSQL_CLIENT_IMAGE:-mysql:8.0.44}
+    entrypoint: ["sleep", "infinity"]
+    depends_on: [tidb]
