@@ -1,0 +1,19 @@
+name: "lock-tables-test"
+task-mode: "all"
+
+# consistency=auto — DM chooses mode based on privilege detection.
+# This is the default behavior for both OSS and Cloud DM.
+
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+
+mysql-instances:
+  - source-id: "mysql-source"
+    block-allow-list: "allow-testdb"
+
+block-allow-list:
+  allow-testdb:
+    do-dbs: ["testdb"]

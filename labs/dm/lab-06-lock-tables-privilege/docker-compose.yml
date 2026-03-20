@@ -1,0 +1,92 @@
+services:
+  mysql-source:
+    image: mysql:8.0.44
+    container_name: lab06-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Pass_1234}
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./conf/my.cnf:/etc/mysql/conf.d/dm.cnf:ro
+    networks:
+      - lab06-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-pPass_1234"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pd:
+    image: pingcap/pd:v8.5.4
+    container_name: lab06-pd
+    command:
+      - --name=pd
+      - --client-urls=http://0.0.0.0:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-client-urls=http://pd:2379
+      - --advertise-peer-urls=http://pd:2380
+      - --data-dir=/data/pd
+    networks:
+      - lab06-net
+
+  tikv:
+    image: pingcap/tikv:v8.5.4
+    container_name: lab06-tikv
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv:20160
+      - --pd=pd:2379
+      - --data-dir=/data/tikv
+    depends_on:
+      - pd
+    networks:
+      - lab06-net
+
+  tidb:
+    image: pingcap/tidb:v8.5.4
+    container_name: lab06-tidb
+    command:
+      - --store=tikv
+      - --path=pd:2379
+    ports:
+      - "4000:4000"
+    depends_on:
+      - tikv
+    networks:
+      - lab06-net
+
+  dm-master:
+    image: pingcap/dm:v8.5.4
+    container_name: lab06-dm-master
+    command:
+      - /dm-master
+      - --master-addr=0.0.0.0:8261
+      - --advertise-addr=dm-master:8261
+      - --name=dm-master
+      - --initial-cluster=dm-master=http://dm-master:8291
+      - --peer-urls=http://0.0.0.0:8291
+      - --advertise-peer-urls=http://dm-master:8291
+    ports:
+      - "8261:8261"
+    depends_on:
+      - tidb
+    networks:
+      - lab06-net
+
+  dm-worker:
+    image: pingcap/dm:v8.5.4
+    container_name: lab06-dm-worker
+    command:
+      - /dm-worker
+      - --worker-addr=0.0.0.0:8262
+      - --advertise-addr=dm-worker:8262
+      - --name=dm-worker
+      - --join=dm-master:8261
+    depends_on:
+      - dm-master
+    networks:
+      - lab06-net
+
+networks:
+  lab06-net:
+    name: lab06-net

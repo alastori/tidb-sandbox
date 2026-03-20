@@ -1,0 +1,23 @@
+name: "lock-tables-test"
+task-mode: "all"
+
+# consistency=snapshot — uses START TRANSACTION WITH CONSISTENT SNAPSHOT.
+# Should succeed without LOCK TABLES privilege (InnoDB only).
+mydumpers:
+  global:
+    extra-args: "--consistency snapshot"
+
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+
+mysql-instances:
+  - source-id: "mysql-source"
+    block-allow-list: "allow-testdb"
+    mydumper-config-name: "global"
+
+block-allow-list:
+  allow-testdb:
+    do-dbs: ["testdb"]

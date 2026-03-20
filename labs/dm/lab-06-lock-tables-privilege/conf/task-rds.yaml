@@ -1,0 +1,22 @@
+name: "lock-tables-test"
+task-mode: "all"
+
+# Cloud DM uses consistency=flush.
+mydumpers:
+  global:
+    extra-args: "--consistency flush"
+
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+
+mysql-instances:
+  - source-id: "rds-source"
+    block-allow-list: "allow-testdb"
+    mydumper-config-name: "global"
+
+block-allow-list:
+  allow-testdb:
+    do-dbs: ["testdb"]

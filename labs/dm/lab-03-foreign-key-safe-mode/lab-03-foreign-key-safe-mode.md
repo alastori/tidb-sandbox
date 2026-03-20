@@ -159,7 +159,7 @@ Create `create_dm_user_mysql.sql`:
 ```sql
 -- create_dm_user_mysql.sql
 CREATE USER 'tidb-dm'@'%' IDENTIFIED BY 'Pass_1234';
-GRANT REPLICATION SLAVE, REPLICATION CLIENT, SELECT, RELOAD, PROCESS ON *.* TO 'tidb-dm'@'%';
+GRANT REPLICATION SLAVE, REPLICATION CLIENT, SELECT, RELOAD, LOCK TABLES, PROCESS ON *.* TO 'tidb-dm'@'%';
 FLUSH PRIVILEGES;
 ```
 

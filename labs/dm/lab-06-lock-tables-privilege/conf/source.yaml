@@ -1,0 +1,6 @@
+source-id: "mysql-source"
+from:
+  host: "mysql-source"
+  user: "dm_user"
+  password: "DmPass_1234"
+  port: 3306

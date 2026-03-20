@@ -1,0 +1,18 @@
+name: "lock-tables-test"
+task-mode: "all"
+
+# consistency=auto — DM chooses mode based on privilege detection.
+
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+
+mysql-instances:
+  - source-id: "rds-source"
+    block-allow-list: "allow-testdb"
+
+block-allow-list:
+  allow-testdb:
+    do-dbs: ["testdb"]
