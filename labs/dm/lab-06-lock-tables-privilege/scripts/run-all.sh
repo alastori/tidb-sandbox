@@ -23,6 +23,7 @@ run_step() {
     run_step step1-seed-data.sh step1-seed-data
     run_step step2-negative-test.sh step2-negative-test
     run_step step3-positive-test.sh step3-positive-test
+    run_step step5-rds-test.sh step5-rds-test
     run_step step4-cleanup.sh step4-cleanup
 
     echo ""

@@ -17,8 +17,6 @@ LOG="${RESULTS_DIR}/step3-positive-test-${TS}.log"
     docker exec lab06-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW GRANTS FOR 'dm_user'@'%';"
     echo ""
 
-    # Copy source config
-    docker cp "${LAB_DIR}/conf/source.yaml" lab06-dm-master:/tmp/source.yaml
 
     # -------------------------------------------------------------------------
     # S5: consistency=flush + LOCK TABLES granted

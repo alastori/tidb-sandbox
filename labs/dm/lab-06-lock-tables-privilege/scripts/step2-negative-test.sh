@@ -10,8 +10,6 @@ LOG="${RESULTS_DIR}/step2-negative-test-${TS}.log"
     echo "=== Step 2: Negative tests — WITHOUT LOCK TABLES ==="
     echo ""
 
-    # Copy source config (shared across all scenarios)
-    docker cp "${LAB_DIR}/conf/source.yaml" lab06-dm-master:/tmp/source.yaml
 
     # -------------------------------------------------------------------------
     # S1: consistency=flush (explicit) — no LOCK TABLES

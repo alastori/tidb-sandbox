@@ -128,6 +128,7 @@ reset_dm_task() {
     echo "  Resetting DM task and source..."
     dmctl stop-task lock-tables-test 2>/dev/null || true
     dmctl operate-source stop mysql-source 2>/dev/null || true
+    dmctl operate-source stop rds-source 2>/dev/null || true
     # Clear dumpling output from previous run
     docker exec "$DM_WORKER_CONTAINER" sh -c 'rm -rf /tmp/dm_worker/dump_data* 2>/dev/null' || true
     # Drop target database so next scenario starts clean
@@ -137,9 +138,13 @@ reset_dm_task() {
 }
 
 # Register source + start task with a given task config.
+# Usage: start_dm_task <task_file> [source_file]
+# source_file defaults to source.yaml (local MySQL).
 start_dm_task() {
     local task_file="$1"
-    echo "  Registering DM source..."
+    local source_file="${2:-source.yaml}"
+    echo "  Registering DM source (${source_file})..."
+    docker cp "${LAB_DIR}/conf/${source_file}" lab06-dm-master:/tmp/source.yaml
     dmctl operate-source create /tmp/source.yaml || true
     sleep 2
     echo "  Starting migration task (config: ${task_file})..."

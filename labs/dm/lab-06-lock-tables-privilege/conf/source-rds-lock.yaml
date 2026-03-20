@@ -1,0 +1,6 @@
+source-id: "rds-source"
+from:
+  host: "dm-test-mysql-source.cfa8ik406c83.us-west-2.rds.amazonaws.com"
+  user: "dm_user_lock"
+  password: "DmPass_1234"
+  port: 3306
