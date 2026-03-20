@@ -3,7 +3,7 @@ services:
     image: mysql:8.0.44
     container_name: lab06-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: Pass_1234
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Pass_1234}
     ports:
       - "3307:3306"
     volumes:

@@ -6,7 +6,17 @@ source "${SCRIPT_DIR}/common.sh"
 
 LOG="${RESULTS_DIR}/step5-rds-test-${TS}.log"
 
-RDS_HOST="dm-test-mysql-source.cfa8ik406c83.us-west-2.rds.amazonaws.com"
+# RDS configuration from environment (see .env.example)
+RDS_HOST="${RDS_HOST:-}"
+RDS_USER_NOLOCK="${RDS_USER_NOLOCK:-dm_user_nolock}"
+RDS_USER_LOCK="${RDS_USER_LOCK:-dm_user_lock}"
+RDS_PASSWORD="${RDS_PASSWORD:-DmPass_1234}"
+
+if [[ -z "$RDS_HOST" ]]; then
+    echo "=== Step 5: RDS tests SKIPPED (RDS_HOST not set) ==="
+    echo "  Set RDS_HOST in .env or environment to enable. See .env.example."
+    exit 0
+fi
 
 {
     echo "=== Step 5: RDS MySQL tests — vanilla MySQL vs RDS comparison ==="
@@ -14,12 +24,35 @@ RDS_HOST="dm-test-mysql-source.cfa8ik406c83.us-west-2.rds.amazonaws.com"
     echo "RDS endpoint: ${RDS_HOST}"
     echo ""
 
+    # Generate RDS source configs at runtime (credentials not committed)
+    cat > /tmp/source-rds-nolock.yaml <<EOF
+source-id: "rds-source"
+from:
+  host: "${RDS_HOST}"
+  user: "${RDS_USER_NOLOCK}"
+  password: "${RDS_PASSWORD}"
+  port: 3306
+EOF
+
+    cat > /tmp/source-rds-lock.yaml <<EOF
+source-id: "rds-source"
+from:
+  host: "${RDS_HOST}"
+  user: "${RDS_USER_LOCK}"
+  password: "${RDS_PASSWORD}"
+  port: 3306
+EOF
+
+    # Copy generated configs to where start_dm_task expects them
+    cp /tmp/source-rds-nolock.yaml "${LAB_DIR}/conf/source-rds-nolock.yaml"
+    cp /tmp/source-rds-lock.yaml "${LAB_DIR}/conf/source-rds-lock.yaml"
+
     # Verify RDS connectivity from DM worker container
     echo "Verifying DM worker can reach RDS..."
     if ! docker exec "$DM_WORKER_CONTAINER" sh -c \
         "echo | nc -w 5 ${RDS_HOST} 3306 2>/dev/null"; then
         echo "WARNING: DM worker cannot reach RDS — skipping RDS tests"
-        echo "  Ensure security group sg-02e40604f36402922 allows inbound 3306"
+        echo "  Ensure the RDS security group allows inbound 3306"
         echo "=== RDS tests skipped ==="
         exit 0
     fi
@@ -32,7 +65,6 @@ RDS_HOST="dm-test-mysql-source.cfa8ik406c83.us-west-2.rds.amazonaws.com"
     # -------------------------------------------------------------------------
     echo "--- R1: consistency=flush, RDS, no LOCK TABLES ---"
     reset_dm_task
-    docker exec "$DM_WORKER_CONTAINER" sh -c 'truncate -s 0 /tmp/dm_worker/log/dm-worker.log 2>/dev/null' || true
     start_dm_task "task-rds.yaml" "source-rds-nolock.yaml"
 
     echo "  Waiting for result (up to 120s)..."
@@ -88,6 +120,9 @@ RDS_HOST="dm-test-mysql-source.cfa8ik406c83.us-west-2.rds.amazonaws.com"
     echo "  Task status:"
     dmctl query-status lock-tables-test || true
     echo ""
+
+    # Clean up generated configs
+    rm -f "${LAB_DIR}/conf/source-rds-nolock.yaml" "${LAB_DIR}/conf/source-rds-lock.yaml"
 
     # -------------------------------------------------------------------------
     # Summary

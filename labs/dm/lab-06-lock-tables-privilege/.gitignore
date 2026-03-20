@@ -1,0 +1,3 @@
+# Generated RDS source configs (contain credentials)
+conf/source-rds-*.yaml
+.env

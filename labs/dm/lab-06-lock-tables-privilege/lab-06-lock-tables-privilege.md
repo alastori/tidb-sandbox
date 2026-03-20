@@ -114,11 +114,15 @@ Run scenarios R1-R3 against the AWS RDS MySQL source. Requires AWS access and
 the RDS instance `dm-test-mysql-source` in us-west-2 to be running.
 
 ```bash
+# Set RDS credentials (not committed — see .env.example)
+export RDS_HOST=your-rds-instance.region.rds.amazonaws.com
+export RDS_PASSWORD=your_password
 ./scripts/step5-rds-test.sh
 ```
 
-Tests two RDS MySQL users (`dm_user_nolock`, `dm_user_lock`) against the same
-DM infrastructure. The script verifies DM worker can reach RDS before running.
+Requires `RDS_HOST` to be set (skips gracefully if not). Tests two RDS MySQL
+users (`dm_user_nolock`, `dm_user_lock`) against the same DM infrastructure.
+Source configs are generated at runtime from environment variables.
 
 ## Results Matrix
 
