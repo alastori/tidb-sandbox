@@ -14,6 +14,7 @@ and troubleshooting patterns.
 | [lab-03](labs/dm/lab-03-foreign-key-safe-mode) | Foreign keys and safe mode (short-term workaround) | Manual |
 | [lab-04](labs/dm/lab-04-binlog-format) | Binlog format requirements (ROW / STATEMENT / MIXED) | Scripted |
 | [lab-05](labs/dm/lab-05-sharded-mysql-dm-migration) | Shard merge migration (3 MySQL shards → TiDB, pessimistic mode) | Scripted |
+| [lab-06](labs/dm/lab-06-lock-tables-privilege) | LOCK TABLES privilege and consistency modes (vanilla MySQL vs RDS) | Scripted |
 
 ### Dumpling
 
