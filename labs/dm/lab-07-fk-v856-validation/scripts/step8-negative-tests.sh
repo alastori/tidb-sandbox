@@ -63,5 +63,7 @@ LOG="${RESULTS_DIR}/step8-negative-${TS}.log"
     echo ""
     echo "=== Step 8 complete ==="
 } 2>&1 | tee "$LOG"
+exit_code=${PIPESTATUS[0]}
 
 clean_log "$LOG"
+exit "$exit_code"

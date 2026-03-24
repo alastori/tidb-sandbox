@@ -75,7 +75,7 @@ LOG="${RESULTS_DIR}/step7-extended-fk-${TS}.log"
     echo "EXPECTED S6b:"
     echo "  Source: parent_upd code='CODE_X', child_on_update parent_code='CODE_X' (CASCADE UPDATE)"
     echo "  Target with safe-mode:true + UK change:"
-    echo "    PR #12414 rejects safe-mode PK/UK update with FK_CHECKS=1."
+    echo "    PR #12351 guardrail rejects safe-mode PK/UK update with FK_CHECKS=1."
     echo "    Task PAUSED with: 'safe-mode update with foreign_key_checks=1 and PK/UK changes'"
     echo "    This is the expected guardrail behavior."
 
@@ -139,5 +139,7 @@ LOG="${RESULTS_DIR}/step7-extended-fk-${TS}.log"
     echo ""
     echo "=== Step 7 complete ==="
 } 2>&1 | tee "$LOG"
+exit_code=${PIPESTATUS[0]}
 
 clean_log "$LOG"
+exit "$exit_code"

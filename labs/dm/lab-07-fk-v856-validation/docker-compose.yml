@@ -11,7 +11,7 @@ services:
     networks:
       - lab07-net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-uroot", "-pPass_1234"]
+      test: ["CMD-SHELL", "mysqladmin ping -uroot -p$${MYSQL_ROOT_PASSWORD:-Pass_1234}"]
       interval: 5s
       timeout: 3s
       retries: 10

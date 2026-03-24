@@ -58,5 +58,7 @@ LOG="${RESULTS_DIR}/step5-ddl-${TS}.log"
     echo ""
     echo "=== Step 5 complete ==="
 } 2>&1 | tee "$LOG"
+exit_code=${PIPESTATUS[0]}
 
 clean_log "$LOG"
+exit "$exit_code"

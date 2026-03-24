@@ -83,5 +83,7 @@ LOG="${RESULTS_DIR}/build-multi-pr-${PR_LABEL}-${TS}.log"
     print_build_summary "${DM_IMAGE_TAG}"
 
 } 2>&1 | tee "$LOG"
+exit_code=${PIPESTATUS[0]}
 
 clean_log "$LOG"
+exit "$exit_code"
