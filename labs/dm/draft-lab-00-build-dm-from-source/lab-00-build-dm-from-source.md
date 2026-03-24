@@ -130,8 +130,11 @@ Visible in `dm-master --version` output.
 
 ### Architecture notes
 
-- **macOS (arm64) host building for Docker:** Docker Desktop runs linux containers. The `dm/Dockerfile` build stage uses `golang:1.25-alpine` which matches the container's architecture. On Apple Silicon, this builds `linux/arm64` binaries natively (fast). For `linux/amd64`, use `docker buildx build --platform linux/amd64`.
-- **CGO:** DM binaries use `CGO_ENABLED=0` on Linux (fully static). On macOS native builds, `CGO_ENABLED=1` is required for the gosigar dependency, but Docker builds are always Linux.
+- **macOS (arm64) host building for Docker:**
+  - Docker Desktop runs Linux containers natively on Apple Silicon
+  - The `dm/Dockerfile` build stage uses `golang:1.25-alpine`, which builds `linux/arm64` binaries by default (fast)
+  - For `linux/amd64` images, use `docker buildx build --platform linux/amd64`
+- **CGO:** DM binaries use `CGO_ENABLED=0` on Linux (fully static). macOS native builds require `CGO_ENABLED=1` for the gosigar dependency, but Docker builds are always Linux.
 - **Build cache:** Go module cache (~1.5 GB) persists across builds if the tiflow directory is reused.
 
 ## Scenarios in Detail
@@ -170,7 +173,7 @@ bash scripts/build-from-pr.sh 12351
 bash scripts/build-from-pr.sh 12600
 ```
 
-**Note:** This builds the PR as-is, without rebasing onto the latest base branch. If the PR is old and conflicts with HEAD, use `build-from-multi-pr.sh` instead with the PR on top of a fresh base.
+> **Note:** This builds the PR as-is, without rebasing onto the latest base branch. If the PR is old and conflicts with HEAD, use `build-from-multi-pr.sh` instead with the PR on top of a fresh base.
 
 ### build-from-multi-pr.sh
 

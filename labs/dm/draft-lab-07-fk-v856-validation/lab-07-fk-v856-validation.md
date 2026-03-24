@@ -34,36 +34,21 @@ products: [dm, mysql, tidb]
 | S6b | ON UPDATE CASCADE semantic mismatch | Same as S6a | Guardrail: safe-mode UK update rejected | UK change DELETE+REPLACE, wrong semantics |
 | S6c | Self-referencing FK (employee hierarchy) | Same as S6a | Non-key UPDATE safe; DELETE cascades SET NULL | Non-key UPDATE cascades |
 | S6d | Composite FK (multi-column) | Same as S6a | Non-key UPDATE safe; DELETE cascades | Same |
-| S7a | BAL missing ancestor table | `worker-count: 4`, parent filtered | Error: parent table not in block-allow-list | Silent data inconsistency |
+| S7a | Block-allow-list (BAL) missing ancestor table | `worker-count: 4`, parent filtered | Error: parent table not in BAL | Silent data inconsistency |
 
-## Tested Environment
+## Quick Start
 
-> **Note:** v8.5.6 is not yet released (target: 2026-04-14). The DM image must be built from the `release-8.5` branch of [pingcap/tiflow](https://github.com/pingcap/tiflow) at commit `d6d53adbe1` or later. Set `DM_IMAGE` in `.env` to override.
-
-- DM: v8.5.6 (unreleased; `pingcap/dm:v8.5.6` or custom build from release-8.5)
-- TiDB / PD / TiKV: v8.5.4 (`pingcap/tidb:v8.5.4`, `pingcap/pd:v8.5.4`, `pingcap/tikv:v8.5.4`)
-- MySQL: 8.0.44 (`mysql:8.0.44`)
-- Docker Desktop on macOS (arm64)
-- Default credentials: root / `Pass_1234`
-
-### Building DM from source (until v8.5.6 is released)
-
-Use [Lab 00 -- Build DM from Source](../draft-lab-00-build-dm-from-source/lab-00-build-dm-from-source.md):
+> **Important:** v8.5.6 is not yet released (target: 2026-04-14). Build the DM image first using [Lab 00](../draft-lab-00-build-dm-from-source/lab-00-build-dm-from-source.md), then set `DM_IMAGE` in `.env`.
 
 ```bash
-# Build from release-8.5 branch (contains all v8.5.6 cherry-picks)
+# 1. Build DM from source (one-time)
 cd ../draft-lab-00-build-dm-from-source
 bash scripts/build-from-branch.sh release-8.5
 bash scripts/verify-image.sh dm:release-8.5
 
-# Set in this lab's .env
-echo "DM_IMAGE=dm:release-8.5" >> ../draft-lab-07-fk-v856-validation/.env
-```
-
-## Quick Start
-
-```bash
-cd labs/dm/draft-lab-07-fk-v856-validation
+# 2. Configure and run this lab
+cd ../draft-lab-07-fk-v856-validation
+echo "DM_IMAGE=dm:release-8.5" >> .env
 bash scripts/run-all.sh
 ```
 
@@ -78,9 +63,17 @@ bash scripts/step4-multi-worker.sh         # S3: Multi-worker causality
 bash scripts/step5-ddl-replication.sh      # S4: DDL whitelist
 bash scripts/step6-safe-multi-worker.sh    # S5: safe-mode:true + worker-count:4
 bash scripts/step7-extended-fk-types.sh    # S6: Multi-level, ON UPDATE, self-ref, composite
-bash scripts/step8-negative-tests.sh       # S7: BAL missing ancestor
+bash scripts/step8-negative-tests.sh       # S7: block-allow-list missing ancestor
 bash scripts/step9-cleanup.sh              # Teardown
 ```
+
+## Tested Environment
+
+- DM: v8.5.6 (unreleased; `pingcap/dm:v8.5.6` or custom build from release-8.5 at `d6d53adbe1`+)
+- TiDB / PD / TiKV: v8.5.4 (`pingcap/tidb:v8.5.4`, `pingcap/pd:v8.5.4`, `pingcap/tikv:v8.5.4`)
+- MySQL: 8.0.44 (`mysql:8.0.44`)
+- Docker Desktop on macOS (arm64)
+- Default credentials: root / `Pass_1234`
 
 ## Schema
 
@@ -188,23 +181,47 @@ ALTER TABLE child_dynamic DROP FOREIGN KEY fk_dyn;
 | Data replicated | Yes (d1a, d2a) |
 | FK after ADD + DROP | No FK remaining |
 
+### S5: safe-mode:true + worker-count:4 (Step 6)
+
+**Why this matters:** The most realistic production configuration. After a task resume, DM auto-enables safe mode for ~60 seconds while running with the configured `worker-count`. This exercises both PR #12351 and #12414 simultaneously.
+
+**Config:** `safe-mode: true`, `worker-count: 4`, `foreign_key_checks: ON`
+
+**DML:** Combines non-key UPDATEs (S1) and interleaved parent+child INSERTs (S3) under both fixes active.
+
+### S6a-d: Extended FK Types (Step 7)
+
+**S6a -- Multi-level cascades:** 3-level chain (grandparent -> mid_parent -> grandchild). Non-key UPDATEs should not cascade. DELETE on grandparent should cascade through mid_parent to grandchild.
+
+**S6b -- ON UPDATE CASCADE:** UK-changing UPDATE on `parent_upd.code` (UNIQUE KEY). In safe mode, DM detects the UK change and the guardrail rejects it: `"safe-mode update with foreign_key_checks=1 and PK/UK changes is not supported"`. Task PAUSEs. This documents the semantic mismatch: MySQL applies ON UPDATE CASCADE, but DM safe mode would rewrite as DELETE+REPLACE triggering ON DELETE RESTRICT.
+
+**S6c -- Self-referencing FK:** Employee hierarchy where `employee.manager_id` references `employee.id`. Circular FK detected by DM; causality ordering may be skipped. Non-key UPDATEs should be safe; DELETE cascades SET NULL to subordinates.
+
+**S6d -- Composite FK:** Multi-column FK `(org_id, dept_id)` references `org(org_id, dept_id)`. Tests FK relation discovery with multi-column index mapping in PR #12414.
+
+### S7a: Block-Allow-List Missing Ancestor (Step 8)
+
+Negative test. Task config includes `child_cascade` but excludes `parent` from `do-tables`. DM should reject with: `"foreign_key_checks=1 is not supported when replicated table depends on parent/ancestor table filtered by block-allow-list"`.
+
 ## Results Summary
 
-| ID | Scenario | Status |
-|----|----------|--------|
-| S1a | Non-key UPDATE safe mode fix | TODO |
-| S1b | INSERT rewrite in safe mode | TODO |
-| S1c | DM worker log FK_CHECKS toggle | TODO |
-| S2a | PK-changing UPDATE limitation | TODO |
-| S2b | safe-mode:false workaround | TODO |
-| S3 | Multi-worker FK causality | TODO |
-| S4 | DDL replication | TODO |
-| S5 | safe-mode:true + worker-count:4 | TODO |
-| S6a | Multi-level cascades | TODO |
-| S6b | ON UPDATE CASCADE | TODO |
-| S6c | Self-referencing FK | TODO |
-| S6d | Composite FK | TODO |
-| S7a | BAL missing ancestor | TODO |
+Update the Status column after running each step.
+
+| ID | Status |
+|----|--------|
+| S1a | TODO |
+| S1b | TODO |
+| S1c | TODO |
+| S2a | TODO |
+| S2b | TODO |
+| S3 | TODO |
+| S4 | TODO |
+| S5 | TODO |
+| S6a | TODO |
+| S6b | TODO |
+| S6c | TODO |
+| S6d | TODO |
+| S7a | TODO |
 
 ## Comparison with Lab 03
 
@@ -241,5 +258,5 @@ Validated by this lab or documented in PRs:
 - [DM Compatibility Catalog](https://docs.pingcap.com/tidb/stable/dm-compatibility-catalog/) -- FK section
 - [Lab 03 -- DM Foreign Keys and Safe Mode (Pre-fix)](../lab-03-foreign-key-safe-mode/lab-03-foreign-key-safe-mode.md) -- before/after baseline
 - [tiflow#12350](https://github.com/pingcap/tiflow/issues/12350) -- umbrella tracking issue
-- [FD-2307](https://jira.pingcap.net/browse/FD-2307) -- Safe Mode FK (Jira)
-- [FD-2379](https://jira.pingcap.net/browse/FD-2379) -- Multi-worker FK causality (Jira)
+- FD-2307 -- Safe Mode FK (PingCAP internal Jira)
+- FD-2379 -- Multi-worker FK causality (PingCAP internal Jira)
