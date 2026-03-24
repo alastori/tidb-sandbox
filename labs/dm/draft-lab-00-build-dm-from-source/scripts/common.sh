@@ -16,10 +16,10 @@ TS="${TS:-$(date -u +%Y%m%dT%H%M%SZ)}"
 RESULTS_DIR="${RESULTS_DIR:-${LAB_DIR}/results}"
 mkdir -p "${RESULTS_DIR}"
 
-# Defaults
+# Defaults — DM_IMAGE_TAG is intentionally not set here;
+# each build script computes a contextual default (dm:release-8.5, dm:pr-12351, etc.)
 TIFLOW_REPO="${TIFLOW_REPO:-https://github.com/pingcap/tiflow.git}"
 TIFLOW_DIR="${TIFLOW_DIR:-${LAB_DIR}/tiflow}"
-DM_IMAGE_TAG="${DM_IMAGE_TAG:-dm:local}"
 
 # -----------------------------------------------------------------------------
 # Utility Functions
@@ -112,4 +112,4 @@ clean_log() {
 }
 
 export SCRIPT_DIR LAB_DIR TS RESULTS_DIR
-export TIFLOW_REPO TIFLOW_DIR DM_IMAGE_TAG
+export TIFLOW_REPO TIFLOW_DIR

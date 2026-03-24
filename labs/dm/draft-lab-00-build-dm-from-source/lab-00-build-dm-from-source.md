@@ -44,7 +44,7 @@ cd labs/dm/draft-lab-00-build-dm-from-source
 bash scripts/build-from-branch.sh release-8.5
 
 # Verify the image
-bash scripts/verify-image.sh dm:release-8.5
+bash scripts/verify-image.sh dm:release-8.5-<hash>
 ```
 
 ### Build from a specific PR
@@ -73,7 +73,7 @@ After building, set `DM_IMAGE` in the target lab's `.env`:
 
 ```bash
 # Example: use in Lab 07 (FK validation)
-echo "DM_IMAGE=dm:release-8.5" >> ../draft-lab-07-fk-v856-validation/.env
+echo "DM_IMAGE=dm:release-8.5-<hash>" >> ../draft-lab-07-fk-v856-validation/.env
 ```
 
 Or pass via environment:
@@ -143,7 +143,7 @@ Visible in `dm-master --version` output.
 
 Clones (or updates) tiflow, checks out the specified branch, builds binaries, creates Docker image.
 
-**Default tag:** `dm:<branch-name>` (slashes replaced with dashes)
+**Default tag:** `dm:<branch-name>-<short-hash>` (e.g., `dm:release-8.5-d6d53ad`). The commit hash avoids ambiguity since branch HEAD moves over time.
 
 ```bash
 # Build from master (latest development)
@@ -201,7 +201,7 @@ Runs a 3-level verification on a built image:
 
 ```bash
 # Verify any image
-bash scripts/verify-image.sh dm:release-8.5
+bash scripts/verify-image.sh dm:release-8.5-<hash>
 bash scripts/verify-image.sh dm:pr-12351
 bash scripts/verify-image.sh pingcap/dm:v8.5.5   # also works with official images
 ```
@@ -213,7 +213,7 @@ bash scripts/verify-image.sh pingcap/dm:v8.5.5   # also works with official imag
 bash scripts/cleanup.sh
 
 # Remove built images
-docker rmi dm:release-8.5 dm:pr-12351 dm:multi-pr-12351+12414+12329
+docker rmi dm:release-8.5-<hash> dm:pr-12351 dm:multi-pr-12351+12414+12329
 
 # Remove cloned repo (~3 GB)
 rm -rf tiflow/
@@ -225,7 +225,7 @@ Labs that depend on builds from this lab:
 
 | Lab | What it needs | Build command |
 |-----|---------------|---------------|
-| [Lab 07 -- FK v8.5.6 Validation](../draft-lab-07-fk-v856-validation/) | DM v8.5.6 (unreleased) | `bash scripts/build-from-branch.sh release-8.5` |
+| [Lab 07 -- FK v8.5.6 Validation](../draft-lab-07-fk-v856-validation/) | DM from release-8.5 HEAD | `bash scripts/build-from-branch.sh release-8.5` |
 
 ## References
 

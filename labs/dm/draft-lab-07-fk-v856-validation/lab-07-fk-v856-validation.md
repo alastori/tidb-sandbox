@@ -44,11 +44,11 @@ products: [dm, mysql, tidb]
 # 1. Build DM from source (one-time)
 cd ../draft-lab-00-build-dm-from-source
 bash scripts/build-from-branch.sh release-8.5
-bash scripts/verify-image.sh dm:release-8.5
+# Note the image tag printed at the end (e.g., dm:release-8.5-d6d53ad)
 
 # 2. Configure and run this lab
 cd ../draft-lab-07-fk-v856-validation
-echo "DM_IMAGE=dm:release-8.5" >> .env
+echo "DM_IMAGE=dm:release-8.5-d6d53ad" >> .env   # use the tag from step 1
 bash scripts/run-all.sh
 ```
 
