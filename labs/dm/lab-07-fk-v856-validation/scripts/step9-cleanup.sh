@@ -22,5 +22,7 @@ LOG="${RESULTS_DIR}/step9-cleanup-${TS}.log"
     echo ""
     echo "=== Cleanup complete ==="
 } 2>&1 | tee "$LOG"
+exit_code=${PIPESTATUS[0]}
 
 clean_log "$LOG"
+exit "$exit_code"

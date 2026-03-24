@@ -18,24 +18,6 @@ products: [dm, mysql, tidb]
 
 **Tracking issue:** [tiflow#12350](https://github.com/pingcap/tiflow/issues/12350)
 
-## Scenarios
-
-| ID | Scenario | Config | Expected (v8.5.6) | Expected (pre-v8.5.6) |
-|----|----------|--------|--------------------|----------------------|
-| S1a | Non-key UPDATE with safe mode ON | `safe-mode: true`, `worker-count: 1` | No cascade, no error, children preserved | CASCADE deletes, error 1451, NULL drift |
-| S1b | INSERT rewrite in safe mode (REPLACE INTO) | Same as S1a | FK_CHECKS=0 prevents cascade on REPLACE | REPLACE triggers ON DELETE CASCADE |
-| S1c | DM worker log: FK_CHECKS=0 toggle | Same as S1a | Log shows foreign_key_checks toggle | N/A |
-| S2a | PK-changing UPDATE (known limitation) | Same as S1a | Children orphaned (FK_CHECKS=0 bypasses CASCADE); UK changes rejected by guardrail | Same |
-| S2b | PK-change workaround: safe-mode:false | `safe-mode: false`, `worker-count: 1` | Native UPDATE, no rewrite, children preserved | Same |
-| S3 | Multi-worker FK causality | `safe-mode: false`, `worker-count: 4` | No FK violations, correct ordering | Possible error 1452 |
-| S4 | DDL replication (ADD/DROP FK) | Continuation of S3 task | DDL replicated downstream | DDL silently dropped |
-| S5 | safe-mode:true + worker-count:4 | `safe-mode: true`, `worker-count: 4` | Both fixes together: no cascade, correct ordering | CASCADE + ordering violations |
-| S6a | Multi-level cascades (3-level chain) | `safe-mode: true`, `worker-count: 1` | Non-key UPDATEs preserved; DELETE cascades through chain | UPDATEs trigger 3-level cascade |
-| S6b | ON UPDATE CASCADE semantic mismatch | Same as S6a | Guardrail: safe-mode UK update rejected | UK change DELETE+REPLACE, wrong semantics |
-| S6c | Self-referencing FK (employee hierarchy) | Same as S6a | Non-key UPDATE safe; DELETE cascades SET NULL | Non-key UPDATE cascades |
-| S6d | Composite FK (multi-column) | Same as S6a | Non-key UPDATE safe; DELETE cascades | Same |
-| S7a | Block-allow-list (BAL) missing ancestor table | `worker-count: 4`, parent filtered | Error: parent table not in BAL | Silent data inconsistency |
-
 ## Quick Start
 
 > **Important:** v8.5.6 is not yet released (target: 2026-04-14). Build the DM image first using [Lab 00](../lab-00-build-dm-from-source/lab-00-build-dm-from-source.md), then set `DM_IMAGE` in `.env`.
@@ -69,15 +51,33 @@ bash scripts/step9-cleanup.sh              # Teardown
 
 ## Tested Environment
 
-- DM: `v8.5.5-12-gd6d53adbe` built from release-8.5 via [Lab 00](../lab-00-build-dm-from-source/) (tag: `dm:release-8.5-d6d53adbe`)
+- DM: `v8.5.5-12-gd6d53adbe` built from release-8.5 via [Lab 00](../lab-00-build-dm-from-source/lab-00-build-dm-from-source.md) (tag: `dm:release-8.5-d6d53adbe`)
 - TiDB / PD / TiKV: v8.5.4 (`pingcap/tidb:v8.5.4`, `pingcap/pd:v8.5.4`, `pingcap/tikv:v8.5.4`)
 - MySQL: 8.0.44 (`mysql:8.0.44`)
 - Docker: 28.5.1 on macOS 15.5 (arm64)
 - Default credentials: root / `Pass_1234`
 
+## Scenarios
+
+| ID | Scenario | Config | Expected (v8.5.6) | Expected (pre-v8.5.6) |
+|----|----------|--------|--------------------|----------------------|
+| S1a | Non-key UPDATE with safe mode ON | `safe-mode: true`, `worker-count: 1` | No cascade, no error, children preserved | CASCADE deletes, error 1451, NULL drift |
+| S1b | INSERT rewrite in safe mode (REPLACE INTO) | Same as S1a | FK_CHECKS=0 prevents cascade on REPLACE | REPLACE triggers ON DELETE CASCADE |
+| S1c | DM worker log: FK_CHECKS=0 toggle | Same as S1a | Log shows foreign_key_checks toggle | N/A |
+| S2a | PK-changing UPDATE (known limitation) | Same as S1a | Children orphaned (FK_CHECKS=0 bypasses CASCADE); UK changes rejected by guardrail | Same |
+| S2b | PK-change workaround: safe-mode:false | `safe-mode: false`, `worker-count: 1` | Native UPDATE, no rewrite, children preserved | Same |
+| S3 | Multi-worker FK causality | `safe-mode: false`, `worker-count: 4` | No FK violations, correct ordering | Possible error 1452 |
+| S4 | DDL replication (ADD/DROP FK) | Continuation of S3 task | DDL replicated downstream | DDL silently dropped |
+| S5 | safe-mode:true + worker-count:4 | `safe-mode: true`, `worker-count: 4` | Both fixes together: no cascade, correct ordering | CASCADE + ordering violations |
+| S6a | Multi-level cascades (3-level chain) | `safe-mode: true`, `worker-count: 1` | Non-key UPDATEs preserved; DELETE cascades through chain | UPDATEs trigger 3-level cascade |
+| S6b | ON UPDATE CASCADE semantic mismatch | Same as S6a | Guardrail: safe-mode UK update rejected | UK change DELETE+REPLACE, wrong semantics |
+| S6c | Self-referencing FK (employee hierarchy) | Same as S6a | Non-key UPDATE safe; DELETE cascades SET NULL | Non-key UPDATE cascades |
+| S6d | Composite FK (multi-column) | Same as S6a | Non-key UPDATE safe; DELETE cascades | Same |
+| S7a | Block-allow-list (BAL) missing ancestor table | `worker-count: 4`, parent filtered | Error: parent table not in BAL | Silent data inconsistency |
+
 ## Schema
 
-Core tables reuse the Lab 03 schema for direct before/after comparison. Extended tables cover additional FK patterns.
+Core tables reuse the Lab 03 schema for direct before/after comparison. Extended tables cover additional FK patterns. Full DDL in [`sql/schema.sql`](sql/schema.sql); seed data in [`sql/seed.sql`](sql/seed.sql).
 
 **Core (Lab 03 baseline):**
 
@@ -143,7 +143,9 @@ SET SESSION foreign_key_checks = 1;
 | parent id=999 | Exists with original note |
 | child_cascade for parent_id=3 | Orphaned (parent gone, FK_CHECKS=0 bypasses CASCADE on target) |
 
-**Workaround (S2b):** The step also validates `safe-mode: false` with a 70-second wait for the auto-safe-mode window to close. With safe-mode off, the UPDATE replicates natively.
+**Workaround (S2b):** The step also validates `safe-mode: false` after the auto-safe-mode window closes.
+
+> **Note:** S2b requires a 70-second wait (DM auto-enables safe mode for ~60 seconds after task start; 10-second buffer). With safe-mode off, the UPDATE replicates natively.
 
 ### S3: Multi-worker FK Causality (Step 4)
 
@@ -198,7 +200,7 @@ ALTER TABLE child_dynamic DROP FOREIGN KEY fk_dyn;
 
 This documents a semantic mismatch: MySQL applies ON UPDATE CASCADE (children updated), but DM safe mode would rewrite as DELETE+REPLACE triggering ON DELETE RESTRICT (children blocked or deleted).
 
-**S6c -- Self-referencing FK:** Employee hierarchy where `employee.manager_id` references `employee.id`. Circular FK detected by DM; causality ordering may be skipped. Non-key UPDATEs should be safe; DELETE cascades SET NULL to subordinates.
+**S6c -- Self-referencing FK:** Employee hierarchy where `employee.manager_id` references `employee.id`. Circular FK detected by DM; causality ordering is silently skipped for circular references. Non-key UPDATEs are safe; DELETE cascades SET NULL to subordinates.
 
 **S6d -- Composite FK:** Multi-column FK `(org_id, dept_id)` references `org(org_id, dept_id)`. Tests FK relation discovery with multi-column index mapping in PR #12414.
 
@@ -257,7 +259,7 @@ Validated by this lab or documented in PRs:
 
 ## References
 
-- [DM Safe Mode](https://docs.pingcap.com/tidb/stable/dm-safe-mode/) -- official docs
-- [DM Compatibility Catalog](https://docs.pingcap.com/tidb/stable/dm-compatibility-catalog/) -- FK section
+- [DM Safe Mode](https://docs.pingcap.com/tidb/stable/dm-safe-mode) -- official docs
+- [DM Compatibility Catalog](https://docs.pingcap.com/tidb/stable/dm-compatibility-catalog) -- FK section
 - [Lab 03 -- DM Foreign Keys and Safe Mode (Pre-fix)](../lab-03-foreign-key-safe-mode/lab-03-foreign-key-safe-mode.md) -- before/after baseline
 - [tiflow#12350](https://github.com/pingcap/tiflow/issues/12350) -- umbrella tracking issue

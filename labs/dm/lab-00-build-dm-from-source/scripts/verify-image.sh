@@ -80,6 +80,10 @@ OS:      {{.Os}}' || {
         echo "FAIL: DM-master did not become ready within 40 seconds."
         echo "Logs:"
         docker logs lab00-dm-master 2>&1 | tail -20
+        # Clean up before exiting with error
+        DM_IMAGE="${DM_IMAGE_TAG}" docker compose -f "${COMPOSE_FILE}" down -v 2>/dev/null || true
+        docker network rm lab00-net 2>/dev/null || true
+        exit 1
     fi
 
     echo ""
@@ -91,5 +95,7 @@ OS:      {{.Os}}' || {
     echo "=== Verification complete ==="
 
 } 2>&1 | tee "$LOG"
+exit_code=${PIPESTATUS[0]}
 
 clean_log "$LOG"
+exit "$exit_code"

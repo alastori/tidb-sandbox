@@ -32,6 +32,13 @@ check_go() {
     fi
     local go_version
     go_version=$(go version | grep -oE '[0-9]+\.[0-9]+' | head -1)
+    local go_major go_minor
+    go_major=$(echo "$go_version" | cut -d. -f1)
+    go_minor=$(echo "$go_version" | cut -d. -f2)
+    if [[ "$go_major" -lt 1 ]] || { [[ "$go_major" -eq 1 ]] && [[ "$go_minor" -lt 23 ]]; }; then
+        echo "ERROR: Go ${go_version} is too old. tiflow requires Go 1.23+."
+        return 1
+    fi
     echo "Go version: ${go_version}"
 }
 
@@ -70,7 +77,7 @@ build_dm_binaries() {
     ls -la bin/dm-master bin/dm-worker bin/dmctl 2>/dev/null
     echo ""
     echo "Version info:"
-    ./bin/dm-master --version 2>/dev/null || true
+    ./bin/dm-master -V 2>/dev/null || true
 }
 
 build_dm_docker_image() {
@@ -110,6 +117,10 @@ clean_log() {
         mv "${file}.tmp" "$file"
     fi
 }
+
+# Wrapper for { ... } 2>&1 | tee that preserves the exit code.
+# Usage: run_logged "$LOG" command args...
+# Or use the PIPESTATUS pattern at the end of scripts.
 
 export SCRIPT_DIR LAB_DIR TS RESULTS_DIR
 export TIFLOW_REPO TIFLOW_DIR

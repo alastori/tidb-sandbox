@@ -28,5 +28,7 @@ LOG="${RESULTS_DIR}/step0-start-${TS}.log"
     echo ""
     echo "=== Step 0 complete ==="
 } 2>&1 | tee "$LOG"
+exit_code=${PIPESTATUS[0]}
 
 clean_log "$LOG"
+exit "$exit_code"

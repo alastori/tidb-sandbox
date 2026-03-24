@@ -34,5 +34,7 @@ run_step() {
     echo "=== Lab 07 complete ==="
     echo "Results in: ${RESULTS_DIR}/"
 } 2>&1 | tee "$LOG"
+exit_code=${PIPESTATUS[0]}
 
 clean_log "$LOG"
+exit "$exit_code"
