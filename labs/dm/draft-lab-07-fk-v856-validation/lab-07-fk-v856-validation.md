@@ -38,11 +38,11 @@ products: [dm, mysql, tidb]
 
 ## Quick Start
 
-> **Important:** v8.5.6 is not yet released (target: 2026-04-14). Build the DM image first using [Lab 00](../draft-lab-00-build-dm-from-source/lab-00-build-dm-from-source.md), then set `DM_IMAGE` in `.env`.
+> **Important:** v8.5.6 is not yet released (target: 2026-04-14). Build the DM image first using [Lab 00](../lab-00-build-dm-from-source/lab-00-build-dm-from-source.md), then set `DM_IMAGE` in `.env`.
 
 ```bash
 # 1. Build DM from source (one-time)
-cd ../draft-lab-00-build-dm-from-source
+cd ../lab-00-build-dm-from-source
 bash scripts/build-from-branch.sh release-8.5
 # Note the image tag printed at the end (e.g., dm:release-8.5-d6d53ad)
 

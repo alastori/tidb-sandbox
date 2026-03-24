@@ -9,6 +9,7 @@ and troubleshooting patterns.
 
 | Lab | Description | Type |
 |-----|-------------|------|
+| [lab-00](labs/dm/lab-00-build-dm-from-source) | Build DM Docker images from tiflow source (branch, PR, multi-PR) | Scripted |
 | [lab-01](labs/dm/lab-01-mariadb10613-privileges) | MariaDB 10.6.13 privilege fix & workarounds | Manual |
 | [lab-02](labs/dm/lab-02-mariadb-legacy-migration) | Legacy MariaDB full-load precheck & target fixups | Manual |
 | [lab-03](labs/dm/lab-03-foreign-key-safe-mode) | Foreign keys and safe mode (short-term workaround) | Manual |

@@ -1,6 +1,6 @@
 <!-- lab-meta
 archetype: scripted-validation
-status: draft
+status: released
 products: [dm]
 -->
 
@@ -38,7 +38,7 @@ products: [dm]
 ### Build from a release branch (most common)
 
 ```bash
-cd labs/dm/draft-lab-00-build-dm-from-source
+cd labs/dm/lab-00-build-dm-from-source
 
 # Build from release-8.5 HEAD (contains all v8.5.6 cherry-picks)
 bash scripts/build-from-branch.sh release-8.5
@@ -79,15 +79,15 @@ echo "DM_IMAGE=dm:release-8.5-<hash>" >> ../draft-lab-07-fk-v856-validation/.env
 Or pass via environment:
 
 ```bash
-DM_IMAGE=dm:release-8.5 docker compose -f docker-compose.yml up -d
+DM_IMAGE=dm:release-8.5-d6d53ad docker compose -f docker-compose.yml up -d
 ```
 
 ## Tested Environment
 
-- Go: 1.23+ (tiflow requires 1.23 minimum; CI uses 1.25)
-- Docker Desktop: 4.30+ on macOS (arm64)
-- tiflow repository: [github.com/pingcap/tiflow](https://github.com/pingcap/tiflow)
-- Build output: Alpine 3.15 runtime image (~50 MB base)
+- Go: 1.25.6 (`go1.25.6 darwin/arm64`); tiflow minimum: 1.23
+- Docker: 28.5.1 on macOS 15.5 (arm64)
+- tiflow repository: [github.com/pingcap/tiflow](https://github.com/pingcap/tiflow) at `release-8.5` (`d6d53adbe`)
+- Build output: Alpine 3.15 runtime image (~430 MB with DM binaries)
 - Binaries: dm-master, dm-worker, dmctl (statically linked on Linux)
 
 ## How It Works
@@ -126,7 +126,7 @@ GitHash:           full commit SHA
 GitBranch:         current branch name
 ```
 
-Visible in `dm-master --version` output.
+Visible in `dm-master -V` output (dm-master and dm-worker use `-V`; dmctl uses `--version`).
 
 ### Architecture notes
 
@@ -195,8 +195,8 @@ bash scripts/build-from-multi-pr.sh 12500 12501
 
 Runs a 3-level verification on a built image:
 
-1. **Binary check:** `dm-master --version`, `dm-worker --version`, `dmctl --version`
-2. **Smoke test:** `dm-master --help`, `dm-worker --help` (proves binary executes)
+1. **Binary check:** `dm-master -V`, `dm-worker -V`, `dmctl --version`
+2. **Smoke test:** `--print-sample-config` on dm-master and dm-worker (proves binary executes and exits cleanly)
 3. **Integration test:** Starts a DM master + worker cluster via Docker Compose, verifies `list-member` returns successfully, then tears down
 
 ```bash
