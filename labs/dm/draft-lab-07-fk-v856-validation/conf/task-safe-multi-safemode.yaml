@@ -1,0 +1,24 @@
+name: fk-v856
+task-mode: "all"
+
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+  session:
+    foreign_key_checks: "ON"
+
+mysql-instances:
+  - source-id: "mysql-src"
+    block-allow-list: "fk-tables"
+    syncer-config-name: "safe-multi-sm"
+
+block-allow-list:
+  fk-tables:
+    do-dbs: ["fk_lab"]
+
+syncers:
+  safe-multi-sm:
+    safe-mode: true
+    worker-count: 4
