@@ -224,7 +224,7 @@ Tested on `dm:release-8.5-d6d53adbe` (2026-03-24).
 | S6b | PASS | Task PAUSED (guardrail rejected UK change in safe mode) |
 | S6c | PASS | SET NULL cascade on delete; self-ref non-key UPDATE safe |
 | S6d | PASS | Composite FK discovery correct; CASCADE on delete correct |
-| S7a | OPEN | Error requires DML trigger; task starts without error at startup |
+| S7a | PASS | Task PAUSED with ErrCode 36025: parent filtered by BAL |
 
 ## Comparison with Lab 03
 
