@@ -25,7 +25,7 @@ LOG="${RESULTS_DIR}/step5-ddl-${TS}.log"
 
     echo "Table exists on target:"
     "$MYSQL_CMD" -h"$TIDB_HOST" -P"$TIDB_PORT" -uroot -t -e \
-        "USE fk_lab; SHOW CREATE TABLE child_dynamic\G"
+        "USE fk_lab; SHOW CREATE TABLE child_dynamic;"
 
     echo ""
     echo "Data replicated:"

@@ -3,6 +3,7 @@
 USE fk_lab;
 
 -- Create a new table without FK, then add one via DDL
+DROP TABLE IF EXISTS child_dynamic;
 CREATE TABLE child_dynamic (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   parent_id BIGINT NOT NULL,

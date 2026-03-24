@@ -138,7 +138,7 @@ start_dm_task() {
     sleep 2
     echo "  Starting migration task (config: ${task_file})..."
     docker cp "${LAB_DIR}/conf/${task_file}" "$DM_MASTER_CONTAINER":/tmp/task.yaml
-    dmctl start-task /tmp/task.yaml || true
+    dmctl start-task /tmp/task.yaml --remove-meta || true
 }
 
 # Wait for DM task to reach Sync stage
@@ -183,7 +183,7 @@ compare_counts() {
 
 print_dm_version() {
     echo "DM version:"
-    docker exec "$DM_WORKER_CONTAINER" /dm-worker --version 2>/dev/null || echo "  (version query failed)"
+    docker exec "$DM_WORKER_CONTAINER" /dm-worker -V 2>/dev/null || echo "  (version query failed)"
 }
 
 export SCRIPT_DIR LAB_DIR TS RESULTS_DIR
