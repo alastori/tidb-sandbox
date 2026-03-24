@@ -1,0 +1,28 @@
+name: fk-v856
+task-mode: "all"
+
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+  session:
+    foreign_key_checks: "ON"
+
+mysql-instances:
+  - source-id: "mysql-src"
+    block-allow-list: "partial-tables"
+    syncer-config-name: "multi-filtered"
+
+block-allow-list:
+  partial-tables:
+    do-dbs: ["fk_lab"]
+    do-tables:
+      - db-name: "fk_lab"
+        tbl-name: "child_cascade"
+      # parent table deliberately excluded to test the BAL missing ancestor error
+
+syncers:
+  multi-filtered:
+    safe-mode: false
+    worker-count: 4
