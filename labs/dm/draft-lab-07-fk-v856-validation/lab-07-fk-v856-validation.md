@@ -25,7 +25,7 @@ products: [dm, mysql, tidb]
 | S1a | Non-key UPDATE with safe mode ON | `safe-mode: true`, `worker-count: 1` | No cascade, no error, children preserved | CASCADE deletes, error 1451, NULL drift |
 | S1b | INSERT rewrite in safe mode (REPLACE INTO) | Same as S1a | FK_CHECKS=0 prevents cascade on REPLACE | REPLACE triggers ON DELETE CASCADE |
 | S1c | DM worker log: FK_CHECKS=0 toggle | Same as S1a | Log shows foreign_key_checks toggle | N/A |
-| S2a | PK-changing UPDATE (known limitation) | Same as S1a | CASCADE may occur (DELETE + REPLACE for PK change) | Same |
+| S2a | PK-changing UPDATE (known limitation) | Same as S1a | Children orphaned (FK_CHECKS=0 bypasses CASCADE); UK changes rejected by guardrail | Same |
 | S2b | PK-change workaround: safe-mode:false | `safe-mode: false`, `worker-count: 1` | Native UPDATE, no rewrite, children preserved | Same |
 | S3 | Multi-worker FK causality | `safe-mode: false`, `worker-count: 4` | No FK violations, correct ordering | Possible error 1452 |
 | S4 | DDL replication (ADD/DROP FK) | Continuation of S3 task | DDL replicated downstream | DDL silently dropped |
