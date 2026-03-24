@@ -48,16 +48,16 @@ products: [dm, mysql, tidb]
 
 ### Building DM from source (until v8.5.6 is released)
 
+Use [Lab 00 -- Build DM from Source](../draft-lab-00-build-dm-from-source/lab-00-build-dm-from-source.md):
+
 ```bash
-git clone --branch release-8.5 https://github.com/pingcap/tiflow.git
-cd tiflow
-make dm-master dm-worker
+# Build from release-8.5 branch (contains all v8.5.6 cherry-picks)
+cd ../draft-lab-00-build-dm-from-source
+bash scripts/build-from-branch.sh release-8.5
+bash scripts/verify-image.sh dm:release-8.5
 
-# Build Docker image
-docker build -t pingcap/dm:v8.5.6-dev -f dm/Dockerfile .
-
-# Set in .env
-echo "DM_IMAGE=pingcap/dm:v8.5.6-dev" > labs/dm/draft-lab-07-fk-v856-validation/.env
+# Set in this lab's .env
+echo "DM_IMAGE=dm:release-8.5" >> ../draft-lab-07-fk-v856-validation/.env
 ```
 
 ## Quick Start

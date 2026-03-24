@@ -1,0 +1,34 @@
+services:
+  dm-master:
+    image: ${DM_IMAGE:-dm:local}
+    container_name: lab00-dm-master
+    command:
+      - /dm-master
+      - --master-addr=0.0.0.0:8261
+      - --advertise-addr=dm-master:8261
+      - --name=dm-master
+      - --initial-cluster=dm-master=http://dm-master:8291
+      - --peer-urls=http://0.0.0.0:8291
+      - --advertise-peer-urls=http://dm-master:8291
+    ports:
+      - "18261:8261"
+    networks:
+      - lab00-net
+
+  dm-worker:
+    image: ${DM_IMAGE:-dm:local}
+    container_name: lab00-dm-worker
+    command:
+      - /dm-worker
+      - --worker-addr=0.0.0.0:8262
+      - --advertise-addr=dm-worker:8262
+      - --name=dm-worker
+      - --join=dm-master:8261
+    depends_on:
+      - dm-master
+    networks:
+      - lab00-net
+
+networks:
+  lab00-net:
+    name: lab00-net
