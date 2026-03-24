@@ -16,7 +16,9 @@ mysql-instances:
 
 block-allow-list:
   partial-tables:
-    do-dbs: ["fk_lab"]
+    # do-dbs intentionally omitted: when do-dbs is set, skipByTable considers
+    # any table in a matching database as "not filtered", even if do-tables
+    # excludes it. Using only do-tables ensures parent is detected as filtered.
     do-tables:
       - db-name: "fk_lab"
         tbl-name: "child_cascade"
