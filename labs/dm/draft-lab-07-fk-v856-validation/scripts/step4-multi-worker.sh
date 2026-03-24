@@ -21,7 +21,7 @@ LOG="${RESULTS_DIR}/step4-multi-worker-${TS}.log"
     docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/schema.sql"
     docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/seed.sql"
 
-    start_dm_task task-safe-multi.yaml
+    start_dm_task task-nosafe-multi.yaml
     wait_for_sync || true
 
     echo ""

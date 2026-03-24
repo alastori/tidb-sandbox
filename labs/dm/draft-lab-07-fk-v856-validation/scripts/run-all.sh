@@ -11,7 +11,7 @@ run_step() {
     local label="$2"
     echo ""
     echo ">>> Running ${label}"
-    bash "${SCRIPT_DIR}/${script}" 2>&1 | tee "${RESULTS_DIR}/${label}-${TS}.log"
+    bash "${SCRIPT_DIR}/${script}"
 }
 
 {

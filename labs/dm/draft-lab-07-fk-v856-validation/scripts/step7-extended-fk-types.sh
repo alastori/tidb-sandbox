@@ -10,6 +10,11 @@ LOG="${RESULTS_DIR}/step7-extended-fk-${TS}.log"
     echo "=== Step 7: Extended FK Types (gaps F, G, H, I) ==="
     echo ""
 
+    # ---------------------------------------------------------------
+    # S6a: Multi-level cascades
+    # ---------------------------------------------------------------
+    echo "--- S6a: Multi-level cascades (grandparent -> mid_parent -> grandchild) ---"
+
     reset_dm_task
     docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/schema.sql"
     docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/seed.sql"
@@ -18,8 +23,6 @@ LOG="${RESULTS_DIR}/step7-extended-fk-${TS}.log"
     wait_for_sync || true
     require_mysql
 
-    echo ""
-    echo "--- S6a: Multi-level cascades (grandparent -> mid_parent -> grandchild) ---"
     echo "Executing multi-level DML..."
     docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/dml-multi-level.sql"
 
@@ -39,6 +42,11 @@ LOG="${RESULTS_DIR}/step7-extended-fk-${TS}.log"
     echo "  - grandparent 102 DELETED: mid_parent 202 CASCADE-deleted, grandchild gc202a CASCADE-deleted"
     echo "  - grandparent 100,101 preserved, mid_parent 200,201 preserved, grandchild gc200a/gc200b/gc201a preserved"
 
+    # ---------------------------------------------------------------
+    # S6b: ON UPDATE CASCADE semantic mismatch
+    # This will PAUSE the task (safe-mode UK change guardrail).
+    # Reset before S6c.
+    # ---------------------------------------------------------------
     echo ""
     echo "--- S6b: ON UPDATE CASCADE semantic mismatch (gap G) ---"
     echo "Executing UK-changing UPDATE on parent_upd..."
@@ -68,11 +76,23 @@ LOG="${RESULTS_DIR}/step7-extended-fk-${TS}.log"
     echo "  Source: parent_upd code='CODE_X', child_on_update parent_code='CODE_X' (CASCADE UPDATE)"
     echo "  Target with safe-mode:true + UK change:"
     echo "    PR #12414 rejects safe-mode PK/UK update with FK_CHECKS=1."
-    echo "    Task may PAUSE with: 'safe-mode update with foreign_key_checks=1 and PK/UK changes'"
+    echo "    Task PAUSED with: 'safe-mode update with foreign_key_checks=1 and PK/UK changes'"
     echo "    This is the expected guardrail behavior."
 
+    # ---------------------------------------------------------------
+    # S6c: Self-referencing FK — fresh task (S6b paused the previous one)
+    # ---------------------------------------------------------------
     echo ""
     echo "--- S6c: Self-referencing FK (employee hierarchy, gap H) ---"
+    echo "Resetting task (S6b paused it)..."
+
+    reset_dm_task
+    docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/schema.sql"
+    docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/seed.sql"
+
+    start_dm_task task-safe-single.yaml
+    wait_for_sync || true
+
     docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/dml-self-ref.sql"
 
     sleep 10
@@ -94,6 +114,9 @@ LOG="${RESULTS_DIR}/step7-extended-fk-${TS}.log"
     echo "  - employee 3: DELETED, subordinates (id=4) get manager_id=NULL (SET NULL cascade)"
     echo "  - Self-ref FK is detected as circular; DM may skip causality (silent)"
 
+    # ---------------------------------------------------------------
+    # S6d: Composite FK — continue on same task (S6c should be Running)
+    # ---------------------------------------------------------------
     echo ""
     echo "--- S6d: Composite FK (multi-column, gap I) ---"
     docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/dml-composite-fk.sql"
