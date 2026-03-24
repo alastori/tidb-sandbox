@@ -15,7 +15,7 @@ INSERT INTO child_setnull (parent_id, payload) VALUES
 -- Multi-level cascade chain
 INSERT INTO grandparent VALUES (100, 'gp100'), (101, 'gp101'), (102, 'gp102');
 
-INSERT INTO mid_parent VALUES (200, 100, 'mp200'), (201, 100, 'mp201'), (202, 101, 'mp202');
+INSERT INTO mid_parent VALUES (200, 100, 'mp200'), (201, 100, 'mp201'), (202, 102, 'mp202');
 
 INSERT INTO grandchild (mid_id, payload) VALUES
   (200, 'gc200a'), (200, 'gc200b'), (201, 'gc201a'), (202, 'gc202a');

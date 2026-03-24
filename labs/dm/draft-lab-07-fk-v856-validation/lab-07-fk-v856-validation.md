@@ -212,7 +212,7 @@ ALTER TABLE child_dynamic DROP FOREIGN KEY fk_dyn;
 |----------|-----------------|-----------------|
 | Non-key UPDATE + safe mode | CASCADE/RESTRICT/SET NULL failures | Fixed (REPLACE only) |
 | INSERT rewrite + safe mode | Not tested | Fixed (FK_CHECKS=0 per batch) |
-| PK-changing UPDATE + safe mode | CASCADE triggers | Guardrail: rejected with PK/UK change error |
+| PK-changing UPDATE + safe mode | CASCADE triggers | CASCADE under FK_CHECKS=0; UK change rejected by guardrail |
 | PK-changing UPDATE + safe-mode:false | Workaround (wait 60s) | Validated workaround |
 | Multi-worker + FK tables | Not tested (worker-count=1 only) | Causality ordering |
 | safe-mode + multi-worker | Not tested | Both fixes together |
@@ -227,13 +227,13 @@ ALTER TABLE child_dynamic DROP FOREIGN KEY fk_dyn;
 
 Validated by this lab or documented in PRs:
 
-- PK/UK-changing UPDATEs still trigger cascades in safe mode
-- DDL operations that create/alter/drop FK constraints **during replication** are not supported (pre-existing FKs are fine)
-- Table routing combined with `worker-count > 1` is not supported
-- Block-allow-list must include all ancestor tables in the FK chain
+- PK/UK-changing UPDATEs in safe mode are rejected by the guardrail (`safe-mode update with foreign_key_checks=1 and PK/UK changes is not supported`)
+- DDL operations that create/alter/drop FK constraints **during replication** are rejected when `foreign_key_checks=1` (pre-existing FKs are fine)
+- Table routing combined with `worker-count > 1` is not supported (must use `worker-count=1`)
+- Block-allow-list must include all ancestor tables in the FK chain (tested in S7a)
 - Source and downstream FK metadata must match
-- Only single-column FK with `ON DELETE CASCADE` validated; composite FK, `ON UPDATE CASCADE`, and multi-level cascades are not validated
-- Circular FK references are silently skipped
+- Circular FK references are silently skipped (self-referencing FK tested in S6c)
+- Multi-level cascades (S6a), ON UPDATE CASCADE (S6b), composite FK (S6d) are tested but experimental
 
 ## References
 
