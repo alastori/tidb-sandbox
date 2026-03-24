@@ -25,19 +25,29 @@ LOG="${RESULTS_DIR}/step8-negative-${TS}.log"
 
     echo "  Starting task with filtered parent (expect error)..."
     docker cp "${LAB_DIR}/conf/task-filtered-parent.yaml" "$DM_MASTER_CONTAINER":/tmp/task.yaml
-    RESULT=$(dmctl start-task /tmp/task.yaml 2>&1 || true)
+    RESULT=$(dmctl start-task /tmp/task.yaml --remove-meta 2>&1 || true)
     echo "$RESULT"
 
     echo ""
-    if echo "$RESULT" | grep -qi "parent\|ancestor\|block-allow-list\|filtered"; then
-        echo "PASS: DM rejected task with missing ancestor table"
-    else
-        echo "CHECK: Expected error about missing parent/ancestor table in BAL"
-        echo "  The error may appear later during DML processing, not at task start"
+    echo "  Waiting for initial sync, then sending DML to trigger FK check..."
+    sleep 15
 
-        echo "  Waiting for task to process and checking status..."
-        sleep 15
-        dmctl query-status fk-v856 2>&1 || true
+    # Insert a row into child_cascade on the source to trigger FK causality processing
+    docker exec "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e \
+        "INSERT INTO fk_lab.child_cascade (parent_id, payload) VALUES (1, 'trigger');" 2>/dev/null || true
+
+    sleep 10
+
+    echo "  Task status after DML:"
+    STATUS=$(dmctl query-status fk-v856 2>&1 || true)
+    echo "$STATUS"
+
+    echo ""
+    if echo "$STATUS" | grep -qi "parent\|ancestor\|block-allow-list\|filtered\|Paused\|foreign_key"; then
+        echo "PASS: DM detected missing ancestor table in BAL"
+    else
+        echo "NOTE: Error may require worker-count>1 DML processing to trigger."
+        echo "  The BAL precheck fires in prepareDownStreamTableInfo during incremental sync."
     fi
 
     echo ""

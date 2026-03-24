@@ -13,8 +13,10 @@ LOG="${RESULTS_DIR}/step2-nonkey-update-${TS}.log"
     echo "emitting only REPLACE INTO. No cascade should occur."
     echo ""
 
-    # Start with clean task
+    # Start with clean source + target
     reset_dm_task
+    docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/schema.sql"
+    docker exec -i "$MYSQL_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "${LAB_DIR}/sql/seed.sql"
     start_dm_task task-safe-single.yaml
     wait_for_sync || true
 
@@ -67,7 +69,7 @@ LOG="${RESULTS_DIR}/step2-nonkey-update-${TS}.log"
     echo ""
     echo "EXPECTED (v8.5.6+):"
     echo "  S1a: Task Running, all children preserved, parent.note updated"
-    echo "  S1b: parent id=4 note='p4_replay', children c4a/r4a/n4a preserved"
+    echo "  S1b: parent id=4 exists, children c4a/r4a/n4a exist (INSERT rewritten as REPLACE, FK_CHECKS=0)"
     echo "  S1c: DM logs show foreign_key_checks toggle during batch execution"
     echo ""
     echo "EXPECTED (pre-v8.5.6 — see Lab 03):"

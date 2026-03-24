@@ -28,9 +28,9 @@ LOG="${RESULTS_DIR}/step6-safe-multi-worker-${TS}.log"
         "USE fk_lab;
          SELECT 'BASELINE' AS tag,
            (SELECT COUNT(*) FROM parent) AS parents,
-           (SELECT COUNT(*) FROM child_cascade) AS cascade,
-           (SELECT COUNT(*) FROM child_restrict) AS restrict_c,
-           (SELECT COUNT(*) FROM child_setnull) AS setnull;"
+           (SELECT COUNT(*) FROM child_cascade) AS casc,
+           (SELECT COUNT(*) FROM child_restrict) AS restr,
+           (SELECT COUNT(*) FROM child_setnull) AS setnl;"
 
     echo ""
     echo "--- S5a: Non-key UPDATEs across 4 workers with safe mode ---"
