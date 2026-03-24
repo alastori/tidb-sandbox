@@ -1,6 +1,6 @@
 <!-- lab-meta
 archetype: scripted-validation
-status: draft
+status: released
 products: [dm, mysql, tidb]
 -->
 
@@ -47,7 +47,7 @@ bash scripts/build-from-branch.sh release-8.5
 # Note the image tag printed at the end (e.g., dm:release-8.5-d6d53adbe)
 
 # 2. Configure and run this lab
-cd ../draft-lab-07-fk-v856-validation
+cd ../lab-07-fk-v856-validation
 echo "DM_IMAGE=dm:release-8.5-d6d53adbe" >> .env   # use the tag from step 1
 bash scripts/run-all.sh
 ```

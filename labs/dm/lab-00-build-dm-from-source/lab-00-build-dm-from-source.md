@@ -73,7 +73,7 @@ After building, set `DM_IMAGE` in the target lab's `.env`:
 
 ```bash
 # Example: use in Lab 07 (FK validation)
-echo "DM_IMAGE=dm:release-8.5-<hash>" >> ../draft-lab-07-fk-v856-validation/.env
+echo "DM_IMAGE=dm:release-8.5-<hash>" >> ../lab-07-fk-v856-validation/.env
 ```
 
 Or pass via environment:
@@ -225,7 +225,7 @@ Labs that depend on builds from this lab:
 
 | Lab | What it needs | Build command |
 |-----|---------------|---------------|
-| [Lab 07 -- FK v8.5.6 Validation](../draft-lab-07-fk-v856-validation/) | DM from release-8.5 HEAD | `bash scripts/build-from-branch.sh release-8.5` |
+| [Lab 07 -- FK v8.5.6 Validation](../lab-07-fk-v856-validation/) | DM from release-8.5 HEAD | `bash scripts/build-from-branch.sh release-8.5` |
 
 ## References
 
