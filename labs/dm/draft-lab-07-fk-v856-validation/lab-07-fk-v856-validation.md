@@ -44,11 +44,11 @@ products: [dm, mysql, tidb]
 # 1. Build DM from source (one-time)
 cd ../lab-00-build-dm-from-source
 bash scripts/build-from-branch.sh release-8.5
-# Note the image tag printed at the end (e.g., dm:release-8.5-d6d53ad)
+# Note the image tag printed at the end (e.g., dm:release-8.5-d6d53adbe)
 
 # 2. Configure and run this lab
 cd ../draft-lab-07-fk-v856-validation
-echo "DM_IMAGE=dm:release-8.5-d6d53ad" >> .env   # use the tag from step 1
+echo "DM_IMAGE=dm:release-8.5-d6d53adbe" >> .env   # use the tag from step 1
 bash scripts/run-all.sh
 ```
 
@@ -69,7 +69,7 @@ bash scripts/step9-cleanup.sh              # Teardown
 
 ## Tested Environment
 
-- DM: v8.5.6 (unreleased; `pingcap/dm:v8.5.6` or custom build from release-8.5 at `d6d53adbe1`+)
+- DM: `v8.5.5-12-gd6d53adbe` built from release-8.5 via [Lab 00](../lab-00-build-dm-from-source/) (tag: `dm:release-8.5-d6d53adbe`)
 - TiDB / PD / TiKV: v8.5.4 (`pingcap/tidb:v8.5.4`, `pingcap/pd:v8.5.4`, `pingcap/tikv:v8.5.4`)
 - MySQL: 8.0.44 (`mysql:8.0.44`)
 - Docker Desktop on macOS (arm64)
