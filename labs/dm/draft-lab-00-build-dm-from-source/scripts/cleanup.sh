@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     # Stop any verification containers
     COMPOSE_FILE="${LAB_DIR}/conf/docker-compose-verify.yml"
     if [[ -f "${COMPOSE_FILE}" ]]; then
-        DM_IMAGE="${DM_IMAGE_TAG}" docker compose -f "${COMPOSE_FILE}" down -v 2>/dev/null || true
+        DM_IMAGE="${DM_IMAGE_TAG:-dm:local}" docker compose -f "${COMPOSE_FILE}" down -v 2>/dev/null || true
     fi
     docker network rm lab00-net 2>/dev/null || true
 

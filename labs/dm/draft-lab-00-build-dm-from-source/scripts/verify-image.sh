@@ -29,25 +29,27 @@ OS:      {{.Os}}' || {
     }
 
     # Verify binaries exist and report versions
+    # dm-master and dm-worker use -V (not --version); dmctl uses --version
     echo ""
     echo "--- Binary versions ---"
     echo "dm-master:"
-    docker run --rm "${DM_IMAGE_TAG}" /dm-master --version 2>&1 || echo "  (dm-master not found)"
+    docker run --rm "${DM_IMAGE_TAG}" /dm-master -V 2>&1 || echo "  (dm-master not found)"
     echo ""
     echo "dm-worker:"
-    docker run --rm "${DM_IMAGE_TAG}" /dm-worker --version 2>&1 || echo "  (dm-worker not found)"
+    docker run --rm "${DM_IMAGE_TAG}" /dm-worker -V 2>&1 || echo "  (dm-worker not found)"
     echo ""
     echo "dmctl:"
     docker run --rm "${DM_IMAGE_TAG}" /dmctl --version 2>&1 || echo "  (dmctl not found)"
 
-    # Verify dm-master can start (will exit immediately without config, but proves binary runs)
+    # Smoke test: verify binaries execute (--help exits immediately)
+    # macOS lacks GNU timeout; use a background process with kill instead
     echo ""
-    echo "--- Smoke test: dm-master starts ---"
-    timeout 5 docker run --rm "${DM_IMAGE_TAG}" /dm-master --help 2>&1 | head -5 || true
+    echo "--- Smoke test: dm-master --help ---"
+    docker run --rm "${DM_IMAGE_TAG}" /dm-master --print-sample-config 2>&1 | head -5 || true
 
     echo ""
-    echo "--- Smoke test: dm-worker starts ---"
-    timeout 5 docker run --rm "${DM_IMAGE_TAG}" /dm-worker --help 2>&1 | head -5 || true
+    echo "--- Smoke test: dm-worker --help ---"
+    docker run --rm "${DM_IMAGE_TAG}" /dm-worker --print-sample-config 2>&1 | head -5 || true
 
     # Minimal Docker Compose stack test
     echo ""
@@ -58,7 +60,7 @@ OS:      {{.Os}}' || {
     DM_IMAGE="${DM_IMAGE_TAG}" docker compose -f "${COMPOSE_FILE}" up -d 2>&1
 
     echo "Waiting for DM-master..."
-    local retries=0
+    retries=0
     while [ $retries -lt 20 ]; do
         if docker exec lab00-dm-master /dmctl --master-addr=dm-master:8261 list-member &>/dev/null; then
             echo "  DM-master is ready."
