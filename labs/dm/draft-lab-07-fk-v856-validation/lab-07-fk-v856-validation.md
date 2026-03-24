@@ -258,5 +258,3 @@ Validated by this lab or documented in PRs:
 - [DM Compatibility Catalog](https://docs.pingcap.com/tidb/stable/dm-compatibility-catalog/) -- FK section
 - [Lab 03 -- DM Foreign Keys and Safe Mode (Pre-fix)](../lab-03-foreign-key-safe-mode/lab-03-foreign-key-safe-mode.md) -- before/after baseline
 - [tiflow#12350](https://github.com/pingcap/tiflow/issues/12350) -- umbrella tracking issue
-- FD-2307 -- Safe Mode FK (PingCAP internal Jira)
-- FD-2379 -- Multi-worker FK causality (PingCAP internal Jira)
