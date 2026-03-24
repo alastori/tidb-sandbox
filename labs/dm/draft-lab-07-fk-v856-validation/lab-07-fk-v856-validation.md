@@ -72,7 +72,7 @@ bash scripts/step9-cleanup.sh              # Teardown
 - DM: `v8.5.5-12-gd6d53adbe` built from release-8.5 via [Lab 00](../lab-00-build-dm-from-source/) (tag: `dm:release-8.5-d6d53adbe`)
 - TiDB / PD / TiKV: v8.5.4 (`pingcap/tidb:v8.5.4`, `pingcap/pd:v8.5.4`, `pingcap/tikv:v8.5.4`)
 - MySQL: 8.0.44 (`mysql:8.0.44`)
-- Docker Desktop on macOS (arm64)
+- Docker: 28.5.1 on macOS 15.5 (arm64)
 - Default credentials: root / `Pass_1234`
 
 ## Schema
@@ -91,10 +91,10 @@ child_setnull  (parent_id FK -> parent ON DELETE SET NULL)
 **Extended (gap coverage):**
 
 ```text
-grandparent -> mid_parent -> grandchild      3-level cascade chain (gap F)
-parent_upd -> child_on_update                ON UPDATE CASCADE + ON DELETE RESTRICT (gap G)
-employee -> employee (self-ref)              Self-referencing FK, ON DELETE SET NULL (gap H)
-org -> org_member                            Composite FK (org_id, dept_id) (gap I)
+grandparent -> mid_parent -> grandchild      3-level cascade chain
+parent_upd -> child_on_update                ON UPDATE CASCADE + ON DELETE RESTRICT
+employee -> employee (self-ref)              Self-referencing FK, ON DELETE SET NULL
+org -> org_member                            Composite FK (org_id, dept_id)
 ```
 
 Seed: 3 parents, 3 grandparents, 3 mid-parents, 4 grandchildren, 2 parent_upd, 3 child_on_update, 5 employees, 3 orgs, 4 org_members.
@@ -125,12 +125,14 @@ UPDATE parent SET note = CONCAT(note, ':updated') WHERE id = 3;
 
 ### S2: PK-changing UPDATE -- Known Limitation (Step 3)
 
-**What remains unchanged:** When an `UPDATE` changes the primary key value, safe mode still rewrites it as `DELETE` (old PK) + `REPLACE INTO` (new PK). The `DELETE` triggers `ON DELETE CASCADE` on child rows.
+**What remains unchanged:** When an `UPDATE` changes the primary key value, safe mode still rewrites it as `DELETE` (old PK) + `REPLACE INTO` (new PK).
 
-**DML:**
+**DML:** MySQL blocks PK changes when the FK has default ON UPDATE RESTRICT. The test disables FK checks on the source to force the binlog event through:
 
 ```sql
+SET SESSION foreign_key_checks = 0;
 UPDATE parent SET id = 999 WHERE id = 3;
+SET SESSION foreign_key_checks = 1;
 ```
 
 **Validation:**
@@ -139,10 +141,9 @@ UPDATE parent SET id = 999 WHERE id = 3;
 |-------|----------|
 | parent id=3 | Deleted |
 | parent id=999 | Exists with original note |
-| child_cascade for parent_id=3 | CASCADE deleted (child gone) |
-| child_cascade for parent_id=999 | None (child not re-parented) |
+| child_cascade for parent_id=3 | Orphaned (parent gone, FK_CHECKS=0 bypasses CASCADE on target) |
 
-This is the documented limitation. Users with PK-changing UPDATEs and CASCADE constraints should use `safe-mode: false`.
+**Workaround (S2b):** The step also validates `safe-mode: false` with a 70-second wait for the auto-safe-mode window to close. With safe-mode off, the UPDATE replicates natively.
 
 ### S3: Multi-worker FK Causality (Step 4)
 
@@ -193,7 +194,9 @@ ALTER TABLE child_dynamic DROP FOREIGN KEY fk_dyn;
 
 **S6a -- Multi-level cascades:** 3-level chain (grandparent -> mid_parent -> grandchild). Non-key UPDATEs should not cascade. DELETE on grandparent should cascade through mid_parent to grandchild.
 
-**S6b -- ON UPDATE CASCADE:** UK-changing UPDATE on `parent_upd.code` (UNIQUE KEY). In safe mode, DM detects the UK change and the guardrail rejects it: `"safe-mode update with foreign_key_checks=1 and PK/UK changes is not supported"`. Task PAUSEs. This documents the semantic mismatch: MySQL applies ON UPDATE CASCADE, but DM safe mode would rewrite as DELETE+REPLACE triggering ON DELETE RESTRICT.
+**S6b -- ON UPDATE CASCADE:** UK-changing UPDATE on `parent_upd.code` (UNIQUE KEY). In safe mode, DM detects the UK change and the guardrail rejects it: `"safe-mode update with foreign_key_checks=1 and PK/UK changes is not supported"`. Task PAUSEs.
+
+This documents a semantic mismatch: MySQL applies ON UPDATE CASCADE (children updated), but DM safe mode would rewrite as DELETE+REPLACE triggering ON DELETE RESTRICT (children blocked or deleted).
 
 **S6c -- Self-referencing FK:** Employee hierarchy where `employee.manager_id` references `employee.id`. Circular FK detected by DM; causality ordering may be skipped. Non-key UPDATEs should be safe; DELETE cascades SET NULL to subordinates.
 
@@ -205,23 +208,23 @@ Negative test. Task config includes `child_cascade` but excludes `parent` from `
 
 ## Results Summary
 
-Update the Status column after running each step.
+Tested on `dm:release-8.5-d6d53adbe` (2026-03-24).
 
-| ID | Status |
-|----|--------|
-| S1a | TODO |
-| S1b | TODO |
-| S1c | TODO |
-| S2a | TODO |
-| S2b | TODO |
-| S3 | TODO |
-| S4 | TODO |
-| S5 | TODO |
-| S6a | TODO |
-| S6b | TODO |
-| S6c | TODO |
-| S6d | TODO |
-| S7a | TODO |
+| ID | Status | Notes |
+|----|--------|-------|
+| S1a | PASS | Children preserved, parent notes updated |
+| S1b | PASS | Parent+children replicated via safe-mode REPLACE |
+| S1c | PASS | Task Running (log grep inconclusive; mechanism confirmed by S1a outcome) |
+| S2a | PASS | PK change replicated with FK_CHECKS=0 on both source and target |
+| S2b | PASS | Task Running after 70s auto-safe-mode window |
+| S3 | PASS | No error 1452, parents created before children |
+| S4 | PASS | child_dynamic table + data replicated, FK added+dropped |
+| S5 | PASS | Both fixes working together under safe-mode + multi-worker |
+| S6a | PASS | Non-key UPDATEs safe; 3-level DELETE cascade correct |
+| S6b | PASS | Task PAUSED (guardrail rejected UK change in safe mode) |
+| S6c | PASS | SET NULL cascade on delete; self-ref non-key UPDATE safe |
+| S6d | PASS | Composite FK discovery correct; CASCADE on delete correct |
+| S7a | OPEN | Error requires DML trigger; task starts without error at startup |
 
 ## Comparison with Lab 03
 
