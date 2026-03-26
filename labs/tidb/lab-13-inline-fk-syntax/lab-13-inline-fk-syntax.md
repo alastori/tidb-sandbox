@@ -63,14 +63,14 @@ v8.5.5 parser behavior tested here is identical to v8.5.6.
 
 | Finding | Severity | Blocks v8.5.6? | Action |
 |---------|:--------:|:--------------:|--------|
-| TiDB parser silently ignores inline REFERENCES | High | **No** | Feature request for v8.6+. File FRM with this lab as evidence. |
+| TiDB parser silently ignores inline REFERENCES | High | **No** | Feature request for v8.5.7+. File FRM with this lab as evidence. |
 | DM precheck says "TiDB does not support FK" (outdated) | Medium | **No** (cosmetic) | Update precheck string. Low-effort fix; can ship as patch. |
 | DM full-sync fails with MySQL 9.6 source | High | **No** (MySQL 9.x not in compatibility catalog) | Document as known limitation in v8.5.6 release notes. Track separately. |
 | FK schema drift during incremental sync (MySQL 9.x source) | High | **No** (same root cause as parser issue) | Resolved when TiDB honors inline REFERENCES (Phase 2). |
 
 > **Note:** None of these findings block the v8.5.6 release. The DM FK
 > PRs (#12329, #12351, #12414) validated in lab-07 are the release gate.
-> This lab identifies follow-up work for v8.6+ and known limitations to
+> This lab identifies follow-up work for v8.5.7+ and known limitations to
 > document in release notes.
 
 ## Tested Environment
@@ -777,8 +777,8 @@ axis changes FK semantics:
 
 | # | MySQL Source | DM Version | TiDB Target | Inline FK Source | Inline FK Target | Drift? | Risk |
 |--:|-------------|-----------|-------------|:----------------:|:----------------:|:------:|:-----|
-| U5 | 8.4 | v8.5.6 | **v8.6+** (proposed) | ❌ Ignored | ⚠️ Warning | No | Warning on DDL replay; no FK to drift. |
-| U6 | **9.x** | **v8.5.6** | **v8.6+** (proposed) | ✅ Enforced | ✅ Enforced | **No** | Clean. But existing orphan data blocks ADD FK. |
+| U5 | 8.4 | v8.5.6 | **v8.5.7+** (proposed) | ❌ Ignored | ⚠️ Warning | No | Warning on DDL replay; no FK to drift. |
+| U6 | **9.x** | **v8.5.6** | **v8.5.7+** (proposed) | ✅ Enforced | ✅ Enforced | **No** | Clean. But existing orphan data blocks ADD FK. |
 | U7 | 8.4 **-> 9.x** | v8.5.6 | v8.5.5 | ❌ -> **✅** | ❌ Ignored | **Yes** | New tables created via incremental sync get FK on source but not target. |
 
 ### TiCDC (TiDB-to-TiDB Blue-Green Upgrades)
@@ -791,7 +791,7 @@ the old version does not:
 | Scenario | Old TiDB (source) | New TiDB (target) | Drift? | Notes |
 |----------|:------------------:|:------------------:|:------:|-------|
 | Same version (v8.5 to v8.5) | ❌ Ignores | ❌ Ignores | No | No risk. |
-| Blue-green: v8.5 to v8.6+ (Phase 1) | ❌ Ignores | ⚠️ Warns | No | Warning on DDL replay; no FK created on either side. |
+| Blue-green: v8.5 to v8.5.7+ (Phase 1) | ❌ Ignores | ⚠️ Warns | No | Warning on DDL replay; no FK created on either side. |
 | Blue-green: v8.5 to v9.x (Phase 2) | ❌ Ignores | ✅ Honors | **Yes** | See below. |
 
 **Blue-green v8.5 to v9.x drift scenario:**
@@ -846,7 +846,7 @@ created after the upgrade.
 | TiDB parser: honor inline REFERENCES | TiDB Parser team | To be filed (FRM); related: [tidb#45474](https://github.com/pingcap/tidb/issues/45474) | v9.x | L |
 | DM post-DDL FK verification | DM team | [tiflow#12350](https://github.com/pingcap/tiflow/issues/12350) (umbrella) | v9.x | M |
 
-### Phase 1 - Warning (TiDB v8.5.7 or v8.6 / DM v8.5.7 or v8.6)
+### Phase 1 - Warning (TiDB v8.5.7+ / DM v8.5.7+)
 
 No behavior change; only visibility. Zero risk of breaking existing
 workloads.
@@ -884,14 +884,14 @@ variable is the opt-out on both TiDB and DM sides.
 
 #### Upgrade Scenario A - TiDB In-Place Upgrade
 
-Upgrading TiDB from v8.5 (silent ignore) to v8.6+ (Phase 1) or v9.x
+Upgrading TiDB from v8.5 (silent ignore) to v8.5.7+ (Phase 1) or v9.x
 (Phase 2) via `tiup cluster upgrade` or rolling restart.
 
 **What happens to existing tables:** In-place upgrades preserve catalog
 metadata. Existing tables that were created with inline REFERENCES on
 v8.5 already have no FK in their catalog (the REFERENCES was discarded
 at parse time). The upgrade does NOT re-parse DDL, so existing tables
-remain without FK. Only new tables created after the upgrade on v8.6+
+remain without FK. Only new tables created after the upgrade on v8.5.7+
 (Phase 1) will trigger warnings; on v9.x (Phase 2) they will get the FK.
 
 **Action required:**
@@ -921,7 +921,7 @@ remain without FK. Only new tables created after the upgrade on v8.6+
      FOREIGN KEY (parent_id) REFERENCES parent(id);
    ```
 
-**Phase 1 (v8.6+, warn):** No data fix needed before upgrading. Warnings
+**Phase 1 (v8.5.7+, warn):** No data fix needed before upgrading. Warnings
 will surface the gap. Rewrite DDL at your own pace.
 
 **Phase 2 (v9.x, enforce):** Fix orphan data BEFORE upgrading if you
@@ -931,7 +931,7 @@ unaffected (no retroactive FK creation).
 #### Upgrade Scenario B - TiDB Blue-Green via TiCDC
 
 Upgrading TiDB by replicating from old cluster (v8.5) to new cluster
-(v8.6+ or v9.x) via TiCDC, then cutting over traffic.
+(v8.5.7+ or v9.x) via TiCDC, then cutting over traffic.
 
 **Schema sync (initial):** Dump from old TiDB, load to new TiDB. Since
 old TiDB's catalog has no FK (inline REFERENCES was discarded), the new
