@@ -77,16 +77,16 @@ v8.5.5 parser behavior tested here is identical to v8.5.6.
 
 - TiDB v8.5.5 (`pingcap/tidb:v8.5.5`)
 - DM v8.5.6-pre (`dm:release-8.5-d6d53adbe`, built from `release-8.5`
-  branch, commit `d6d53adbe`) --- see
+  branch, commit `d6d53adbe`); see
   [dm/lab-00-build-dm-from-source](../../dm/lab-00-build-dm-from-source/)
   for build instructions
-- MySQL 8.0.44 (`mysql:8.0.44`) --- legacy LTS, EOL Apr 2026
-- MySQL 8.4.7 (`mysql:8.4.7`) --- current LTS
-- MySQL 9.6.0 (`mysql:9.6.0`) --- innovation track
-- MariaDB 10.11.16 (`mariadb:10.11.16`) --- LTS, supported until Feb 2028
-- MariaDB 11.4.10 (`mariadb:11.4.10`) --- LTS, supported until May 2029
-- PostgreSQL 16.6 (`postgres:16.6`) --- supported until Nov 2028
-- PostgreSQL 17.7 (`postgres:17.7`) --- latest stable
+- MySQL 8.0.44 (`mysql:8.0.44`) - legacy LTS, EOL Apr 2026
+- MySQL 8.4.7 (`mysql:8.4.7`) - current LTS
+- MySQL 9.6.0 (`mysql:9.6.0`) - innovation track
+- MariaDB 10.11.16 (`mariadb:10.11.16`) - LTS, supported until Feb 2028
+- MariaDB 11.4.10 (`mariadb:11.4.10`) - LTS, supported until May 2029
+- PostgreSQL 16.6 (`postgres:16.6`) - supported until Nov 2028
+- PostgreSQL 17.7 (`postgres:17.7`) - latest stable
 - Colima 0.8.1 with Docker 27.5.1 on macOS 15.4 (arm64)
 
 > **Note:** DM v8.5.6 is not yet released (target: 2026-04-14). For S8
@@ -193,7 +193,7 @@ mysql -h 127.0.0.1 -P 4000 -u root --force --verbose < sql/inline-fk-mysql.sql
 
 ## Scenarios
 
-### S1 --- Inline Column-Level REFERENCES (Core Test)
+### S1 - Inline Column-Level REFERENCES (Core Test)
 
 The core question: is the inline `REFERENCES` clause honored or silently
 ignored? The fix landed in MySQL 9.0.0 (WL#16130); all subsequent 9.x
@@ -228,7 +228,7 @@ SHOW CREATE TABLE t2;
 > values but still allows orphans when the FK is silently ignored.
 > `NOT NULL` is not a substitute for FK enforcement.
 
-### S2 --- Table-Level FOREIGN KEY (Control)
+### S2 - Table-Level FOREIGN KEY (Control)
 
 Control case. Table-level syntax should create the FK on all engines.
 
@@ -259,7 +259,7 @@ control baseline.
 > **Note:** MariaDB uses the same `ibfk` naming convention as MySQL for
 > auto-generated FK constraints. TiDB uses a simpler `fk_N` pattern.
 
-### S3 --- Inline REFERENCES with Action Clause
+### S3 - Inline REFERENCES with Action Clause
 
 Tests whether the engine honors or ignores the `ON DELETE` action clause
 alongside inline syntax.
@@ -285,7 +285,7 @@ SHOW CREATE TABLE t4;
 | PostgreSQL 17.7 | ✅ Yes (`ON DELETE CASCADE`) |
 | **TiDB v8.5.5** | **❌ Silent ignore** |
 
-### S4 --- DML Enforcement Probe (Orphan Row Danger)
+### S4 - DML Enforcement Probe (Orphan Row Danger)
 
 The real-world danger: can orphan rows be inserted when the FK was
 silently ignored?
@@ -310,7 +310,7 @@ SELECT * FROM t2;
 | PostgreSQL 17.7 | ERROR 23503 (FK blocks) | ✅ Orphan prevented |
 | **TiDB v8.5.5** | **Succeeds (no FK)** | **❌ Orphan created** |
 
-### S5 --- Implicit PK Reference (No Column Specified)
+### S5 - Implicit PK Reference (No Column Specified)
 
 PostgreSQL has always supported `REFERENCES parent` (no column list),
 defaulting to the parent's primary key per SQL standard. MySQL 9.0
@@ -343,7 +343,7 @@ SHOW CREATE TABLE t5;
 > requires the referenced column to be explicitly specified. MySQL 9.6
 > and PostgreSQL both accept implicit PK reference.
 
-### S6 --- ALTER TABLE ADD Column with Inline REFERENCES
+### S6 - ALTER TABLE ADD Column with Inline REFERENCES
 
 Does the silent-ignore behavior also affect `ALTER TABLE`?
 
@@ -366,7 +366,7 @@ SHOW CREATE TABLE t6;
 | PostgreSQL 17.7 | ✅ Yes |
 | **TiDB v8.5.5** | **❌ Silent ignore** |
 
-### S7 --- SHOW WARNINGS After Silent-Ignore DDL
+### S7 - SHOW WARNINGS After Silent-Ignore DDL
 
 Does any engine that silently ignores the inline REFERENCES at least
 populate the warnings buffer?
@@ -382,7 +382,7 @@ PostgreSQL: N/A (inline REFERENCES is always honored). MariaDB and
 MySQL 9.6 also show zero warnings, but they honor the FK so there is
 nothing to warn about.
 
-### S8 --- DM Replication Drift (MySQL 9.6 to TiDB v8.5.5)
+### S8 - DM Replication Drift (MySQL 9.6 to TiDB v8.5.5)
 
 This scenario requires a DM replication pipeline with MySQL 9.6 as source,
 DM v8.5.6-pre replicating to TiDB v8.5.5 as target.
@@ -607,7 +607,7 @@ TiDB v8.5.5: Query OK, 1 row affected
              SELECT * FROM child → (1, 999)  ← orphan row created
 ```
 
-### S9 --- Upgrade Impact: Existing Orphan Data
+### S9 - Upgrade Impact: Existing Orphan Data
 
 Simulates the migration pain point when a user discovers their inline FK
 was never enforced and existing data contains orphans.
@@ -662,7 +662,7 @@ can be properly established. On engines that honor inline FK (MySQL 9.6,
 MariaDB, PostgreSQL), this problem never arises because the FK blocks
 bad data from the start.
 
-### S10 --- DM Precheck: Inline REFERENCES Detection
+### S10 - DM Precheck: Inline REFERENCES Detection
 
 Does DM's pre-flight check detect inline REFERENCES on the source and
 warn about potential schema drift?
@@ -739,11 +739,11 @@ share this behavior.
 When a user writes `t1_id INT REFERENCES t1(id)`, they are declaring
 intent: this column is a foreign key. Three outcomes are possible:
 
-1. **Honor it** --- Create the constraint. This is what PostgreSQL has
+1. **Honor it.** Create the constraint. This is what PostgreSQL has
    always done and what MySQL 9.0+ now does. SQL standard behavior.
-2. **Reject it** --- Return an error. The user learns immediately to use
+2. **Reject it.** Return an error. The user learns immediately to use
    table-level syntax. No false sense of security.
-3. **Silently ignore it** --- The syntax is accepted, the DDL succeeds,
+3. **Silently ignore it.** The syntax is accepted, the DDL succeeds,
    but no constraint exists. The user discovers the gap only when orphan
    rows appear in production.
 
@@ -781,11 +781,38 @@ axis changes FK semantics:
 | U6 | **9.x** | **v8.5.6** | **v8.6+** (proposed) | ✅ Enforced | ✅ Enforced | **No** | Clean. But existing orphan data blocks ADD FK. |
 | U7 | 8.4 **-> 9.x** | v8.5.6 | v8.5.5 | ❌ -> **✅** | ❌ Ignored | **Yes** | New tables created via incremental sync get FK on source but not target. |
 
-> **TiCDC (TiDB-to-TiDB):** Not covered in this lab. Both sides run TiDB,
-> so they share the same parser behavior for a given version. Cross-version
-> TiCDC drift (e.g., future v9.x upstream honoring inline FK to v8.5
-> downstream ignoring it) is a separate concern to address when TiDB
-> implements Phase 2 enforcement.
+### TiCDC (TiDB-to-TiDB Blue-Green Upgrades)
+
+For same-version TiCDC replication, both sides share the same parser, so
+there is no inline FK drift. The risk appears in **cross-version
+blue-green deployments** when the new TiDB version honors inline FK but
+the old version does not:
+
+| Scenario | Old TiDB (source) | New TiDB (target) | Drift? | Notes |
+|----------|:------------------:|:------------------:|:------:|-------|
+| Same version (v8.5 to v8.5) | ❌ Ignores | ❌ Ignores | No | No risk. |
+| Blue-green: v8.5 to v8.6+ (Phase 1) | ❌ Ignores | ⚠️ Warns | No | Warning on DDL replay; no FK created on either side. |
+| Blue-green: v8.5 to v9.x (Phase 2) | ❌ Ignores | ✅ Honors | **Yes** | See below. |
+
+**Blue-green v8.5 to v9.x drift scenario:**
+
+- Initial schema sync (dump from old, load to new): Old TiDB's catalog
+  already discarded the inline REFERENCES at parse time. The dump shows
+  tables without FK. New TiDB loads them without FK. **No drift.**
+- Ongoing DDL via TiCDC: If a user runs
+  `CREATE TABLE child (pid INT REFERENCES parent(id))` on old TiDB
+  (v8.5), old TiDB ignores the REFERENCES and creates the table without
+  FK. TiCDC captures the original DDL SQL from the changelog and replays
+  it on new TiDB (v9.x). New TiDB's parser honors the inline REFERENCES
+  and creates the FK. **Schema divergence:** old side has no FK, new
+  side has FK. DML that succeeds on old side (orphans) may fail on new.
+- This is the same pattern as the MySQL 9.6 to TiDB DM drift (S8), but
+  in the TiDB-to-TiDB direction.
+
+> **Note:** This scenario only becomes relevant when TiDB implements
+> Phase 2 (honor inline FK). It does not affect current deployments.
+> See also [tiflow#7718](https://github.com/pingcap/tiflow/issues/7718)
+> (TiCDC may lose index for FK tables).
 
 **U3 and U4 are the immediate risk.** MySQL 9.x (and MariaDB 10.11+)
 sources with inline FK produce tables with enforced constraints. During
@@ -813,13 +840,13 @@ created after the upgrade.
 | Change | Owner | Issue | Target | Effort |
 |--------|-------|-------|--------|:------:|
 | TiDB parser: emit warning on inline REFERENCES | TiDB Parser team | To be filed (FRM) | v8.6 | S |
-| DM precheck: update FK warning message | DM team | To be filed | v8.5.6 patch or v8.6 | S |
+| DM precheck: update FK warning message | DM team | [tiflow#12129](https://github.com/pingcap/tiflow/issues/12129) (open) | v8.5.6 patch or v8.6 | S |
 | DM sync: log warning on inline REFERENCES replay | DM team | To be filed | v8.6 | S |
 | DM compatibility catalog: add MySQL 9.x | DM team / Docs | To be filed | v8.5.6 release notes | S |
-| TiDB parser: honor inline REFERENCES | TiDB Parser team | To be filed (FRM) | v9.x | L |
-| DM post-DDL FK verification | DM team | To be filed | v9.x | M |
+| TiDB parser: honor inline REFERENCES | TiDB Parser team | To be filed (FRM); related: [tidb#45474](https://github.com/pingcap/tidb/issues/45474) | v9.x | L |
+| DM post-DDL FK verification | DM team | [tiflow#12350](https://github.com/pingcap/tiflow/issues/12350) (umbrella) | v9.x | M |
 
-### Phase 1 --- Warning (TiDB v8.6 / DM v8.6)
+### Phase 1 - Warning (TiDB v8.6 / DM v8.6)
 
 No behavior change; only visibility. Zero risk of breaking existing
 workloads.
@@ -831,7 +858,7 @@ workloads.
 | **DM sync (full + incremental)** | Log a warning when replaying `CREATE TABLE` that contains inline REFERENCES: `"inline REFERENCES in CREATE TABLE for table %s.%s will be ignored by TiDB; use table-level FOREIGN KEY syntax"`. |
 | **DM compatibility catalog** | Add MySQL 9.x with explicit note: inline REFERENCES are enforced on source but silently ignored on TiDB target. |
 
-### Phase 2 --- Enforce (TiDB v9.x / DM v9.x)
+### Phase 2 - Enforce (TiDB v9.x / DM v9.x)
 
 TiDB honors inline FK syntax. DM verifies FK parity after DDL replay.
 
@@ -855,64 +882,113 @@ variable is the opt-out on both TiDB and DM sides.
 
 ### Upgrade Playbook for Existing Users
 
-Users upgrading TiDB from v8.5 (silent ignore) to v8.6+ (Phase 1: warn)
-or v9.x (Phase 2: enforce) should follow this sequence:
+#### Upgrade Scenario A - TiDB In-Place Upgrade
 
-**Step 1 --- Audit DDL sources for inline REFERENCES.**
+Upgrading TiDB from v8.5 (silent ignore) to v8.6+ (Phase 1) or v9.x
+(Phase 2) via `tiup cluster upgrade` or rolling restart.
 
-If the FK was silently ignored, there is no metadata in TiDB to detect
-it (the REFERENCES clause was discarded at parse time). You must audit
-your application DDL scripts, ORM migration files, or source database
-schemas. Search for the pattern `REFERENCES` in column definitions:
+**What happens to existing tables:** In-place upgrades preserve catalog
+metadata. Existing tables that were created with inline REFERENCES on
+v8.5 already have no FK in their catalog (the REFERENCES was discarded
+at parse time). The upgrade does NOT re-parse DDL, so existing tables
+remain without FK. Only new tables created after the upgrade on v8.6+
+(Phase 1) will trigger warnings; on v9.x (Phase 2) they will get the FK.
 
-```bash
-# Search application DDL files for inline REFERENCES
-grep -rn 'INT.*REFERENCES\|BIGINT.*REFERENCES' schema/ migrations/
-```
+**Action required:**
 
-If your source is MySQL 9.x or MariaDB (which honor inline FK), compare
-FK counts between source and TiDB:
+1. Audit DDL sources for inline REFERENCES. Since TiDB's catalog has no
+   record of the discarded REFERENCES, you must search your application
+   DDL scripts, ORM migration files, or source database schemas:
 
-```sql
--- Run on both source and TiDB, compare results
-SELECT TABLE_SCHEMA, TABLE_NAME, COUNT(*) AS fk_count
-FROM information_schema.TABLE_CONSTRAINTS
-WHERE CONSTRAINT_TYPE = 'FOREIGN KEY'
-GROUP BY TABLE_SCHEMA, TABLE_NAME
-ORDER BY TABLE_SCHEMA, TABLE_NAME;
-```
+   ```bash
+   grep -rn 'INT.*REFERENCES\|BIGINT.*REFERENCES' schema/ migrations/
+   ```
 
-**Step 2 --- Detect orphan rows** for each table where the FK was
-silently ignored. Parameterized query template:
+2. Detect orphan rows for each table where the FK was silently ignored:
 
-```sql
--- Replace <child_table>, <child_fk_col>, <parent_table>, <parent_pk_col>
-SELECT c.*
-FROM <child_table> c
-LEFT JOIN <parent_table> p ON c.<child_fk_col> = p.<parent_pk_col>
-WHERE c.<child_fk_col> IS NOT NULL AND p.<parent_pk_col> IS NULL;
-```
+   ```sql
+   -- Replace placeholders with actual table/column names
+   SELECT c.*
+   FROM <child_table> c
+   LEFT JOIN <parent_table> p ON c.<child_fk_col> = p.<parent_pk_col>
+   WHERE c.<child_fk_col> IS NOT NULL AND p.<parent_pk_col> IS NULL;
+   ```
 
-**Step 3a --- If upgrading to Phase 1 (warn):** No data fix needed.
-Warnings will surface the gap. Rewrite DDL to use table-level
-`FOREIGN KEY` syntax at your own pace.
+3. Fix orphans, then add the FK explicitly using table-level syntax:
 
-**Step 3b --- If upgrading to Phase 2 (enforce):** Fix orphan data
-BEFORE upgrading. The upgrade will attempt to create the FK constraint;
-orphan rows will block it (ERROR 1452).
+   ```sql
+   ALTER TABLE child ADD CONSTRAINT fk_name
+     FOREIGN KEY (parent_id) REFERENCES parent(id);
+   ```
 
-**Step 4 --- DM pipelines:** If using DM with MySQL 9.x or MariaDB
-source, verify that the target TiDB version matches the source FK
-behavior. Use DM precheck to identify drift risks before starting
-replication.
+**Phase 1 (v8.6+, warn):** No data fix needed before upgrading. Warnings
+will surface the gap. Rewrite DDL at your own pace.
 
-**Step 5 --- Opt-out:** If you intentionally want to ignore inline
-REFERENCES (e.g., bulk import, migration scripts), set
-`foreign_key_checks=0` for the session or DM task.
+**Phase 2 (v9.x, enforce):** Fix orphan data BEFORE upgrading if you
+plan to re-create tables with inline REFERENCES. Existing tables are
+unaffected (no retroactive FK creation).
 
-The same playbook applies to DM pipelines where the MySQL source is
-upgraded from 8.x to 9.x: the source starts enforcing inline FK, so the
-target must also be upgraded (or FK checks disabled) to avoid schema drift.
+#### Upgrade Scenario B - TiDB Blue-Green via TiCDC
+
+Upgrading TiDB by replicating from old cluster (v8.5) to new cluster
+(v8.6+ or v9.x) via TiCDC, then cutting over traffic.
+
+**Schema sync (initial):** Dump from old TiDB, load to new TiDB. Since
+old TiDB's catalog has no FK (inline REFERENCES was discarded), the new
+cluster also has no FK. No drift.
+
+**Ongoing DDL via TiCDC:** If tables are created on the old cluster
+during replication with inline REFERENCES:
+- Old TiDB (v8.5) ignores the REFERENCES, creates table without FK.
+- TiCDC captures the original DDL SQL and replays it on new TiDB.
+- New TiDB (v9.x, Phase 2) honors the REFERENCES and creates the FK.
+- **Result:** Schema divergence. FK on new side, not on old side.
+- DML that succeeds on old side (orphans) may fail on new side.
+
+**Mitigation:** During the blue-green window, avoid creating new tables
+with inline REFERENCES. Use table-level `FOREIGN KEY` syntax instead
+(works identically on both versions). Alternatively, set
+`foreign_key_checks=0` on the new cluster during the transition.
+
+#### Upgrade Scenario C - MySQL Source Upgrade (DM Pipeline)
+
+Upgrading the MySQL source from 8.4 to 9.x while DM replicates to TiDB.
+
+**What changes:** MySQL 9.x starts honoring inline REFERENCES (WL#16130).
+New tables created after the MySQL upgrade get FK constraints that the
+old MySQL version silently ignored.
+
+**DM incremental sync:** DM replays the original `CREATE TABLE` DDL from
+the binlog. TiDB silently discards the inline REFERENCES. FK exists on
+source, missing on target. (Verified in S8.)
+
+**DM full sync:** `SHOW CREATE TABLE` on MySQL 9.x normalizes inline
+REFERENCES to table-level FK syntax. TiDB honors table-level FK. No
+drift during full sync.
+
+**Action required:**
+1. If your source is MySQL 9.x or MariaDB, compare FK counts:
+
+   ```sql
+   -- Run on both source and TiDB, compare results
+   SELECT TABLE_SCHEMA, TABLE_NAME, COUNT(*) AS fk_count
+   FROM information_schema.TABLE_CONSTRAINTS
+   WHERE CONSTRAINT_TYPE = 'FOREIGN KEY'
+   GROUP BY TABLE_SCHEMA, TABLE_NAME
+   ORDER BY TABLE_SCHEMA, TABLE_NAME;
+   ```
+
+2. Use DM precheck to identify FK drift risks before starting replication.
+3. If drift is detected, add missing FKs on TiDB using table-level syntax.
+
+#### Opt-Out (All Scenarios)
+
+If you intentionally want to ignore inline REFERENCES (e.g., bulk import,
+migration scripts, legacy compatibility), use the existing mechanisms:
+
+- TiDB session: `SET SESSION foreign_key_checks = 0`
+- TiDB instance: `SET GLOBAL tidb_enable_foreign_key = OFF`
+- DM task config: `foreign_key_checks: false`
 
 ## Cleanup
 
@@ -937,11 +1013,11 @@ tiup clean lab13-dm 2>/dev/null || true
 
 ### MySQL
 
-- [Bug #4919 --- inline REFERENCES silently ignored (filed 2004, fixed MySQL 9.0)](https://bugs.mysql.com/bug.php?id=4919)
-- [Bug #17943 --- inline FK should give a warning (filed 2006, fixed MySQL 9.0)](https://bugs.mysql.com/bug.php?id=17943)
-- [Bug #102904 --- implement inline REFERENCES (filed 2021, fixed MySQL 9.0)](https://bugs.mysql.com/bug.php?id=102904)
-- [MySQL 9.0 Release Notes --- WL#16130/WL#16131](https://dev.mysql.com/doc/relnotes/mysql/9.0/en/news-9-0-0.html)
-- [MySQL 8.0 --- FOREIGN KEY Constraint Differences](https://dev.mysql.com/doc/mysql-reslimits-excerpt/8.0/en/ansi-diff-foreign-keys.html)
+- [Bug #4919 - inline REFERENCES silently ignored (filed 2004, fixed MySQL 9.0)](https://bugs.mysql.com/bug.php?id=4919)
+- [Bug #17943 - inline FK should give a warning (filed 2006, fixed MySQL 9.0)](https://bugs.mysql.com/bug.php?id=17943)
+- [Bug #102904 - implement inline REFERENCES (filed 2021, fixed MySQL 9.0)](https://bugs.mysql.com/bug.php?id=102904)
+- [MySQL 9.0 Release Notes - WL#16130/WL#16131](https://dev.mysql.com/doc/relnotes/mysql/9.0/en/news-9-0-0.html)
+- [MySQL 8.0 - FOREIGN KEY Constraint Differences](https://dev.mysql.com/doc/mysql-reslimits-excerpt/8.0/en/ansi-diff-foreign-keys.html)
 
 ### MariaDB
 
@@ -949,30 +1025,38 @@ tiup clean lab13-dm 2>/dev/null || true
 
 ### PostgreSQL
 
-- [PostgreSQL CREATE TABLE --- REFERENCES](https://www.postgresql.org/docs/17/sql-createtable.html)
+- [PostgreSQL CREATE TABLE - REFERENCES](https://www.postgresql.org/docs/17/sql-createtable.html)
 
 ### TiDB
 
 - [TiDB Foreign Key Constraints](https://docs.pingcap.com/tidb/v8.5/foreign-key)
-- [tidb#36982 --- FK Dev Task (implementation tracker)](https://github.com/pingcap/tidb/issues/36982)
+- [tidb#36982 - FK Dev Task (implementation tracker)](https://github.com/pingcap/tidb/issues/36982)
+- [tidb#45474 - ALTER TABLE ADD COLUMN + FK in single statement](https://github.com/pingcap/tidb/issues/45474) (open, related parser gap)
 
 ### DM / TiFlow
 
-- [tiflow#12350 --- DM FK support umbrella issue](https://github.com/pingcap/tiflow/issues/12350)
-- [tiflow#12329 --- DDL whitelist: ADD/DROP FK now replicated](https://github.com/pingcap/tiflow/pull/12329)
-- [tiflow#12351 --- Safe mode: skip DELETE for non-key UPDATEs](https://github.com/pingcap/tiflow/pull/12351)
-- [tiflow#12414 --- Multi-worker FK causality ordering](https://github.com/pingcap/tiflow/pull/12414)
-- [tiflow#12396 --- DM: Support for MySQL 8.4](https://github.com/pingcap/tiflow/pull/12396)
-- [tidb#57188 --- Dumpling: New terminology for MySQL 8.4+](https://github.com/pingcap/tidb/pull/57188)
+- [tiflow#12350 - DM FK support umbrella issue](https://github.com/pingcap/tiflow/issues/12350)
+- [tiflow#12329 - DDL whitelist: ADD/DROP FK now replicated](https://github.com/pingcap/tiflow/pull/12329)
+- [tiflow#12351 - Safe mode: skip DELETE for non-key UPDATEs](https://github.com/pingcap/tiflow/pull/12351)
+- [tiflow#12414 - Multi-worker FK causality ordering](https://github.com/pingcap/tiflow/pull/12414)
+- [tiflow#12396 - DM: Support for MySQL 8.4](https://github.com/pingcap/tiflow/pull/12396)
+- [tidb#57188 - Dumpling: New terminology for MySQL 8.4+](https://github.com/pingcap/tidb/pull/57188)
+- [tiflow#12129 - DM precheck FK warning is outdated](https://github.com/pingcap/tiflow/issues/12129) (open)
+- [tiflow#12470 - DM parser skips FK nodes in DDL rewriting](https://github.com/pingcap/tiflow/issues/12470) (open)
+
+### TiCDC / FK
+
+- [tiflow#7718 - TiCDC may lose index for FK tables](https://github.com/pingcap/tiflow/issues/7718) (open)
+- [tiflow#12328 - TiCDC silently dropped DROP FK DDL](https://github.com/pingcap/tiflow/issues/12328) (fixed by tiflow#12329)
 
 ### Related Labs
 
-- [dm/lab-00 --- Build DM from Source](../../dm/lab-00-build-dm-from-source/) (prerequisite for S8, S10)
-- [dm/lab-07 --- FK v8.5.6 Validation](../../dm/lab-07-fk-v856-validation/) (validates the three DM FK PRs)
-- [tidb/lab-04 --- FK and Supporting Index Comparison](../lab-04-fk-index-comparison/) (MySQL 8.4 vs TiDB FK index rules)
+- [dm/lab-00 - Build DM from Source](../../dm/lab-00-build-dm-from-source/) (prerequisite for S8, S10)
+- [dm/lab-07 - FK v8.5.6 Validation](../../dm/lab-07-fk-v856-validation/) (validates the three DM FK PRs)
+- [tidb/lab-04 - FK and Supporting Index Comparison](../lab-04-fk-index-comparison/) (MySQL 8.4 vs TiDB FK index rules)
 
 ### Community / Blog Posts
 
-- [Neon --- The silent syntax difference in FK between Postgres and MySQL](https://neon.com/blog/the-silent-syntax-difference-in-foreign-keys-between-postgres-and-mysql)
-- [Schneide Blog --- Inline and Implicit FK Constraints in SQL (Jan 2025)](https://schneide.blog/2025/01/13/inline-and-implicit-foreign-key-constraints-in-sql/)
-- [Django #5729 --- Django switched to ALTER TABLE for MySQL FKs (2007)](https://code.djangoproject.com/ticket/5729)
+- [Neon - The silent syntax difference in FK between Postgres and MySQL](https://neon.com/blog/the-silent-syntax-difference-in-foreign-keys-between-postgres-and-mysql)
+- [Schneide Blog - Inline and Implicit FK Constraints in SQL (Jan 2025)](https://schneide.blog/2025/01/13/inline-and-implicit-foreign-key-constraints-in-sql/)
+- [Django #5729 - Django switched to ALTER TABLE for MySQL FKs (2007)](https://code.djangoproject.com/ticket/5729)
