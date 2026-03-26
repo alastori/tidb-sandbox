@@ -244,7 +244,44 @@ Every lab ends with a References section linking to:
 - MySQL/MariaDB reference pages
 - Relevant GitHub issues
 
-### 3.6 Code Blocks
+### 3.6 Ticket References
+
+All issue and PR references (e.g., `tiflow#12329`, `tidb#36982`) must be verified
+before publishing. Broken or incorrect ticket links erode trust in the lab's
+findings.
+
+**Formatting rules:**
+
+- In **References sections**, use the full link format with a single dash
+  separator: `[repo#number - description](url)`
+  ```markdown
+  - [tiflow#12329 - DDL whitelist for DM sync](https://github.com/pingcap/tiflow/issues/12329)
+  - [tidb#36982 - Foreign key cascade behavior](https://github.com/pingcap/tidb/issues/36982)
+  ```
+- In **body text**, use the inline `repo#number` format (GitHub auto-links
+  these in some contexts): "This behavior was fixed in `tidb#36982`."
+- Use a **single dash with spaces** (` - `) as the separator in reference list
+  entries. Never use double or triple dashes.
+
+**Verification before promotion:**
+
+Before promoting a lab from `draft` to `released`, verify all ticket links
+resolve to real issues or PRs:
+
+```bash
+# Extract and verify all ticket references
+grep -oE '(tiflow|tidb)#[0-9]+' lab-doc.md | sort -u | while read ref; do
+  repo=$(echo $ref | cut -d'#' -f1)
+  num=$(echo $ref | cut -d'#' -f2)
+  gh pr view $num --repo pingcap/$repo --json number,title,state 2>/dev/null || \
+  gh issue view $num --repo pingcap/$repo --json number,title,state 2>/dev/null || \
+  echo "NOT FOUND: $ref"
+done
+```
+
+Any `NOT FOUND` result must be investigated and corrected before release.
+
+### 3.7 Code Blocks
 
 Always use language specifiers (`sql`, `bash`, `yaml`, `toml`, `text`).
 
@@ -258,7 +295,7 @@ Use `text` for command output:
 +----+----------+--------+
 ```
 
-### 3.7 Notes and Callouts
+### 3.8 Notes and Callouts
 
 ```markdown
 > **Note:** MariaDB 10.5+ requires `BINLOG MONITOR` instead of `REPLICATION CLIENT`.
