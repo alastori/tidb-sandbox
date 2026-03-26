@@ -19,9 +19,13 @@ TiDB v8.5.5 silently parses and discards inline FK definitions
 emitted. The user believes a foreign key exists; the database does not
 enforce one. This is a data-integrity trap.
 
-MySQL carried this same bug for 20 years (bugs.mysql.com #4919, #17943,
-#102904) before fixing it in MySQL 9.0.0 (July 2024) via WL#16130 and
-WL#16131. TiDB still matches the legacy MySQL 8.x behavior.
+MySQL carried this same bug for 20 years
+([#4919](https://bugs.mysql.com/bug.php?id=4919),
+[#17943](https://bugs.mysql.com/bug.php?id=17943),
+[#102904](https://bugs.mysql.com/bug.php?id=102904)) before fixing it in
+MySQL 9.0.0 (July 2024) via
+[WL#16130](https://dev.mysql.com/doc/relnotes/mysql/9.0/en/news-9-0-0.html)
+and WL#16131. TiDB still matches the legacy MySQL 8.x behavior.
 
 ### Alignment with DM v8.5.6 FK Fixes
 
@@ -30,9 +34,9 @@ operations is a bug, not a feature.**
 
 | Component | Silent-drop behavior (pre-fix) | Fix |
 |-----------|-------------------------------|-----|
-| DM DDL whitelist | `ADD/DROP FK` silently dropped | tiflow#12329: now replicated |
-| DM safe mode | DELETE triggered unwanted cascades | tiflow#12351: skip DELETE for non-key UPDATEs |
-| DM multi-worker | Parent/child DML out of order | tiflow#12414: FK causality ordering |
+| DM DDL whitelist | `ADD/DROP FK` silently dropped | [tiflow#12329](https://github.com/pingcap/tiflow/pull/12329): now replicated |
+| DM safe mode | DELETE triggered unwanted cascades | [tiflow#12351](https://github.com/pingcap/tiflow/pull/12351): skip DELETE for non-key UPDATEs |
+| DM multi-worker | Parent/child DML out of order | [tiflow#12414](https://github.com/pingcap/tiflow/pull/12414): FK causality ordering |
 | **TiDB parser** | **Inline REFERENCES silently ignored** | **Not yet addressed** |
 
 The same principle applies to the parser: if the engine accepts FK syntax,
@@ -69,7 +73,10 @@ v8.5.5 parser behavior tested here is identical to v8.5.6.
 | FK schema drift during incremental sync (MySQL 9.x source) | High | **No** (same root cause as parser issue) | Resolved when TiDB honors inline REFERENCES (Phase 2). |
 
 > **Note:** None of these findings block the v8.5.6 release. The DM FK
-> PRs (#12329, #12351, #12414) validated in lab-07 are the release gate.
+> PRs ([#12329](https://github.com/pingcap/tiflow/pull/12329),
+> [#12351](https://github.com/pingcap/tiflow/pull/12351),
+> [#12414](https://github.com/pingcap/tiflow/pull/12414)) validated in
+> lab-07 are the release gate.
 > This lab identifies follow-up work for v8.5.7+ and known limitations to
 > document in release notes.
 
@@ -92,7 +99,10 @@ v8.5.5 parser behavior tested here is identical to v8.5.6.
 > **Note:** DM v8.5.6 is not yet released (target: 2026-04-14). For S8
 > and S10, build DM from the `release-8.5` branch using
 > [dm/lab-00](../../dm/lab-00-build-dm-from-source/). All three FK PRs
-> (#12329, #12351, #12414) are merged to `release-8.5` as of 2026-03-18.
+> ([#12329](https://github.com/pingcap/tiflow/pull/12329),
+> [#12351](https://github.com/pingcap/tiflow/pull/12351),
+> [#12414](https://github.com/pingcap/tiflow/pull/12414)) are merged to
+> `release-8.5` as of 2026-03-18.
 >
 > These results were validated against commit `d6d53adbe` on the
 > `release-8.5` branch. If the final v8.5.6 release candidate differs,
@@ -196,7 +206,7 @@ mysql -h 127.0.0.1 -P 4000 -u root --force --verbose < sql/inline-fk-mysql.sql
 ### S1 - Inline Column-Level REFERENCES (Core Test)
 
 The core question: is the inline `REFERENCES` clause honored or silently
-ignored? The fix landed in MySQL 9.0.0 (WL#16130); all subsequent 9.x
+ignored? The fix landed in MySQL 9.0.0 ([WL#16130](https://dev.mysql.com/doc/relnotes/mysql/9.0/en/news-9-0-0.html)); all subsequent 9.x
 releases inherit it, so testing 9.6 is sufficient.
 
 ```sql
@@ -314,7 +324,8 @@ SELECT * FROM t2;
 
 PostgreSQL has always supported `REFERENCES parent` (no column list),
 defaulting to the parent's primary key per SQL standard. MySQL 9.0
-(WL#16131) claims to add this syntax alongside WL#16130 (inline
+([WL#16131](https://dev.mysql.com/doc/relnotes/mysql/9.0/en/news-9-0-0.html))
+claims to add this syntax alongside WL#16130 (inline
 REFERENCES). This scenario verifies which engines accept it.
 
 ```sql
@@ -403,11 +414,11 @@ All three FK PRs and the MySQL 8.4 compatibility fix are merged to
 
 | PR | Cherry-pick | Merged | Fix |
 |---:|------------|:------:|:----|
-| #12329 | #12331 | 2025-09-23 | DDL whitelist: ADD/DROP FK replicated |
-| #12351 | #12541 | 2026-03-16 | Safe mode: skip DELETE for non-key UPDATEs |
-| #12414 | #12552 | 2026-03-18 | Multi-worker FK causality ordering |
-| #12396 | #12532 | 2026-03-10 | MySQL 8.4 support (`SHOW BINARY LOG STATUS`) |
-| tidb#57188 | tidb#65131 | 2026-03-10 | Dumpling: new terminology for MySQL 8.4+ |
+| [#12329](https://github.com/pingcap/tiflow/pull/12329) | [#12331](https://github.com/pingcap/tiflow/pull/12331) | 2025-09-23 | DDL whitelist: ADD/DROP FK replicated |
+| [#12351](https://github.com/pingcap/tiflow/pull/12351) | [#12541](https://github.com/pingcap/tiflow/pull/12541) | 2026-03-16 | Safe mode: skip DELETE for non-key UPDATEs |
+| [#12414](https://github.com/pingcap/tiflow/pull/12414) | [#12552](https://github.com/pingcap/tiflow/pull/12552) | 2026-03-18 | Multi-worker FK causality ordering |
+| [#12396](https://github.com/pingcap/tiflow/pull/12396) | [#12532](https://github.com/pingcap/tiflow/pull/12532) | 2026-03-10 | MySQL 8.4 support (`SHOW BINARY LOG STATUS`) |
+| [tidb#57188](https://github.com/pingcap/tidb/pull/57188) | [tidb#65131](https://github.com/pingcap/tidb/pull/65131) | 2026-03-10 | Dumpling: new terminology for MySQL 8.4+ |
 
 #### Known Issue: DM Full-Sync Fails with MySQL 9.6
 
@@ -418,8 +429,9 @@ parse mydumper metadata error: didn't found binlog location
 in dumped metadata file metadata
 ```
 
-The DM connector fix (tiflow#12396) handles `SHOW BINARY LOG STATUS`,
-but DM's embedded dumpling may not include the separate tidb#57188 fix.
+The DM connector fix ([tiflow#12396](https://github.com/pingcap/tiflow/pull/12396))
+handles `SHOW BINARY LOG STATUS`, but DM's embedded dumpling may not
+include the separate [tidb#57188](https://github.com/pingcap/tidb/pull/57188) fix.
 Incremental-sync mode (`task-mode: incremental`) works correctly.
 
 **Verdict:** MySQL 9.x full-sync is a **known limitation**, not a v8.5.6
@@ -875,7 +887,7 @@ TiDB honors inline FK syntax. DM verifies FK parity after DDL replay.
 | `SET SESSION foreign_key_checks = 0` | TiDB session | ✅ Yes |
 | `SET GLOBAL tidb_enable_foreign_key = OFF` | TiDB instance | ✅ Yes |
 | Task config: `foreign_key_checks: false` | DM task | ✅ Yes |
-| DM safe mode: `FK_CHECKS=0` per batch | DM batch | ✅ Yes (tiflow#12351) |
+| DM safe mode: `FK_CHECKS=0` per batch | DM batch | ✅ Yes ([tiflow#12351](https://github.com/pingcap/tiflow/pull/12351)) |
 
 No new configuration surface is needed. The existing `foreign_key_checks`
 variable is the opt-out on both TiDB and DM sides.
@@ -954,7 +966,7 @@ with inline REFERENCES. Use table-level `FOREIGN KEY` syntax instead
 
 Upgrading the MySQL source from 8.4 to 9.x while DM replicates to TiDB.
 
-**What changes:** MySQL 9.x starts honoring inline REFERENCES (WL#16130).
+**What changes:** MySQL 9.x starts honoring inline REFERENCES ([WL#16130](https://dev.mysql.com/doc/relnotes/mysql/9.0/en/news-9-0-0.html)).
 New tables created after the MySQL upgrade get FK constraints that the
 old MySQL version silently ignored.
 
