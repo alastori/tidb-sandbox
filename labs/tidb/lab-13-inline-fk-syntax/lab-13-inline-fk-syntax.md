@@ -839,14 +839,14 @@ created after the upgrade.
 
 | Change | Owner | Issue | Target | Effort |
 |--------|-------|-------|--------|:------:|
-| TiDB parser: emit warning on inline REFERENCES | TiDB Parser team | To be filed (FRM) | v8.6 | S |
+| TiDB parser: emit warning on inline REFERENCES | TiDB Parser team | To be filed (FRM) | v8.5.7 (ideally v8.6) | S |
 | DM precheck: update FK warning message | DM team | [tiflow#12129](https://github.com/pingcap/tiflow/issues/12129) (open) | v8.5.7 (ideally v8.6) | S |
-| DM sync: log warning on inline REFERENCES replay | DM team | To be filed | v8.6 | S |
+| DM sync: log warning on inline REFERENCES replay | DM team | To be filed | v8.5.7 (ideally v8.6) | S |
 | DM compatibility catalog: add MySQL 9.x | DM team / Docs | To be filed | v8.5.7 (ideally v8.6) | S |
 | TiDB parser: honor inline REFERENCES | TiDB Parser team | To be filed (FRM); related: [tidb#45474](https://github.com/pingcap/tidb/issues/45474) | v9.x | L |
 | DM post-DDL FK verification | DM team | [tiflow#12350](https://github.com/pingcap/tiflow/issues/12350) (umbrella) | v9.x | M |
 
-### Phase 1 - Warning (TiDB v8.6 / DM v8.6)
+### Phase 1 - Warning (TiDB v8.5.7 or v8.6 / DM v8.5.7 or v8.6)
 
 No behavior change; only visibility. Zero risk of breaking existing
 workloads.
