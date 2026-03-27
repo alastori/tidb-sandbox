@@ -89,7 +89,9 @@ v8.5.5 parser behavior tested here is identical to v8.5.6.
   for build instructions
 - MySQL 8.0.44 (`mysql:8.0.44`) - legacy LTS, EOL Apr 2026
 - MySQL 8.4.7 (`mysql:8.4.7`) - current LTS
-- MySQL 9.6.0 (`mysql:9.6.0`) - innovation track
+- MySQL 9.6.0 (`mysql:9.6.0`) - innovation track; inline REFERENCES fix
+  landed in 9.0.0 ([WL#16130](https://dev.mysql.com/doc/relnotes/mysql/9.0/en/news-9-0-0.html))
+  and carries into MySQL 9.7 LTS (the upcoming long-term support release)
 - MariaDB 10.11.16 (`mariadb:10.11.16`) - LTS, supported until Feb 2028
 - MariaDB 11.4.10 (`mariadb:11.4.10`) - LTS, supported until May 2029
 - PostgreSQL 16.6 (`postgres:16.6`) - supported until Nov 2028
@@ -855,7 +857,7 @@ created after the upgrade.
 | DM precheck: update FK warning message | DM team | [tiflow#12129](https://github.com/pingcap/tiflow/issues/12129) (open) | v8.5.7 (ideally v8.6) | S |
 | DM sync: log warning on inline REFERENCES replay | DM team | To be filed | v8.5.7 (ideally v8.6) | S |
 | DM compatibility catalog: add MySQL 9.x | DM team / Docs | To be filed | v8.5.7 (ideally v8.6) | S |
-| TiDB parser: honor inline REFERENCES | TiDB Parser team | To be filed (FRM); related: [tidb#45474](https://github.com/pingcap/tidb/issues/45474) | v9.x | L |
+| TiDB parser: honor inline REFERENCES | TiDB Parser team | To be filed (FRM); related: [tidb#45474](https://github.com/pingcap/tidb/issues/45474), [tidb#67358](https://github.com/pingcap/tidb/issues/67358) | v9.x | L |
 | DM post-DDL FK verification | DM team | [tiflow#12350](https://github.com/pingcap/tiflow/issues/12350) (umbrella) | v9.x | M |
 
 ### Phase 1 - Warning (TiDB v8.5.7+ / DM v8.5.7+)
@@ -1044,6 +1046,7 @@ tiup clean lab13-dm 2>/dev/null || true
 - [TiDB Foreign Key Constraints](https://docs.pingcap.com/tidb/v8.5/foreign-key)
 - [tidb#36982 - FK Dev Task (implementation tracker)](https://github.com/pingcap/tidb/issues/36982)
 - [tidb#45474 - ALTER TABLE ADD COLUMN + FK in single statement](https://github.com/pingcap/tidb/issues/45474) (open, related parser gap)
+- [tidb#67358 - MySQL 9.7 Compatibility tracker](https://github.com/pingcap/tidb/issues/67358) (open; inline FK is one of several MySQL 9.7 LTS items)
 
 ### DM / TiFlow
 
