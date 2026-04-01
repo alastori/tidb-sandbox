@@ -46,14 +46,11 @@ LOG="${RESULTS_DIR}/step8-negative-${TS}.log"
     if echo "$STATUS" | grep -qi "parent\|ancestor\|block-allow-list\|filtered\|Paused\|foreign_key"; then
         echo "PASS: DM detected missing ancestor table in BAL"
     else
-        echo "NOTE: Error may require worker-count>1 DML processing to trigger."
-        echo "  The BAL precheck fires in prepareDownStreamTableInfo during incremental sync."
+        echo "FAIL: Expected BAL ancestor error not detected in task status."
+        echo "  Expected: 'foreign_key_checks=1 is not supported when replicated table"
+        echo "  depends on parent/ancestor table filtered by block-allow-list'"
+        exit 1
     fi
-
-    echo ""
-    echo "EXPECTED S7a:"
-    echo "  Error containing: 'foreign_key_checks=1 is not supported when replicated table"
-    echo "  depends on parent/ancestor table filtered by block-allow-list'"
 
     # --- Cleanup before next test ---
     dmctl stop-task fk-v856 2>/dev/null || true

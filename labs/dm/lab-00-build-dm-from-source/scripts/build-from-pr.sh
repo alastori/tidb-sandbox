@@ -28,10 +28,12 @@ LOG="${RESULTS_DIR}/build-pr-${PR_NUMBER}-${TS}.log"
         cd "${TIFLOW_DIR}"
     fi
 
-    # Fetch the PR ref and create a local branch
+    # Fetch the PR ref into FETCH_HEAD, then create-or-reset the local branch.
+    # Using a named refspec (head:pr-N) fails on re-run when the branch is
+    # already checked out; FETCH_HEAD + checkout -B avoids that constraint.
     echo "Fetching PR #${PR_NUMBER}..."
-    git fetch origin "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
-    git checkout "pr-${PR_NUMBER}"
+    git fetch origin "pull/${PR_NUMBER}/head"
+    git checkout -B "pr-${PR_NUMBER}" FETCH_HEAD
 
     echo ""
     echo "PR branch HEAD:"
