@@ -4,7 +4,7 @@ status: released
 products: [dm, mysql, tidb]
 -->
 
-# Lab 07 -- DM Foreign Key v8.5.6 Fix Validation
+# Lab 07 - DM Foreign Key v8.5.6 Fix Validation
 
 **Goal:** Validate the three engineering fixes for DM foreign key support shipping in v8.5.6 (experimental). This lab is the "after" counterpart to [Lab 03](../lab-03-foreign-key-safe-mode/lab-03-foreign-key-safe-mode.md), which documented the pre-fix behavior on v8.5.4.
 
@@ -123,7 +123,7 @@ UPDATE parent SET note = CONCAT(note, ':updated') WHERE id = 3;
 | child_setnull rows for parent_id=1 | 2 (preserved) | 0 (drifted to NULL) |
 | parent.note values | Updated with `:updated` | Partially updated |
 
-### S2: PK-changing UPDATE -- Known Limitation (Step 3)
+### S2: PK-changing UPDATE - Known Limitation (Step 3)
 
 **What remains unchanged:** When an `UPDATE` changes the primary key value, safe mode still rewrites it as `DELETE` (old PK) + `REPLACE INTO` (new PK).
 
@@ -164,7 +164,7 @@ SET SESSION foreign_key_checks = 1;
 | Children for parents 10-13 | All exist, correct parent_id |
 | No error 1452 | Child INSERT never arrives before parent |
 
-### S4: DDL Replication -- ADD/DROP FOREIGN KEY (Step 5)
+### S4: DDL Replication - ADD/DROP FOREIGN KEY (Step 5)
 
 **What changed in v8.5.6:** PR #12329 adds `ADD FOREIGN KEY` and `DROP FOREIGN KEY` to the DM DDL whitelist. Previously these were silently dropped.
 
@@ -194,15 +194,15 @@ ALTER TABLE child_dynamic DROP FOREIGN KEY fk_dyn;
 
 ### S6a-d: Extended FK Types (Step 7)
 
-**S6a -- Multi-level cascades:** 3-level chain (grandparent -> mid_parent -> grandchild). Non-key UPDATEs should not cascade. DELETE on grandparent should cascade through mid_parent to grandchild.
+**S6a - Multi-level cascades:** 3-level chain (grandparent -> mid_parent -> grandchild). Non-key UPDATEs should not cascade. DELETE on grandparent should cascade through mid_parent to grandchild.
 
-**S6b -- ON UPDATE CASCADE:** UK-changing UPDATE on `parent_upd.code` (UNIQUE KEY). In safe mode, DM detects the UK change and the guardrail rejects it: `"safe-mode update with foreign_key_checks=1 and PK/UK changes is not supported"`. Task PAUSEs.
+**S6b - ON UPDATE CASCADE:** UK-changing UPDATE on `parent_upd.code` (UNIQUE KEY). In safe mode, DM detects the UK change and the guardrail rejects it: `"safe-mode update with foreign_key_checks=1 and PK/UK changes is not supported"`. Task PAUSEs.
 
 This documents a semantic mismatch: MySQL applies ON UPDATE CASCADE (children updated), but DM safe mode would rewrite as DELETE+REPLACE triggering ON DELETE RESTRICT (children blocked or deleted).
 
-**S6c -- Self-referencing FK:** Employee hierarchy where `employee.manager_id` references `employee.id`. Circular FK detected by DM; causality ordering is silently skipped for circular references. Non-key UPDATEs are safe; DELETE cascades SET NULL to subordinates.
+**S6c - Self-referencing FK:** Employee hierarchy where `employee.manager_id` references `employee.id`. Circular FK detected by DM; causality ordering is silently skipped for circular references. Non-key UPDATEs are safe; DELETE cascades SET NULL to subordinates.
 
-**S6d -- Composite FK:** Multi-column FK `(org_id, dept_id)` references `org(org_id, dept_id)`. Tests FK relation discovery with multi-column index mapping in PR #12414.
+**S6d - Composite FK:** Multi-column FK `(org_id, dept_id)` references `org(org_id, dept_id)`. Tests FK relation discovery with multi-column index mapping in PR #12414.
 
 ### S7a: Block-Allow-List Missing Ancestor (Step 8)
 
@@ -214,19 +214,19 @@ Tested on `dm:release-8.5-d6d53adbe` (2026-03-24).
 
 | ID | Status | Notes |
 |----|--------|-------|
-| S1a | PASS | Children preserved, parent notes updated |
-| S1b | PASS | Parent+children replicated via safe-mode REPLACE |
-| S1c | PASS | Task Running (log grep inconclusive; mechanism confirmed by S1a outcome) |
-| S2a | PASS | PK change replicated with FK_CHECKS=0 on both source and target |
-| S2b | PASS | Task Running after 70s auto-safe-mode window |
-| S3 | PASS | No error 1452, parents created before children |
-| S4 | PASS | child_dynamic table + data replicated, FK added+dropped |
-| S5 | PASS | Both fixes working together under safe-mode + multi-worker |
-| S6a | PASS | Non-key UPDATEs safe; 3-level DELETE cascade correct |
-| S6b | PASS | Task PAUSED (guardrail rejected UK change in safe mode) |
-| S6c | PASS | SET NULL cascade on delete; self-ref non-key UPDATE safe |
-| S6d | PASS | Composite FK discovery correct; CASCADE on delete correct |
-| S7a | PASS | Task PAUSED with ErrCode 36025: parent filtered by BAL |
+| S1a | ✅ | Children preserved, parent notes updated |
+| S1b | ✅ | Parent+children replicated via safe-mode REPLACE |
+| S1c | ✅ | Task Running (log grep inconclusive; mechanism confirmed by S1a outcome) |
+| S2a | ✅ | PK change replicated with FK_CHECKS=0 on both source and target |
+| S2b | ✅ | Task Running after 70s auto-safe-mode window |
+| S3 | ✅ | No error 1452, parents created before children |
+| S4 | ✅ | child_dynamic table + data replicated, FK added+dropped |
+| S5 | ✅ | Both fixes working together under safe-mode + multi-worker |
+| S6a | ✅ | Non-key UPDATEs safe; 3-level DELETE cascade correct |
+| S6b | ✅ | Task PAUSED (guardrail rejected UK change in safe mode) |
+| S6c | ✅ | SET NULL cascade on delete; self-ref non-key UPDATE safe |
+| S6d | ✅ | Composite FK discovery correct; CASCADE on delete correct |
+| S7a | ✅ | Task PAUSED with ErrCode 36025: parent filtered by BAL |
 
 ## Comparison with Lab 03
 
@@ -259,7 +259,7 @@ Validated by this lab or documented in PRs:
 
 ## References
 
-- [DM Safe Mode](https://docs.pingcap.com/tidb/stable/dm-safe-mode) -- official docs
-- [DM Compatibility Catalog](https://docs.pingcap.com/tidb/stable/dm-compatibility-catalog) -- FK section
-- [Lab 03 -- DM Foreign Keys and Safe Mode (Pre-fix)](../lab-03-foreign-key-safe-mode/lab-03-foreign-key-safe-mode.md) -- before/after baseline
-- [tiflow#12350](https://github.com/pingcap/tiflow/issues/12350) -- umbrella tracking issue
+- [DM Safe Mode](https://docs.pingcap.com/tidb/stable/dm-safe-mode) - official docs
+- [DM Compatibility Catalog](https://docs.pingcap.com/tidb/stable/dm-compatibility-catalog) - FK section
+- [Lab 03 - DM Foreign Keys and Safe Mode (Pre-fix)](../lab-03-foreign-key-safe-mode/lab-03-foreign-key-safe-mode.md) - before/after baseline
+- [tiflow#12350 - DM FK v8.5.6 umbrella tracking issue](https://github.com/pingcap/tiflow/issues/12350)
