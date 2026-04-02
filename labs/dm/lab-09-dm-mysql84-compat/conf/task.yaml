@@ -1,0 +1,16 @@
+name: "mysql84-compat-test"
+task-mode: "all"
+
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+
+mysql-instances:
+  - source-id: "mysql84-source"
+    block-allow-list: "allow-testdb"
+
+block-allow-list:
+  allow-testdb:
+    do-dbs: ["testdb"]

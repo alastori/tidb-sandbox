@@ -1,0 +1,104 @@
+services:
+  # ---------------------------------------------------------------------------
+  # MySQL 8.4 source — the key differentiator from other DM labs
+  # ---------------------------------------------------------------------------
+  mysql-source:
+    image: ${MYSQL_IMAGE:-mysql:8.4.7}
+    container_name: lab09-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Pass_1234}
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./conf/my.cnf:/etc/mysql/conf.d/lab09.cnf:ro
+    command: --server-id=109
+    networks:
+      - lab09-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-pPass_1234"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # TiDB cluster (PD + TiKV + TiDB)
+  # ---------------------------------------------------------------------------
+  pd:
+    image: pingcap/pd:${TIDB_VERSION:-v8.5.4}
+    container_name: lab09-pd
+    command:
+      - --name=pd
+      - --data-dir=/pd-data
+      - --client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://pd:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-peer-urls=http://pd:2380
+    networks:
+      - lab09-net
+
+  tikv:
+    image: pingcap/tikv:${TIDB_VERSION:-v8.5.4}
+    container_name: lab09-tikv
+    depends_on:
+      - pd
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv:20160
+      - --data-dir=/tikv-data
+      - --pd=pd:2379
+    networks:
+      - lab09-net
+
+  tidb:
+    image: pingcap/tidb:${TIDB_VERSION:-v8.5.4}
+    container_name: lab09-tidb
+    ports:
+      - "4000:4000"
+    depends_on:
+      - tikv
+    command:
+      - --store=tikv
+      - --path=pd:2379
+    networks:
+      - lab09-net
+
+  # ---------------------------------------------------------------------------
+  # DM cluster (dm-master + 1 dm-worker)
+  # Override DM_VERSION for pre-release v8.5.6 testing
+  # ---------------------------------------------------------------------------
+  dm-master:
+    image: ${DM_IMAGE:-pingcap/dm:v8.5.4}
+    container_name: lab09-dm-master
+    ports:
+      - "8261:8261"
+    command:
+      - /dm-master
+      - --master-addr=0.0.0.0:8261
+      - --advertise-addr=dm-master:8261
+      - --name=dm-master
+      - --initial-cluster=dm-master=http://dm-master:8291
+      - --peer-urls=http://0.0.0.0:8291
+      - --advertise-peer-urls=http://dm-master:8291
+    depends_on:
+      - tidb
+    networks:
+      - lab09-net
+
+  dm-worker:
+    image: ${DM_IMAGE:-pingcap/dm:v8.5.4}
+    container_name: lab09-dm-worker
+    command:
+      - /dm-worker
+      - --worker-addr=0.0.0.0:8262
+      - --advertise-addr=dm-worker:8262
+      - --name=dm-worker1
+      - --join=dm-master:8261
+    depends_on:
+      - dm-master
+    networks:
+      - lab09-net
+
+networks:
+  lab09-net:
+    name: lab09-net
+    driver: bridge

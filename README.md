@@ -17,6 +17,8 @@ and troubleshooting patterns.
 | [lab-05](labs/dm/lab-05-sharded-mysql-dm-migration) | Shard merge migration (3 MySQL shards → TiDB, pessimistic mode) | Scripted |
 | [lab-06](labs/dm/lab-06-lock-tables-privilege) | LOCK TABLES privilege and consistency modes (vanilla MySQL vs RDS) | Scripted |
 | [lab-07](labs/dm/lab-07-fk-v856-validation) | Foreign key v8.5.6 fix validation (13 scenarios, 3 PRs) | Scripted |
+| [lab-08](labs/dm/lab-08-column-desensitization) | Column-level desensitization workarounds (source-side trigger, masking view) | Scripted |
+| [lab-09](labs/dm/lab-09-dm-mysql84-compat) | MySQL 8.4 compatibility: full-load + incremental validation + Dumpling workaround | Scripted |
 
 ### Dumpling
 
