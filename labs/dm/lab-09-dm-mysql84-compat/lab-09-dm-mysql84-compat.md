@@ -8,18 +8,20 @@ products: [dm, mysql, tidb, dumpling]
 
 > **Purpose:** Validate that DM correctly handles MySQL 8.4 LTS syntax
 > changes (SHOW BINARY LOG STATUS, SHOW REPLICA STATUS) during full-load
-> and incremental replication. Also validates the v8.5.6 workaround for
-> the DM full-load gap: Dumpling export + IMPORT INTO + DM incremental.
-> Covers FD-2367 / FRM-3145 (tiflow#12396).
+> and incremental replication. Covers FD-2367 / FRM-3145 (tiflow#12396 +
+> tiflow#12589).
 
 **Goal:** Confirm that DM can perform full-load and incremental sync from
 a MySQL 8.4 source without Error 1064 (42000), validating the
 compatibility fixes cherry-picked to release-8.5 for v8.5.6.
 
-**v8.5.6 scope note:** DM incremental mode (CDC) supports MySQL 8.4. DM
-full-load mode does NOT support MySQL 8.4 in v8.5.6 (deferred). The
-workaround scenarios (W1-W3) validate that customers can use Dumpling for
-the full-load phase and then hand off to DM incremental replication.
+**v8.5.6 scope note:** Both DM full-load and incremental modes now support
+MySQL 8.4 end-to-end on `release-8.5` (post tiflow#12589, which upgraded
+the vendored TiDB to include the Dumpling MySQL 8.4 fixes from tidb#65131
+and tidb#66855). The earlier full-load gap, where DM-internal Dumpling
+could not capture the binlog position from MySQL 8.4, is closed. The
+external Dumpling + IMPORT INTO + DM-incremental path is preserved as an
+alternative manual-load procedure in the Appendix.
 
 ## Background
 
@@ -38,18 +40,18 @@ Original contributor: Daniel van Eeden (tiflow#12396).
 
 ## Tested Environment
 
-- DM v8.5.5-12-gd6d53adbe (`dm:release-8.5-d6d53adbe`, built from tiflow release-8.5 branch)
+- DM v8.5.5-13-g7c6d2b6be (`dm:release-8.5-7c6d2b6be`, built from tiflow release-8.5 branch HEAD at commit `7c6d2b6`, post tiflow#12589 dep upgrade)
 - TiDB v8.5.4 (`pingcap/tidb:v8.5.4`)
 - PD v8.5.4 (`pingcap/pd:v8.5.4`)
 - TiKV v8.5.4 (`pingcap/tikv:v8.5.4`)
 - MySQL 8.4.7 (`mysql:8.4.7`) — source
 - Docker Desktop 28.5.1 on macOS (arm64)
 - Default credentials: root / `Pass_1234`, dm_user / `DmPass_1234`
-- Dumpling v8.5.5 (via tiup: `tiup install dumpling:v8.5.5`) — required for W1-W3 only
+- Dumpling v8.5.5 (via tiup: `tiup install dumpling:v8.5.5`); required only for the Appendix manual-load scenarios (W1-W3)
 
-**Pre-release testing:** Override `DM_VERSION` in `.env` with a custom image
+**Pre-release testing:** Override `DM_IMAGE` in `.env` with a custom image
 built from release-8.5 branch (see lab-00-build-dm-from-source). After v8.5.6
-release, use `DM_VERSION=v8.5.6`.
+release, use `DM_IMAGE=pingcap/dm:v8.5.6`.
 
 ## Scenarios
 
@@ -70,24 +72,16 @@ release, use `DM_VERSION=v8.5.6`.
 |----|------|-------------|----------|
 | N1 | Missing privileges | DM user without REPLICATION SLAVE | Clean error, not Error 1064 |
 
-### Workaround (v8.5.6: DM full-load gap, manual load path)
-
-These scenarios validate the FD-2367 workaround for customers whose source is
-MySQL 8.4 and who cannot wait for full DM full-load support.
-
-| ID | Tool | Description | Expected |
-|----|------|-------------|----------|
-| W1 | Dumpling | Export `testdb_wrkrd` from MySQL 8.4 (`--consistency flush`) | Exit 0, metadata contains binlog position using `SHOW BINARY LOG STATUS` |
-| W2 | LOAD DATA LOCAL INFILE | Load Dumpling CSV into TiDB (`LOAD DATA LOCAL INFILE` in Docker; production uses `IMPORT INTO FROM 's3://...'`) | Row counts match source (20 rows) |
-| W3 | DM incremental | DM task in `incremental` mode from Dumpling's binlog position; run INSERT + UPDATE + DELETE on source | All 3 DML operations replicated to TiDB |
-
-**Prereq for W1-W3:** Steps 0-2 must complete first (infrastructure up, `mysql84-source` registered).
-Requires Dumpling on host: `tiup install dumpling:v8.5.5`.
+> **Manual load alternative (W1-W3):** An external Dumpling + IMPORT INTO + DM-incremental
+> path is documented in the [Appendix](#appendix-manual-load-alternative-w1-w3).
+> Now that DM full-load mode supports MySQL 8.4 directly, this is no longer
+> required, but the path is preserved for customers who prefer external Dumpling
+> orchestration or need to seed TiDB from an existing dump.
 
 ## How to Run
 
 ```bash
-# Run all steps (S1-S6, N1 — does NOT include W1-W3)
+# Run all steps (S1-S6, N1; does NOT include the Appendix W1-W3 path)
 ./scripts/run-all.sh
 
 # Or run individual steps
@@ -98,7 +92,7 @@ Requires Dumpling on host: `tiup install dumpling:v8.5.5`.
 ./scripts/step4-lifecycle.sh       # S4-S5: Pause/resume + DDL replication
 ./scripts/step5-negative.sh        # N1: Privilege failure
 
-# Workaround scenarios (W1-W3) — run after step2, before step6
+# Optional: Appendix manual-load alternative (W1-W3), run after step2, before step6
 # Requires: tiup install dumpling:v8.5.5
 ./scripts/step7-workaround.sh      # W1-W3: Dumpling + IMPORT INTO + DM incremental
 
@@ -175,12 +169,49 @@ and start a task. Verify DM fails with a clear privilege error, not Error 1064.
 ./scripts/step6-cleanup.sh
 ```
 
-## Step 7 - Workaround: Dumpling + IMPORT INTO + DM Incremental (W1-W3)
+## Results
 
-Validates the v8.5.6 workaround for customers migrating from MySQL 8.4 where DM
-full-load mode is not yet supported. The workaround: export the initial dataset
-with Dumpling (capturing the binlog position), load it into TiDB with IMPORT INTO,
-then start DM in `incremental` mode at the captured binlog position.
+Re-run on 2026-04-07 against `dm:release-8.5-7c6d2b6be` (post tiflow#12589).
+
+### Positive
+
+| ID | Scenario | Result | Notes |
+|----|----------|--------|-------|
+| S1 | Full load | ✅ | rows match (users=30, orders=60); task reaches `Sync` stage and stays in `Running` (no metadata-parse error) |
+| S2 | Incremental DML | ✅ | INSERT/UPDATE/DELETE replicated to TiDB; UPDATE confirmed via `'Alice Updated'` row check; binlog position advances |
+| S3 | Version check | ✅ | MySQL 8.4 detected in DM worker logs during connection phase |
+| S4 | Pause/resume | ✅ | Row inserted while task paused is replicated after resume; no Error 1064 on reconnect |
+| S5 | DDL replication | ✅ | `ALTER TABLE ADD COLUMN phone` replicated; subsequent `INSERT ... phone='+1-555-0001'` visible on target |
+| S6 | caching_sha2_password | ✅ | `dm_user` authenticated with MySQL 8.4 default auth plugin; `mysql_native_password` disabled |
+
+### Negative
+
+| ID | Scenario | Result | Notes |
+|----|----------|--------|-------|
+| N1 | Missing privileges | ✅ | DM pre-check fails with clear privilege error (RELOAD/REPLICATION SLAVE missing); no Error 1064 |
+
+### Prior result (pre tiflow#12589)
+
+The earlier run on 2026-04-02 against `dm:release-8.5-d6d53adbe` had S1
+✅ but S2/S4/S5 ❌ because DM-internal Dumpling could not write the
+binlog position into the metadata file on MySQL 8.4. Task paused on
+Sync entry with `parse mydumper metadata error ... didn't found binlog
+location`. tiflow#12589 (Apr 4) upgraded the vendored TiDB to include
+tidb#65131 + tidb#66855, which closes that gap. All scenarios now pass
+end-to-end without falling back to the Appendix path.
+
+## Appendix - Manual-load alternative (W1-W3)
+
+External Dumpling + IMPORT INTO + DM-incremental. Preserved as an alternative
+manual-load procedure for customers who orchestrate their own initial dump
+(for example, seeding TiDB from an existing S3 export and only handing the
+incremental phase to DM). With v8.5.6 + tiflow#12589 in place, **DM full-load
+mode handles MySQL 8.4 directly**, so this path is no longer required for
+correctness.
+
+The workaround: export the initial dataset with Dumpling (capturing the
+binlog position), load it into TiDB with IMPORT INTO, then start DM in
+`incremental` mode at the captured binlog position.
 
 **Prereq:** Steps 0-2 complete. Dumpling installed via tiup.
 
@@ -202,40 +233,24 @@ The script:
 
 > **Cross-reference:** W1 exercises the same Dumpling MySQL 8.4 fix validated
 > in [dumpling/draft-lab-03](../../dumpling/draft-lab-03-dumpling-mysql84-compat).
-> If Dumpling is not yet patched, W1 will fail with Error 1064 on `SHOW MASTER STATUS`.
+> Now bundled into DM via tiflow#12589.
 
-## Results
-
-### Positive
+### Appendix results
 
 | ID | Scenario | Result | Notes |
 |----|----------|--------|-------|
-| S1 | Full load | ✅ | rows match (users=30, orders=60); task enters Paused immediately after — see S2 note |
-| S2 | Incremental DML | ❌ | Internal Dumpling (pre-tidb#57188) cannot capture binlog pos from MySQL 8.4 (`SHOW MASTER STATUS` fails); task pauses on Sync entry — incremental never starts. Use W1-W3 workaround. |
-| S3 | Version check | ✅ | MySQL 8.4 detected in DM worker logs during connection phase |
-| S4 | Pause/resume | ❌ | Task paused (same root cause as S2); pause/resume lifecycle cannot be tested |
-| S5 | DDL replication | ❌ | Task paused (same root cause as S2); DDL not replicated |
-| S6 | caching_sha2_password | ✅ | `dm_user` authenticated with MySQL 8.4 default auth plugin; `mysql_native_password` disabled |
-
-### Negative
-
-| ID | Scenario | Result | Notes |
-|----|----------|--------|-------|
-| N1 | Missing privileges | ✅ | DM pre-check fails with clear privilege error (RELOAD/REPLICATION SLAVE missing); no Error 1064 |
-
-### Workaround (v8.5.6 — Dumpling + IMPORT INTO + DM incremental)
-
-| ID | Scenario | Result | Notes |
-|----|----------|--------|-------|
-| W1 | Dumpling export from MySQL 8.4 | ✅ | Data exported (20 rows); binlog pos via `SHOW BINARY LOG STATUS` fallback (Dumpling pre-tidb#57188 can't capture from MySQL 8.4) |
+| W1 | External Dumpling export from MySQL 8.4 | ✅ | Data exported (20 rows); binlog pos captured via `SHOW BINARY LOG STATUS` |
 | W2 | Load Dumpling CSV into TiDB | ✅ | 20/20 rows via `LOAD DATA LOCAL INFILE`; `IMPORT INTO file://` requires additional TiDB server config |
-| W3 | DM incremental from binlog pos | ✅ | INSERT + UPDATE + DELETE all replicated after starting DM at `mysql-bin.000003:16115` |
+| W3 | DM incremental from binlog pos | ✅ | INSERT + UPDATE + DELETE all replicated after starting DM at `mysql-bin.000003:8270` |
 
 ## References
 
 - [tiflow#12396 - DM: support MySQL 8.4](https://github.com/pingcap/tiflow/pull/12396)
+- [tiflow#12589 - deps: upgrade tidb release-8.5 dependency](https://github.com/pingcap/tiflow/pull/12589) (closes the DM full-load gap on MySQL 8.4)
+- [tidb#65131 - dumpling: New terminology for MySQL (release-8.5 cherry-pick of #57188)](https://github.com/pingcap/tidb/pull/65131)
+- [tidb#66855 - dumpling: make metadata collection failure a warning (release-8.5 cherry-pick of #57202)](https://github.com/pingcap/tidb/pull/66855)
 - [tiflow#11020 - DM: MySQL 8.4 tracking issue](https://github.com/pingcap/tiflow/issues/11020)
 - [FD-2367 - DM MySQL 8.4 GA Compatibility](https://tidb.atlassian.net/browse/FD-2367)
 - [FRM-3145 - DM MySQL 8.4 GA Compatibility](https://tidb.atlassian.net/browse/FRM-3145)
 - [MySQL 8.4 Release Notes - Removed SHOW MASTER STATUS](https://dev.mysql.com/doc/relnotes/mysql/8.4/en/)
-- [dumpling/draft-lab-03 - Dumpling MySQL 8.4 compatibility](../../dumpling/draft-lab-03-dumpling-mysql84-compat) — W1 depends on this fix (tidb#57188)
+- [dumpling/draft-lab-03 - Dumpling MySQL 8.4 compatibility](../../dumpling/draft-lab-03-dumpling-mysql84-compat)
