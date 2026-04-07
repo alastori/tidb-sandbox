@@ -40,14 +40,14 @@ Original contributor: Daniel van Eeden (tiflow#12396).
 
 ## Tested Environment
 
-- DM v8.5.5-13-g7c6d2b6be (`dm:release-8.5-7c6d2b6be`, built from tiflow release-8.5 branch HEAD at commit `7c6d2b6` — tiflow#12589 dep upgrade)
+- DM v8.5.5-13-g7c6d2b6be (`dm:release-8.5-7c6d2b6be`, built from tiflow release-8.5 branch HEAD at commit `7c6d2b6`, post tiflow#12589 dep upgrade)
 - TiDB v8.5.4 (`pingcap/tidb:v8.5.4`)
 - PD v8.5.4 (`pingcap/pd:v8.5.4`)
 - TiKV v8.5.4 (`pingcap/tikv:v8.5.4`)
 - MySQL 8.4.7 (`mysql:8.4.7`) — source
 - Docker Desktop 28.5.1 on macOS (arm64)
 - Default credentials: root / `Pass_1234`, dm_user / `DmPass_1234`
-- Dumpling v8.5.5 (via tiup: `tiup install dumpling:v8.5.5`) — required only for the Appendix manual-load scenarios (W1-W3)
+- Dumpling v8.5.5 (via tiup: `tiup install dumpling:v8.5.5`); required only for the Appendix manual-load scenarios (W1-W3)
 
 **Pre-release testing:** Override `DM_IMAGE` in `.env` with a custom image
 built from release-8.5 branch (see lab-00-build-dm-from-source). After v8.5.6
@@ -81,7 +81,7 @@ release, use `DM_IMAGE=pingcap/dm:v8.5.6`.
 ## How to Run
 
 ```bash
-# Run all steps (S1-S6, N1 — does NOT include the Appendix W1-W3 path)
+# Run all steps (S1-S6, N1; does NOT include the Appendix W1-W3 path)
 ./scripts/run-all.sh
 
 # Or run individual steps
@@ -92,7 +92,7 @@ release, use `DM_IMAGE=pingcap/dm:v8.5.6`.
 ./scripts/step4-lifecycle.sh       # S4-S5: Pause/resume + DDL replication
 ./scripts/step5-negative.sh        # N1: Privilege failure
 
-# Optional: Appendix manual-load alternative (W1-W3) — run after step2, before step6
+# Optional: Appendix manual-load alternative (W1-W3), run after step2, before step6
 # Requires: tiup install dumpling:v8.5.5
 ./scripts/step7-workaround.sh      # W1-W3: Dumpling + IMPORT INTO + DM incremental
 
@@ -246,7 +246,7 @@ The script:
 ## References
 
 - [tiflow#12396 - DM: support MySQL 8.4](https://github.com/pingcap/tiflow/pull/12396)
-- [tiflow#12589 - deps: upgrade tidb release-8.5 dependency](https://github.com/pingcap/tiflow/pull/12589) — closes the DM full-load gap on MySQL 8.4
+- [tiflow#12589 - deps: upgrade tidb release-8.5 dependency](https://github.com/pingcap/tiflow/pull/12589) (closes the DM full-load gap on MySQL 8.4)
 - [tidb#65131 - dumpling: New terminology for MySQL (release-8.5 cherry-pick of #57188)](https://github.com/pingcap/tidb/pull/65131)
 - [tidb#66855 - dumpling: make metadata collection failure a warning (release-8.5 cherry-pick of #57202)](https://github.com/pingcap/tidb/pull/66855)
 - [tiflow#11020 - DM: MySQL 8.4 tracking issue](https://github.com/pingcap/tiflow/issues/11020)

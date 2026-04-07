@@ -17,7 +17,7 @@ self-managed DM.
 | [lab-06](lab-06-lock-tables-privilege) | LOCK TABLES privilege and consistency modes in DM full migration | Manual Exploration |
 | [lab-07](lab-07-fk-v856-validation) | FK support validation in v8.5.6 | Scripted Validation |
 | [lab-08](lab-08-column-desensitization) | Column-level desensitization via DM expression filters | Manual Exploration |
-| [lab-09](lab-09-dm-mysql84-compat) | DM MySQL 8.4 compatibility validation + workaround (Dumpling + incremental) | Scripted Validation |
+| [lab-09](lab-09-dm-mysql84-compat) | DM MySQL 8.4 compatibility validation (full-load + incremental) | Scripted Validation |
 
 ## References
 
