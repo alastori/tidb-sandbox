@@ -11,7 +11,7 @@ labs/_templates/              # Archetype-specific starter kits
 LAB_AUTHORING_GUIDE.md        # Full conventions reference
 ```
 
-Products: `dm`, `dumpling`, `import-into`, `sync-diff-inspector`, `ticdc`, `tidb`.
+Products: `dm`, `dumpling`, `import-into`, `lightning`, `sync-diff-inspector`, `ticdc`, `tidb`.
 
 ## Lab Archetypes
 
