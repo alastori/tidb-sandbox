@@ -1,0 +1,31 @@
+name: "desensitize"
+task-mode: "all"
+
+target-database:
+  host: "tidb"
+  port: 4000
+  user: "root"
+  password: ""
+
+mysql-instances:
+  - source-id: "mysql-source"
+    block-allow-list: "allow-ds"
+    loader-config-name: "lab-loader"
+    syncer-config-name: "lab-syncer"
+
+block-allow-list:
+  allow-ds:
+    do-dbs: ["ds_s1", "ds_s3"]
+
+# Explicit: SQL-based full load (not Lightning/physical).
+# SQL INSERT fires downstream triggers; Lightning would bypass them.
+loaders:
+  lab-loader:
+    import-mode: "sql"
+
+# safe-mode: true forces REPLACE INTO during incremental sync.
+# Default behavior only enables safe-mode briefly after checkpoint recovery.
+# We pin it ON to test the REPLACE INTO trigger-interaction path explicitly.
+syncers:
+  lab-syncer:
+    safe-mode: true
