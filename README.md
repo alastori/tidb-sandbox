@@ -33,6 +33,12 @@ and troubleshooting patterns.
 |-----|-------------|------|
 | [lab-01](labs/import-into/lab-01-base64-decoding) | Base64 decoding with IMPORT INTO ... SET | Manual |
 
+### TiDB Lightning
+
+| Lab | Description | Type |
+|-----|-------------|------|
+| [lab-01](labs/lightning/lab-01-create-view-privilege) | CREATE VIEW privilege required by Lightning conflict_view (logical + physical modes, 8 scenarios) | Manual |
+
 ### Sync Diff Inspector
 
 | Lab | Description | Type |
