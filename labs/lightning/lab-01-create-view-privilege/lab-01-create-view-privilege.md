@@ -1,7 +1,7 @@
 <!-- lab-meta
 archetype: manual-exploration
 status: released
-products: [tidb-lightning, tidb]
+products: [lightning, tidb]
 -->
 
 # Lab 01 - CREATE VIEW Privilege Required by Lightning `conflict_view`
