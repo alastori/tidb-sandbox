@@ -1,0 +1,97 @@
+services:
+  # ---------------------------------------------------------------------------
+  # MySQL source (single instance, 3 databases for 3 scenarios)
+  # ---------------------------------------------------------------------------
+  mysql-source:
+    image: ${MYSQL_IMAGE:-mysql:8.0.44}
+    container_name: lab10-mysql-source
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Pass_1234}
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./conf/my.cnf:/etc/mysql/conf.d/lab10.cnf:ro
+    command: --server-id=108
+    networks:
+      - lab10-net
+
+  # ---------------------------------------------------------------------------
+  # TiDB cluster (PD + TiKV + TiDB)
+  # ---------------------------------------------------------------------------
+  pd:
+    image: pingcap/pd:${TIDB_VERSION:-v8.5.4}
+    container_name: lab10-pd
+    command:
+      - --name=pd
+      - --data-dir=/pd-data
+      - --client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://pd:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-peer-urls=http://pd:2380
+    networks:
+      - lab10-net
+
+  tikv:
+    image: pingcap/tikv:${TIDB_VERSION:-v8.5.4}
+    container_name: lab10-tikv
+    depends_on:
+      - pd
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv:20160
+      - --data-dir=/tikv-data
+      - --pd=pd:2379
+    networks:
+      - lab10-net
+
+  tidb:
+    image: pingcap/tidb:${TIDB_VERSION:-v8.5.4}
+    container_name: lab10-tidb
+    ports:
+      - "4000:4000"
+    depends_on:
+      - tikv
+    command:
+      - --store=tikv
+      - --path=pd:2379
+    networks:
+      - lab10-net
+
+  # ---------------------------------------------------------------------------
+  # DM cluster (dm-master + 1 dm-worker)
+  # ---------------------------------------------------------------------------
+  dm-master:
+    image: pingcap/dm:${DM_VERSION:-v8.5.4}
+    container_name: lab10-dm-master
+    ports:
+      - "8261:8261"
+    command:
+      - /dm-master
+      - --master-addr=0.0.0.0:8261
+      - --advertise-addr=dm-master:8261
+      - --name=dm-master
+      - --initial-cluster=dm-master=http://dm-master:8291
+      - --peer-urls=http://0.0.0.0:8291
+      - --advertise-peer-urls=http://dm-master:8291
+    depends_on:
+      - tidb
+    networks:
+      - lab10-net
+
+  dm-worker:
+    image: pingcap/dm:${DM_VERSION:-v8.5.4}
+    container_name: lab10-dm-worker
+    command:
+      - /dm-worker
+      - --worker-addr=0.0.0.0:8262
+      - --advertise-addr=dm-worker:8262
+      - --name=dm-worker1
+      - --join=dm-master:8261
+    depends_on:
+      - dm-master
+    networks:
+      - lab10-net
+
+networks:
+  lab10-net:
+    driver: bridge
