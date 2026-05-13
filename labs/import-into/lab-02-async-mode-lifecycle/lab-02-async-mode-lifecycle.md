@@ -1,0 +1,183 @@
+<!-- lab-meta
+archetype: investigation
+status: draft
+products: [tidb, import-into]
+tidb_version: v8.5.3
+-->
+
+# Lab 02 — `IMPORT INTO ... WITH detached` Async-Mode Lifecycle
+
+**Hypothesis space:** When a user submits `IMPORT INTO ... WITH detached`, the documented async-mode contract is:
+
+1. The SQL statement returns once the job is queued.
+2. The user monitors the job via `SHOW IMPORT JOBS`.
+3. The user can cancel the job via `CANCEL IMPORT JOB <job_id>`.
+4. Concurrency is enforced — overlapping imports on the same table do not silently coexist.
+
+See the [TiDB v8.5 `IMPORT INTO` reference](https://docs.pingcap.com/tidb/v8.5/sql-statement-import-into) for the documented behavior.
+
+This lab tests whether the contract holds across the **entire** job lifecycle, including the early `init` / `encode` states where a user is most likely to be polling and most exposed to ambiguity.
+
+## Test environment
+
+Default: **TiUP playground v8.5.3** on macOS or Linux. Single-machine, single-shell-per-phase.
+
+```bash
+tiup playground v8.5.3 --db 1 --pd 1 --kv 3 --tiflash 0 --without-monitor
+```
+
+3 TiKV nodes are recommended so the distributed-task scheduler exercises a realistic placement path during `encode` / `write&ingest`.
+
+All scripts honor environment overrides for `TIDB_HOST`, `TIDB_PORT`, `TIDB_USER`, `TIDB_PASSWORD`, and `SOURCE_URI` so the same flow runs against any TiDB v8.5.3 deployment.
+
+## Hypotheses
+
+| ID | Hypothesis | Phase |
+|---|---|---|
+| **H1** | `SHOW IMPORT JOBS` does not surface a job during its `init` / `encode` states | [phase1](#phase-1--h1-prepare-state-visibility) |
+| **H2** | A successful job's completion is not signaled in a way a polling user notices in real time | [phase2](#phase-2--h2-completion-signal) |
+| **H3** | `CANCEL IMPORT JOB <id>` is rejected or has no effect during `init` / `encode` | [phase3](#phase-3--h3-cancel-during-prepare) |
+| **H4** | `TRUNCATE TABLE` against the target succeeds during an in-flight import; the import keeps running | [phase4](#phase-4--h4-truncate-survival) |
+| **H5** | A second `IMPORT INTO` against the same table during another job's `init` / `encode` is admitted (no admission-control check) | [phase5](#phase-5--h5-admission-control) |
+| **H6** | A rapid double-submit (simulated client retry) creates two distinct distributed tasks rather than being deduplicated | [phase6](#phase-6--h6-client-retry) |
+
+## Observation method
+
+Each phase produces ground truth (what we did, when) and replays a fixed set of observations:
+
+1. **`SHOW IMPORT JOBS`** — the documented user-facing surface. Polled at multiple cadences (sub-second, second, minute) so a "latency fingerprint" of empty-vs-populated is captured.
+2. **TiDB server logs** — `tidb.log` from the playground captures `task_executor` and `scheduler` lifecycle messages with `task-id` labels. Filtered to `ImportInto` / `switch to next step`.
+3. **`mysql.tidb_global_task` system table** — distributed-task SSoT. Queried directly to confirm task identity, state, and timing.
+
+Each phase records its raw observation files to `results/<ISO8601>/phase{N}/`.
+
+## Phase index
+
+| Phase | Script | Goal |
+|---|---|---|
+| 0 | [phase0-setup.sh](phase0-setup.sh) | Start TiUP playground, generate parquet, create target table, persist env |
+| 1 | [phase1-visibility.sh](phase1-visibility.sh) | H1: visibility during `init` / `encode` |
+| 2 | [phase2-completion-signal.sh](phase2-completion-signal.sh) | H2: success signal |
+| 3 | [phase3-cancel-in-prepare.sh](phase3-cancel-in-prepare.sh) | H3: cancel during prepare |
+| 4 | [phase4-truncate-survival.sh](phase4-truncate-survival.sh) | H4: TRUNCATE during in-flight import |
+| 5 | [phase5-admission-control.sh](phase5-admission-control.sh) | H5: second IMPORT INTO during prepare |
+| 6 | [phase6-client-retry.sh](phase6-client-retry.sh) | H6: rapid double-submit |
+| N | [phaseN-cleanup.sh](phaseN-cleanup.sh) | Drop schema, stop playground |
+
+## Data sizing strategy
+
+`IMPORT INTO`'s `encode` phase scales with input size. To observe lifecycle transitions with sub-second polling, the data must be large enough that `encode` takes at least 60-180 seconds.
+
+- **First pass:** 4 parquet files × 1,000,000 rows ≈ 256 MB total.
+- **If `encode` < 30 s on your hardware:** scale rows per file 4× and rerun.
+- The aim is not benchmarking — it is exposing the user-experience contract across a wide-enough window to poll comfortably.
+
+Recorded into `results/<ISO8601>/phase0/encode-duration.txt` so subsequent runs can iterate.
+
+## Findings
+
+(populated as phases run)
+
+| Hypothesis | Verdict | Evidence |
+|---|---|---|
+| H1 | — | — |
+| H2 | — | — |
+| H3 | — | — |
+| H4 | — | — |
+| H5 | — | — |
+| H6 | — | — |
+
+## Observation coverage matrix
+
+For each engine event observed, did each surface report it? With what time lag? Gaps inform whether `SHOW IMPORT JOBS` alone is sufficient, or whether additional UI / SQL surfaces are required for user-observable correctness.
+
+| Event | SHOW IMPORT JOBS | tidb.log scheduler | mysql.tidb_global_task |
+|---|---|---|---|
+| IMPORT INTO accepted | — | — | — |
+| task `init → encode` | — | — | — |
+| task `encode → write&ingest` | — | — | — |
+| task `write&ingest → post-process` | — | — | — |
+| task `post-process → done` | — | — | — |
+| CANCEL IMPORT JOB issued | — | — | — |
+| TRUNCATE during flight | — | — | — |
+
+## Cleanup
+
+Run [phaseN-cleanup.sh](phaseN-cleanup.sh) when done. Stops the playground (if started by this lab), drops the test database, and removes generated parquet from the working directory.
+
+## Phase 1 — H1: prepare-state visibility
+
+**Setup precondition:** phase0 has run; target table exists; parquet files staged.
+
+**Steps:**
+
+1. Submit `IMPORT INTO <db>.<table> FROM '<source_uri>' FORMAT 'parquet' WITH detached`.
+2. Immediately begin polling `SHOW IMPORT JOBS` at 200 ms intervals.
+3. Continue polling for the full lifecycle (until the job moves to `finished`).
+4. Capture each call's result row count and end-to-end latency.
+
+**Observable signals:**
+
+- Time from submission to first non-empty result.
+- Whether the job's `Status` is `pending`, `running`, or another value during the polling window.
+- Whether the `Status` ever shows `prepare` / `encode` / similar early-lifecycle states, or whether such states are hidden behind `running` / `pending` in the user-visible projection.
+
+**Pass condition for H1:** if `SHOW IMPORT JOBS` returns the submitted job with a stable `Job_ID` within the first second after submit, **H1 is rejected** (no visibility gap).
+
+**Fail condition for H1:** if there is any window of more than ~1 second where the job is in the engine's distributed-task layer (`mysql.tidb_global_task` shows it) but `SHOW IMPORT JOBS` returns empty, **H1 is supported** (visibility gap exists during `init` / `encode`).
+
+## Phase 2 — H2: completion signal
+
+**Steps:**
+
+1. Continue from phase 1 with the same import.
+2. Once the engine logs `post-process → done` for the task, capture the wall-clock timestamp.
+3. Compare against the polling-side observations: when did `SHOW IMPORT JOBS` first reflect `finished` status?
+
+**Observable signal:** lag between engine `done` and user-visible `finished`. A user not polling in that exact window may miss the success entirely.
+
+## Phase 3 — H3: cancel during prepare
+
+**Steps:**
+
+1. Submit `IMPORT INTO ... WITH detached`.
+2. As soon as the engine logs `init → encode`, attempt `CANCEL IMPORT JOB <id>` using the job_id from `mysql.tidb_global_task` (since `SHOW IMPORT JOBS` may not have surfaced the id yet — see phase 1).
+3. Record the response.
+
+**Observable signals:** is `CANCEL` accepted? Rejected with an error? Does it take effect (task state moves to `cancelled`)?
+
+## Phase 4 — H4: TRUNCATE survival
+
+**Steps:**
+
+1. Submit `IMPORT INTO ... WITH detached`.
+2. While the task is in `encode` or `write&ingest`, run `TRUNCATE TABLE <db>.<table>`.
+3. Observe whether `TRUNCATE` succeeds, whether the import continues, and what data the table contains at job completion.
+
+**Observable signals:** TRUNCATE's return status; import job's final state; final row count in the target table.
+
+## Phase 5 — H5: admission control
+
+**Steps:**
+
+1. Submit `IMPORT INTO ... WITH detached` (#A).
+2. While #A is in `init` / `encode`, submit a second `IMPORT INTO` on the same table (#B).
+3. Observe whether #B is admitted, rejected, or queued.
+
+**Observable signals:** the second statement's return; both tasks' lifecycles in `mysql.tidb_global_task`; final row count vs expectation.
+
+## Phase 6 — H6: client retry
+
+**Steps:**
+
+1. Submit `IMPORT INTO ... WITH detached` twice in rapid succession (sub-second gap) to simulate a client-library retry.
+2. Observe whether the engine deduplicates, rejects the second, or creates two distinct tasks.
+
+**Observable signals:** distinct `task_id`s in `mysql.tidb_global_task`; behavior under contention.
+
+## References
+
+- [TiDB v8.5 — `IMPORT INTO`](https://docs.pingcap.com/tidb/v8.5/sql-statement-import-into)
+- [TiDB v8.5 — `SHOW IMPORT JOBS`](https://docs.pingcap.com/tidb/v8.5/sql-statement-show-import-job)
+- [TiDB v8.5 — `CANCEL IMPORT JOB`](https://docs.pingcap.com/tidb/v8.5/sql-statement-cancel-import-job)
+- [TiDB distributed execution framework (DXF)](https://docs.pingcap.com/tidb/v8.5/tidb-distributed-execution-framework)
