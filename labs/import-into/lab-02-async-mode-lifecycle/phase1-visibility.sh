@@ -35,8 +35,14 @@ GLOBAL_TASK_INTERVAL_S="${GLOBAL_TASK_INTERVAL_S:-1}"
 
 mysql_exec() {
   mysql -h "${TIDB_HOST}" -P "${TIDB_PORT}" -u "${TIDB_USER}" \
-    ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} "$@"
+    ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} \
+    ${TIDB_SSL_OPTS:-} "$@"
 }
+
+# ---------- 1.0: reset target table ----------
+# IMPORT INTO rejects with ERROR 8173 if target is not empty.
+echo "[phase1] resetting target table..."
+mysql_exec -e "TRUNCATE TABLE ${TARGET_DB}.${TARGET_TABLE};" > "${PHASE_DIR}/reset.log" 2>&1 || true
 
 # ---------- 1.1: baseline snapshot ----------
 echo "[phase1] baseline snapshot of mysql.tidb_global_task..."
@@ -50,7 +56,7 @@ mysql_exec --batch -e "
 # ---------- 1.2: background poller ----------
 echo "[phase1] starting SHOW IMPORT JOBS poller (duration=${POLL_DURATION_S}s, interval=${POLL_INTERVAL_MS}ms)..."
 TIDB_HOST="${TIDB_HOST}" TIDB_PORT="${TIDB_PORT}" TIDB_USER="${TIDB_USER}" \
-  TIDB_PASSWORD="${TIDB_PASSWORD:-}" \
+  TIDB_PASSWORD="${TIDB_PASSWORD:-}" TIDB_SSL_OPTS="${TIDB_SSL_OPTS:-}" \
   bash "${LAB_DIR}/lib/poll-show-import-jobs.sh" \
     "${POLL_DURATION_S}" "${POLL_INTERVAL_MS}" \
     "${PHASE_DIR}/show-import-jobs.ndjson" &

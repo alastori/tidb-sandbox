@@ -16,7 +16,8 @@ mkdir -p "${PHASE_DIR}"
 
 mysql_exec() {
   mysql -h "${TIDB_HOST}" -P "${TIDB_PORT}" -u "${TIDB_USER}" \
-    ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} "$@"
+    ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} \
+    ${TIDB_SSL_OPTS:-} "$@"
 }
 
 echo "[phase4] resetting target table..."

@@ -46,6 +46,7 @@ done
 echo "[phase0] testing connection to ${TIDB_HOST}:${TIDB_PORT}..."
 mysql -h "${TIDB_HOST}" -P "${TIDB_PORT}" -u "${TIDB_USER}" \
   ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} \
+    ${TIDB_SSL_OPTS:-} \
   -e "SELECT VERSION() AS version;" \
   > "${RESULTS_DIR}/tidb-version.txt" 2>&1 || {
     echo "ERROR: could not connect to TiDB at ${TIDB_HOST}:${TIDB_PORT}."
@@ -89,6 +90,7 @@ echo "[phase0] generated $(du -sh "${PARQUET_DIR}" | awk '{print $1}') of parque
 echo "[phase0] creating ${TARGET_DB}.${TARGET_TABLE}..."
 mysql -h "${TIDB_HOST}" -P "${TIDB_PORT}" -u "${TIDB_USER}" \
   ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} \
+    ${TIDB_SSL_OPTS:-} \
   -e "
     CREATE DATABASE IF NOT EXISTS ${TARGET_DB};
     USE ${TARGET_DB};

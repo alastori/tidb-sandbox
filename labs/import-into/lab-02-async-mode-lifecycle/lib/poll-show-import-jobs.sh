@@ -34,6 +34,7 @@ while [[ $(now_ms) -lt ${end_epoch_ms} ]]; do
   rows_file="$(mktemp)"
   mysql -h "${TIDB_HOST}" -P "${TIDB_PORT}" -u "${TIDB_USER}" \
     ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} \
+    ${TIDB_SSL_OPTS:-} \
     --batch --raw -e "SHOW IMPORT JOBS;" \
     > "${rows_file}" 2>/dev/null || true
   call_end=$(now_ms)

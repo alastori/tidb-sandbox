@@ -23,7 +23,8 @@ POLL_INTERVAL_MS="${POLL_INTERVAL_MS:-200}"
 
 mysql_exec() {
   mysql -h "${TIDB_HOST}" -P "${TIDB_PORT}" -u "${TIDB_USER}" \
-    ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} "$@"
+    ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} \
+    ${TIDB_SSL_OPTS:-} "$@"
 }
 
 echo "[phase2] resetting target table..."
@@ -31,7 +32,7 @@ mysql_exec -e "TRUNCATE TABLE ${TARGET_DB}.${TARGET_TABLE};" > "${PHASE_DIR}/res
 
 echo "[phase2] starting poller (${POLL_DURATION_S}s, ${POLL_INTERVAL_MS}ms)..."
 TIDB_HOST="${TIDB_HOST}" TIDB_PORT="${TIDB_PORT}" TIDB_USER="${TIDB_USER}" \
-  TIDB_PASSWORD="${TIDB_PASSWORD:-}" \
+  TIDB_PASSWORD="${TIDB_PASSWORD:-}" TIDB_SSL_OPTS="${TIDB_SSL_OPTS:-}" \
   bash "${LAB_DIR}/lib/poll-show-import-jobs.sh" \
     "${POLL_DURATION_S}" "${POLL_INTERVAL_MS}" \
     "${PHASE_DIR}/show-import-jobs.ndjson" &
