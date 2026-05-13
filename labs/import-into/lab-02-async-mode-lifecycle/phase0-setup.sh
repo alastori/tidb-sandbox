@@ -106,19 +106,23 @@ mysql -h "${TIDB_HOST}" -P "${TIDB_PORT}" -u "${TIDB_USER}" \
     SHOW CREATE TABLE ${TARGET_TABLE};
   " > "${RESULTS_DIR}/schema-setup.log" 2>&1
 
-# ---------- 0.5: detect TiDB log path (best-effort) ----------
-# If we can find a tidb-server process listening on TIDB_PORT, its --log-file
-# argument is the authoritative log path. This works for TiUP playground and
-# for any local TiDB launched directly. Skipped silently for remote / managed
-# deployments where the log isn't reachable from this host.
-DETECTED_LOG_PATH=""
-TIDB_PID=$(pgrep -f "tidb-server.*-P[= ]${TIDB_PORT}( |$)" 2>/dev/null | head -1 || true)
-if [[ -n "${TIDB_PID}" ]]; then
-  DETECTED_LOG_PATH=$(ps -p "${TIDB_PID}" -o command= 2>/dev/null \
-    | grep -oE -- '--log-file=[^ ]+' | head -1 | cut -d= -f2- || true)
-  if [[ -n "${DETECTED_LOG_PATH}" ]]; then
-    echo "[phase0] detected TiDB log: ${DETECTED_LOG_PATH}"
-  fi
+# ---------- 0.5: detect TiDB log paths (best-effort) ----------
+# In multi-instance deployments the scheduler can log lifecycle events on any
+# TiDB pod, not just the one bound to TIDB_PORT. Capture all reachable log
+# paths so downstream phases can grep across them. Skipped silently for
+# remote / managed deployments where logs aren't reachable from this host.
+DETECTED_LOG_PATHS=""
+# Portable to bash 3.2 (macOS default): no mapfile, use a temp file.
+log_paths_tmp="$(mktemp)"
+pgrep -f "tidb-server " 2>/dev/null | while read -r pid; do
+  ps -p "${pid}" -o command= 2>/dev/null | grep -oE -- '--log-file=[^ ]+' | cut -d= -f2-
+done | sort -u > "${log_paths_tmp}"
+DETECTED_LOG_PATHS="$(cat "${log_paths_tmp}")"
+DETECTED_LOG_PATH="$(head -1 "${log_paths_tmp}")"
+LOG_PATH_COUNT="$(wc -l < "${log_paths_tmp}" | tr -d ' ')"
+if [[ -n "${DETECTED_LOG_PATHS}" ]]; then
+  echo "[phase0] detected ${LOG_PATH_COUNT} TiDB log path(s):"
+  sed 's/^/  /' "${log_paths_tmp}"
 fi
 
 # ---------- 0.6: persist env for subsequent phases ----------
@@ -136,6 +140,11 @@ export SOURCE_URI="${SOURCE_URI}"
 export PARQUET_SIZE_BYTES="${PARQUET_SIZE_BYTES}"
 export TIDB_LOG_PATH="${DETECTED_LOG_PATH}"
 EOF
+
+# Write multi-line log path list to a sidecar so phase scripts can grep across
+# all instances (avoids escaping newlines inside shell env exports).
+cp "${log_paths_tmp}" "${LAB_DIR}/.lab-tidb-log-paths"
+rm -f "${log_paths_tmp}"
 
 echo "[phase0] complete."
 echo "[phase0] env -> ${LAB_DIR}/.lab-env"

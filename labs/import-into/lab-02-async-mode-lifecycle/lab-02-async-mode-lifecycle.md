@@ -82,16 +82,18 @@ Recorded into `results/<ISO8601>/phase0/encode-duration.txt` so subsequent runs 
 
 ## Findings
 
-(populated as phases run)
+Initial run on a 3-instance TiUP playground (`--db 3 --kv 3`) with 4 × 1 M-row parquet (~54 MB). Each phase records numbers and a verdict in `results/<TS>/phase{N}/verdict.md`.
 
-| Hypothesis | Verdict | Evidence |
+| Hypothesis | Verdict | Note |
 |---|---|---|
-| H1 | — | — |
-| H2 | — | — |
-| H3 | — | — |
-| H4 | — | — |
-| H5 | — | — |
-| H6 | — | — |
+| H1 — visibility during prepare | **not reproduced** (with one transient observation) | First multi-instance run after a fresh playground startup briefly showed the empty-result fingerprint (251 ms gap, 6 empty polls); subsequent runs did not. May require a higher-latency or higher-load deployment to reproduce reliably. |
+| H2 — completion signal | **not reproduced** | Engine `post-process -> done` is reflected in `SHOW IMPORT JOBS` within ~1 ms on playground. No lag observed. |
+| H3 — cancel during prepare | **not reproduced** | `CANCEL IMPORT JOB <id>` accepted during `pending`; job reached `cancelled` state cleanly. |
+| H4 — TRUNCATE survival | **partial / not as claimed** | `TRUNCATE TABLE` is accepted while the import is `pending`. The import then ends in `failed` rather than silently continuing. 0 rows land in the target table. The "import survives TRUNCATE" framing isn't what this version does. |
+| H5 — admission control | **not reproduced** | TiDB v8.5.3 rejects a second `IMPORT INTO` on the same target with `ERROR 8173: PreCheck failed: there is active job on the target table already`. Engine-level admission control fires before the second job is admitted. |
+| H6 — client retry | **SUPPORTED** | Two parallel `IMPORT INTO` submissions (49 ms apart) create two distinct `Job_ID`s; no engine-level deduplication. |
+
+The H4 and H5 findings are particularly interesting against the documented contract: on v8.5.3, the engine handles concurrent submission more defensively than one might assume from older docs. Deployment-specific behavior (resource isolation, multi-pod scheduler hand-off, queue depth) may still surface the issues in other topologies; this lab is the methodology to test that.
 
 ## Observation coverage matrix
 
