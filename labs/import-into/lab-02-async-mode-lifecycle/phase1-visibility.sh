@@ -18,6 +18,9 @@
 
 set -euo pipefail
 
+# Cross-platform millisecond timestamps (macOS BSD date lacks %N; perl is ubiquitous).
+now_ms() { perl -MTime::HiRes=time -e 'print int(time()*1000)'; }
+
 LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "${LAB_DIR}/.lab-env"
@@ -58,7 +61,7 @@ POLL_PID=$!
   : > "${PHASE_DIR}/tidb-global-task.ndjson"
   end_epoch=$(( $(date +%s) + POLL_DURATION_S ))
   while [[ $(date +%s) -lt ${end_epoch} ]]; do
-    ts=$(date +%s%3N)
+    ts=$(now_ms)
     snapshot=$(mysql_exec --batch -e "
       SELECT id, task_key, type, state, step, dispatcher_id,
              UNIX_TIMESTAMP(start_time)*1000, UNIX_TIMESTAMP(state_update_time)*1000
@@ -76,7 +79,7 @@ POLL_PID=$!
 SNAP_PID=$!
 
 # ---------- 1.4: submit IMPORT INTO ----------
-submit_start=$(date +%s%3N)
+submit_start=$(now_ms)
 echo "[phase1] submitting IMPORT INTO at ${submit_start}..."
 mysql_exec -e "
   IMPORT INTO ${TARGET_DB}.${TARGET_TABLE}
@@ -87,7 +90,7 @@ mysql_exec -e "
   kill "${POLL_PID}" "${SNAP_PID}" 2>/dev/null || true
   exit 1
 }
-submit_end=$(date +%s%3N)
+submit_end=$(now_ms)
 echo "[phase1] submit returned in $(( submit_end - submit_start )) ms"
 
 # ---------- 1.5: wait until the job terminates ----------
@@ -111,13 +114,16 @@ kill "${POLL_PID}" "${SNAP_PID}" 2>/dev/null || true
 wait "${POLL_PID}" 2>/dev/null || true
 wait "${SNAP_PID}" 2>/dev/null || true
 
-# ---------- 1.7: capture tidb.log tail (TiUP playground convenience) ----------
-# Try the conventional playground log location first; users on other deployments
-# can override TIDB_LOG_PATH.
-TIDB_LOG_PATH="${TIDB_LOG_PATH:-${HOME}/.tiup/data/$(ls -t ${HOME}/.tiup/data 2>/dev/null | head -1)/tidb-0/tidb.log}"
-if [[ -f "${TIDB_LOG_PATH}" ]]; then
+# ---------- 1.7: capture tidb.log tail (best-effort) ----------
+# TIDB_LOG_PATH is set by phase0-setup.sh from the live tidb-server's
+# --log-file argument. Skipped silently when unset (e.g., remote/managed
+# deployments where the log isn't reachable from this host).
+if [[ -n "${TIDB_LOG_PATH:-}" && -f "${TIDB_LOG_PATH}" ]]; then
   grep -E 'ImportInto|task-id=' "${TIDB_LOG_PATH}" | tail -200 \
     > "${PHASE_DIR}/tidb-log-import-into.txt" || true
+  echo "[phase1] captured tidb.log tail from ${TIDB_LOG_PATH}"
+else
+  echo "[phase1] TIDB_LOG_PATH not set or not readable; skipping log tail"
 fi
 
 # ---------- 1.8: derive verdict ----------
@@ -134,6 +140,16 @@ else
   gap_ms="N/A — job was never visible to SHOW IMPORT JOBS within the polling window"
 fi
 
+# Detect topology: is this a single-instance TiUP playground or something larger?
+# Read tidb-server count from server status (if reachable) or process count.
+topology_note=""
+tidb_pod_count=$(pgrep -fc "tidb-server.*-P[= ]${TIDB_PORT}" 2>/dev/null || echo 1)
+if [[ "${tidb_pod_count}" == "1" && "${TIDB_HOST}" == "127.0.0.1" ]]; then
+  topology_note="single-instance (likely TiUP playground)"
+else
+  topology_note="multi-instance or remote deployment"
+fi
+
 cat > "${PHASE_DIR}/verdict.md" <<EOF
 # Phase 1 — H1 verdict (${TS})
 
@@ -145,6 +161,7 @@ cat > "${PHASE_DIR}/verdict.md" <<EOF
 - **Time-to-first-visible:** ${gap_ms}
 - Empty-result polls: ${empty_polls} of ${total_polls}
 - Job reached terminal state during polling window: $([[ ${job_terminal} -eq 1 ]] && echo yes || echo no)
+- Topology: ${topology_note}
 
 ## Verdict
 
@@ -152,8 +169,10 @@ $(if [[ "${gap_ms}" == "N/A"* ]]; then
   echo "**H1 SUPPORTED** — \`SHOW IMPORT JOBS\` never surfaced the job during the polling window. Visibility gap is total."
 elif [[ "${gap_ms}" -gt 1000 ]]; then
   echo "**H1 SUPPORTED** — \`SHOW IMPORT JOBS\` did not surface the job for ${gap_ms} ms after submission. Visibility gap during early lifecycle."
+elif [[ "${tidb_pod_count}" == "1" ]]; then
+  echo "**H1 not observed on this topology** — \`SHOW IMPORT JOBS\` surfaced the job within ${gap_ms} ms of submission on a ${topology_note}. The visibility gap claim is about multi-pod scheduler hand-off; a single-instance test cannot distinguish 'bug fixed' from 'bug requires multi-pod topology'. Re-test on a multi-pod deployment before concluding."
 else
-  echo "**H1 REJECTED** — \`SHOW IMPORT JOBS\` surfaced the job within ${gap_ms} ms of submission. No visibility gap observed."
+  echo "**H1 not reproduced** — \`SHOW IMPORT JOBS\` surfaced the job within ${gap_ms} ms of submission on a ${topology_note}. No visibility gap observed in this run."
 fi)
 
 ## Evidence files

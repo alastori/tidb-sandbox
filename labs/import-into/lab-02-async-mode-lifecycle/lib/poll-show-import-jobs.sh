@@ -13,6 +13,9 @@
 
 set -euo pipefail
 
+# Cross-platform millisecond timestamps (macOS BSD date lacks %N; perl is ubiquitous).
+now_ms() { perl -MTime::HiRes=time -e 'print int(time()*1000)'; }
+
 DURATION_S="${1:?duration in seconds required}"
 INTERVAL_MS="${2:?poll interval in ms required}"
 OUTPUT_FILE="${3:?output file required}"
@@ -24,16 +27,16 @@ OUTPUT_FILE="${3:?output file required}"
 mkdir -p "$(dirname "${OUTPUT_FILE}")"
 : > "${OUTPUT_FILE}"
 
-end_epoch_ms=$(( $(date +%s%3N) + DURATION_S * 1000 ))
+end_epoch_ms=$(( $(now_ms) + DURATION_S * 1000 ))
 
-while [[ $(date +%s%3N) -lt ${end_epoch_ms} ]]; do
-  call_start=$(date +%s%3N)
+while [[ $(now_ms) -lt ${end_epoch_ms} ]]; do
+  call_start=$(now_ms)
   rows_file="$(mktemp)"
   mysql -h "${TIDB_HOST}" -P "${TIDB_PORT}" -u "${TIDB_USER}" \
     ${TIDB_PASSWORD:+-p"${TIDB_PASSWORD}"} \
     --batch --raw -e "SHOW IMPORT JOBS;" \
     > "${rows_file}" 2>/dev/null || true
-  call_end=$(date +%s%3N)
+  call_end=$(now_ms)
   latency_ms=$(( call_end - call_start ))
   # First line is the header. Count data rows below it.
   row_count=$(( $(wc -l < "${rows_file}") - 1 ))
