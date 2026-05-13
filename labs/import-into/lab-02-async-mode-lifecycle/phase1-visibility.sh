@@ -140,14 +140,22 @@ else
   gap_ms="N/A — job was never visible to SHOW IMPORT JOBS within the polling window"
 fi
 
-# Detect topology: is this a single-instance TiUP playground or something larger?
-# Read tidb-server count from server status (if reachable) or process count.
+# Detect topology. Prefer information_schema (works for remote and local
+# deployments alike); fall back to local process count for offline cases.
 topology_note=""
-tidb_pod_count=$(pgrep -fc "tidb-server.*-P[= ]${TIDB_PORT}" 2>/dev/null || echo 1)
+tidb_pod_count=$(mysql_exec --batch --skip-column-names -e "
+  SELECT COUNT(*) FROM information_schema.cluster_info WHERE TYPE='tidb';
+" 2>/dev/null | head -1 || echo "")
+if [[ -z "${tidb_pod_count}" ]]; then
+  # Fallback: count tidb-server processes on this host
+  tidb_pod_count=$(pgrep -fc "tidb-server " 2>/dev/null || echo 1)
+fi
 if [[ "${tidb_pod_count}" == "1" && "${TIDB_HOST}" == "127.0.0.1" ]]; then
   topology_note="single-instance (likely TiUP playground)"
+elif [[ "${TIDB_HOST}" == "127.0.0.1" ]]; then
+  topology_note="${tidb_pod_count}-instance local (TiUP playground --db ${tidb_pod_count})"
 else
-  topology_note="multi-instance or remote deployment"
+  topology_note="${tidb_pod_count}-instance remote deployment"
 fi
 
 cat > "${PHASE_DIR}/verdict.md" <<EOF
@@ -166,13 +174,15 @@ cat > "${PHASE_DIR}/verdict.md" <<EOF
 ## Verdict
 
 $(if [[ "${gap_ms}" == "N/A"* ]]; then
-  echo "**H1 SUPPORTED** — \`SHOW IMPORT JOBS\` never surfaced the job during the polling window. Visibility gap is total."
+  echo "**H1 SUPPORTED (severe)** — \`SHOW IMPORT JOBS\` never surfaced the job during the polling window. Visibility gap is total."
 elif [[ "${gap_ms}" -gt 1000 ]]; then
-  echo "**H1 SUPPORTED** — \`SHOW IMPORT JOBS\` did not surface the job for ${gap_ms} ms after submission. Visibility gap during early lifecycle."
+  echo "**H1 SUPPORTED (severe)** — \`SHOW IMPORT JOBS\` did not surface the job for ${gap_ms} ms (~${empty_polls} empty-result polls) after submission. Visibility gap during early lifecycle."
+elif [[ "${empty_polls}" -gt 0 ]]; then
+  echo "**H1 SUPPORTED (mild)** — \`SHOW IMPORT JOBS\` returned ${empty_polls} empty results in the first ${gap_ms} ms after submission. The contract was violated briefly. Topology: ${topology_note}. Scale up data size or move to a higher-latency deployment to widen the observable window."
 elif [[ "${tidb_pod_count}" == "1" ]]; then
-  echo "**H1 not observed on this topology** — \`SHOW IMPORT JOBS\` surfaced the job within ${gap_ms} ms of submission on a ${topology_note}. The visibility gap claim is about multi-pod scheduler hand-off; a single-instance test cannot distinguish 'bug fixed' from 'bug requires multi-pod topology'. Re-test on a multi-pod deployment before concluding."
+  echo "**H1 not observed on this topology** — \`SHOW IMPORT JOBS\` surfaced the job immediately (${gap_ms} ms after submit, no empty polls) on a ${topology_note}. The visibility gap claim is about multi-pod scheduler hand-off; a single-instance test cannot distinguish 'bug fixed' from 'bug requires multi-pod topology'. Re-test on a multi-pod deployment before concluding."
 else
-  echo "**H1 not reproduced** — \`SHOW IMPORT JOBS\` surfaced the job within ${gap_ms} ms of submission on a ${topology_note}. No visibility gap observed in this run."
+  echo "**H1 not reproduced** — \`SHOW IMPORT JOBS\` surfaced the job immediately (${gap_ms} ms after submit, no empty polls) on a ${topology_note}."
 fi)
 
 ## Evidence files
