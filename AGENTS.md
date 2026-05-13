@@ -32,6 +32,20 @@ Products: `dm`, `dumpling`, `import-into`, `lightning`, `sync-diff-inspector`, `
 - Python virtual environments: store in `~/.venvs/<org>/<repo>/`,
   symlink `.venv` in project directory (keeps Google Drive sync clean)
 
+## Public-Repo Hygiene
+
+**This repository is public.** Anything committed here is published and
+indexed. Labs MUST NOT reference customer names, internal infrastructure
+(hostnames, K8s namespaces, dev/staging consoles, internal observability
+paths), internal ticket IDs (FRM, FD, DM, TCOC, etc.), Cloud product or tier
+names that frame the bug as a managed-service issue, or real production data.
+Default to a self-contained environment (TiUP playground, Docker Compose).
+Internal validation, if useful, lives in a private workspace and references
+the public lab via env-var overrides — never via internal defaults committed
+into the lab. See
+[LAB_AUTHORING_GUIDE.md section 1.7 Public-Repo Hygiene](LAB_AUTHORING_GUIDE.md#17-public-repo-hygiene)
+for the full convention and a pre-commit scrub regex.
+
 ## References
 
 See [LAB_AUTHORING_GUIDE.md](LAB_AUTHORING_GUIDE.md) for full documentation

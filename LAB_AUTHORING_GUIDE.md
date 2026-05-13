@@ -67,6 +67,55 @@ Full commands with all parameters:
 - Full Docker commands with all flags
 - No assumed environment or aliases
 
+### 1.7 Public-Repo Hygiene
+
+This repository is public. Labs are read by the open-source community and are
+indexed by search engines. **Anything committed here is published.**
+
+Labs MUST NOT reference:
+
+- **Customer names, account IDs, or domains.** No "Acme Corp", no
+  `customer@example.com`, no real S3 bucket / table / database names that
+  encode a customer's product. Use generic placeholders (`events`, `txns`,
+  `account_id`, `entity_id`).
+- **Vendor-product or tier names that frame a bug as a Cloud product issue.**
+  Bugs against open-source TiDB should be described in pure OSS terms. Avoid
+  phrasing like "this fails on Tier X" or "the managed service does Y". State
+  the engine behavior, point at the open-source code path, leave deployment
+  context to whoever runs the lab.
+- **Internal infrastructure.** No internal hostnames, K8s namespaces, dev/staging
+  console URLs, internal Grafana / Loki / Clinic paths, internal Slack / Feishu
+  / Jira links, or references to private repos.
+- **Internal ticket IDs.** Cross-reference public GitHub issues or PRs in
+  `pingcap/tidb` (or related OSS repos). Internal trackers stay internal.
+- **Real production data.** Generate synthetic data inline (DuckDB, Python,
+  shell). Never commit dumps from a real system, even anonymized.
+
+Labs SHOULD:
+
+- **Default to a fully self-contained environment** (TiUP playground, Docker
+  Compose, or a local TiDB). Internal cluster validation, if useful, lives in
+  a separate private workspace (e.g., `tidb-pm-tools/docs/plans/`) and is
+  referenced from the public lab only via env-var overrides that the lab honors
+  without leaking the internal default.
+- **Reference public TiDB documentation** (`docs.pingcap.com`) when stating the
+  contract under test.
+- **Use generic placeholders in env-var defaults.** Hardcoded internal IDs as
+  defaults are a leak; require the user to set them via environment variables
+  with no internal default value.
+
+Quick scrub before commit:
+
+```bash
+# Adjust the regex list to your context, but at minimum check for these patterns.
+grep -rE 'Customer|customer-name|@example\.com|account-[0-9]+|<real-bucket>|<internal-host>|<tier-name>' \
+  labs/<product>/lab-XX-name/ || echo 'clean'
+```
+
+If a finding requires internal context to be meaningful (e.g., "we saw this on
+a production cluster"), it belongs in an internal artifact (Jira, Obsidian,
+internal wiki) and the public lab references only the reproducer.
+
 ---
 
 ## 2. Lab Archetypes
