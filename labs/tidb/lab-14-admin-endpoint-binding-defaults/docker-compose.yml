@@ -1,0 +1,77 @@
+# Multi-container topology that emulates a production-style multi-host TiDB
+# deployment. Each component runs in its own container with its own network
+# namespace; they reach each other via the user-defined bridge network using
+# container hostnames (pd-0, tikv-0, tidb-0).
+#
+# This is not a tiup cluster install (which requires SSH between hosts and is
+# heavy to set up). It is a faithful proxy: each component binds inside its
+# own container the same way it would on its own host, and the bind defaults
+# (0.0.0.0 for every listener) are what we are testing.
+#
+# Phase 4 of lab-14-admin-endpoint-binding-defaults uses this topology to
+# audit the bind defaults of TiDB / TiKV / PD when deployed without dev
+# conveniences.
+
+services:
+  pd-0:
+    image: pingcap/pd:v8.5.6
+    container_name: lab14-pd-0
+    networks:
+      - lab14-net
+    command:
+      - --name=pd-0
+      - --client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://pd-0:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-peer-urls=http://pd-0:2380
+      - --initial-cluster=pd-0=http://pd-0:2380
+      - --data-dir=/data/pd
+
+  tikv-0:
+    image: pingcap/tikv:v8.5.6
+    container_name: lab14-tikv-0
+    networks:
+      - lab14-net
+    depends_on:
+      - pd-0
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv-0:20160
+      - --status-addr=0.0.0.0:20180
+      - --advertise-status-addr=tikv-0:20180
+      - --pd=pd-0:2379
+      - --data-dir=/data/tikv
+
+  tidb-0:
+    image: pingcap/tidb:v8.5.6
+    container_name: lab14-tidb-0
+    networks:
+      - lab14-net
+    depends_on:
+      - tikv-0
+    # No args - the image entrypoint runs tidb-server with default flags.
+    # Defaults: --host=0.0.0.0, --status-host=0.0.0.0 (per phase1 flag inventory).
+    command:
+      - --store=tikv
+      - --path=pd-0:2379
+      - --advertise-address=tidb-0
+
+  # Probe container on the same bridge network. Used by phase4 to curl each
+  # component's listeners from a separate network namespace, which proves
+  # cross-host reachability the same way another host on the LAN would.
+  probe:
+    image: nicolaka/netshoot:v0.13
+    container_name: lab14-probe
+    networks:
+      - lab14-net
+    depends_on:
+      - tidb-0
+    # Idle - phase4 execs into this container to run probes.
+    command:
+      - sleep
+      - infinity
+
+networks:
+  lab14-net:
+    name: lab14-net
+    driver: bridge
