@@ -92,7 +92,7 @@ The architectural prerequisite for binding the TiDB / TiKV admin listener to loc
 
 PD is a separate case. PD inherits etcd's two-listener model and its admin / debug routes share `--client-urls` with the etcd-style cluster client API. To localhost-bind PD's admin without breaking cluster operation, PD would need either a new admin listener (etcd divergence) or per-route filtering on the existing one.
 
-The single-host `tiup playground` audit is not representative of production. In a production `tiup cluster` install, [`listen_host: 0.0.0.0`](https://docs.pingcap.com/tidb/stable/tiup-cluster-topology-reference/) is the global default, so all listeners (TiDB status, TiKV status, PD client) bind to `0.0.0.0` on every node. In TiDB Operator on Kubernetes, pods bind to `0.0.0.0` and rely on Kubernetes Services and NetworkPolicy for cross-pod reach. Any default flip needs to be coordinated across `tiup playground`, `tiup cluster`, and the TiDB Operator chart.
+The single-host `tiup playground` audit is not representative of production. In a production `tiup cluster` install, [`listen_host: 0.0.0.0`](https://docs.pingcap.com/tidb/stable/tiup-cluster-topology-reference/) is the global default, so all listeners (TiDB status, TiKV status, PD client) bind to `0.0.0.0` on every node. TiDB Operator deployments on Kubernetes are expected (per the standard Kubernetes networking model, not tested in this lab) to bind pods to `0.0.0.0` and rely on Services and NetworkPolicy for cross-pod reach. Any default-flip work would need to be coordinated across `tiup playground`, `tiup cluster`, and the TiDB Operator chart.
 
 ## What this lab does not test
 
