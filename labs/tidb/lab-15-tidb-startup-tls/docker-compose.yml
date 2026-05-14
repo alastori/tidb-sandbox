@@ -1,0 +1,71 @@
+# Multi-container topology for phase 3 of lab-15 (TLS off pass). Faithful
+# proxy for the multi-host bind behavior tiup cluster produces (with
+# listen_host: 0.0.0.0 global default). Each component runs in its own
+# container with its own network namespace; they reach each other via the
+# bridge network using container hostnames.
+#
+# Three components: PD, TiKV, TiDB. TiFlash is intentionally omitted from
+# phase 3 - its bring-up requires a substantial tiflash.toml + tiflash_proxy
+# .toml + RaftStore config that is heavier than what phase 3 demonstrates.
+# TiFlash is exercised end-to-end (with TLS off and TLS on) by phase 2 via
+# `tiup playground` (the --tls flag auto-wires all 4 components).
+#
+# Companion file docker-compose-tls.yml is the TLS-on variant.
+
+services:
+  pd-0:
+    image: pingcap/pd:v8.5.6
+    container_name: lab15-pd-0
+    networks:
+      - lab15-net
+    command:
+      - --name=pd-0
+      - --client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://pd-0:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-peer-urls=http://pd-0:2380
+      - --initial-cluster=pd-0=http://pd-0:2380
+      - --data-dir=/data/pd
+
+  tikv-0:
+    image: pingcap/tikv:v8.5.6
+    container_name: lab15-tikv-0
+    networks:
+      - lab15-net
+    depends_on:
+      - pd-0
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv-0:20160
+      - --status-addr=0.0.0.0:20180
+      - --advertise-status-addr=tikv-0:20180
+      - --pd=pd-0:2379
+      - --data-dir=/data/tikv
+
+  tidb-0:
+    image: pingcap/tidb:v8.5.6
+    container_name: lab15-tidb-0
+    networks:
+      - lab15-net
+    depends_on:
+      - tikv-0
+    command:
+      - --store=tikv
+      - --path=pd-0:2379
+      - --advertise-address=tidb-0
+
+  probe:
+    image: nicolaka/netshoot:v0.13
+    container_name: lab15-probe
+    networks:
+      - lab15-net
+    depends_on:
+      - tidb-0
+    command:
+      - sleep
+      - infinity
+
+networks:
+  lab15-net:
+    name: lab15-net
+    driver: bridge

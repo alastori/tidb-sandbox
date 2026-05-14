@@ -1,0 +1,48 @@
+# TidbCluster CR for phase 4A (TLS off pass). Minimal sizing for kind on a
+# laptop: 1 PD, 1 TiKV, 1 TiDB, no TiFlash. spec.tlsCluster.enabled is unset
+# (today's default), so the operator deploys all three components without
+# inter-component TLS.
+apiVersion: pingcap.com/v1alpha1
+kind: TidbCluster
+metadata:
+  name: lab15
+spec:
+  version: v8.5.6
+  timezone: UTC
+  pvReclaimPolicy: Delete
+  enableDynamicConfiguration: true
+  configUpdateStrategy: RollingUpdate
+  schedulerName: default-scheduler
+  pd:
+    baseImage: pingcap/pd
+    replicas: 1
+    requests:
+      storage: "1Gi"
+      cpu: "100m"
+      memory: "256Mi"
+    storageClassName: standard
+    config: {}
+  tikv:
+    baseImage: pingcap/tikv
+    replicas: 1
+    requests:
+      storage: "1Gi"
+      cpu: "100m"
+      memory: "512Mi"
+    storageClassName: standard
+    config: |
+      [storage]
+      reserve-space = "0MB"
+      [rocksdb]
+      max-open-files = 256
+      [raftdb]
+      max-open-files = 256
+  tidb:
+    baseImage: pingcap/tidb
+    replicas: 1
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    service:
+      type: ClusterIP
+    config: {}

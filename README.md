@@ -63,6 +63,7 @@ and troubleshooting patterns.
 | [lab-11](labs/tidb/lab-11-cloud-proxy-failover) | Cloud proxy failover: HAProxy (L4) vs ProxySQL (L7) on EC2 | Scripted |
 | [lab-13](labs/tidb/lab-13-inline-fk-syntax) | Inline FK syntax: silent accept-and-ignore across 8 engines | Manual |
 | [lab-14](labs/tidb/lab-14-admin-endpoint-binding-defaults) | TiDB / TiKV / PD admin-endpoint binding defaults (flag inventory, bind audit, network reach) | Investigation |
+| [lab-15](labs/tidb/lab-15-tidb-startup-tls) | TiDB cluster startup behavior with and without inter-component TLS (TLS-off vs TLS-on across bare process, multi-container deploy, and TiDB Operator; tiup playground baseline only) | Investigation |
 
 ## Lab Types
 

@@ -1,0 +1,8 @@
+certs/
+
+# tiup-spawned binaries write a few default artifacts into CWD when phase 1
+# runs them without overriding the relevant flags:
+#   tidb-slow.log    (tidb-server's slow query log)
+#   oom_record/      (tikv-server's OOM record dir)
+tidb-slow.log
+oom_record/

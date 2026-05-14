@@ -1,0 +1,199 @@
+# TidbCluster CR + cert-manager Issuer/Certificates for phase 4B (TLS on
+# pass). Mirrors tidb-cluster-no-tls.yaml plus:
+#   1. A self-signed Issuer that bootstraps a CA Certificate
+#   2. A CA Issuer that signs per-component server certs
+#   3. Three Certificate resources whose Secrets follow the naming convention
+#      tidb-operator looks up when spec.tlsCluster.enabled = true:
+#        - <cluster>-pd-cluster-secret
+#        - <cluster>-tikv-cluster-secret
+#        - <cluster>-tidb-cluster-secret
+#        - <cluster>-cluster-client-secret
+#
+# Reference for the secret naming convention and SAN list:
+# https://docs.pingcap.com/tidb-in-kubernetes/stable/enable-tls-between-components/
+
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: lab15-selfsigned
+spec:
+  selfSigned: {}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lab15-ca
+spec:
+  secretName: lab15-ca-secret
+  commonName: "lab15 ca"
+  isCA: true
+  duration: 8760h
+  renewBefore: 720h
+  issuerRef:
+    name: lab15-selfsigned
+    kind: Issuer
+
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: lab15-ca-issuer
+spec:
+  ca:
+    secretName: lab15-ca-secret
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lab15-pd-cluster-secret
+spec:
+  secretName: lab15-pd-cluster-secret
+  duration: 8760h
+  renewBefore: 720h
+  commonName: "TiDB"
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - "lab15-pd"
+    - "lab15-pd.lab15b"
+    - "lab15-pd.lab15b.svc"
+    - "lab15-pd-peer"
+    - "lab15-pd-peer.lab15b"
+    - "lab15-pd-peer.lab15b.svc"
+    - "*.lab15-pd-peer"
+    - "*.lab15-pd-peer.lab15b"
+    - "*.lab15-pd-peer.lab15b.svc"
+  ipAddresses:
+    - "127.0.0.1"
+    - "::1"
+  issuerRef:
+    name: lab15-ca-issuer
+    kind: Issuer
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lab15-tikv-cluster-secret
+spec:
+  secretName: lab15-tikv-cluster-secret
+  duration: 8760h
+  renewBefore: 720h
+  commonName: "TiDB"
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - "lab15-tikv"
+    - "lab15-tikv.lab15b"
+    - "lab15-tikv.lab15b.svc"
+    - "lab15-tikv-peer"
+    - "lab15-tikv-peer.lab15b"
+    - "lab15-tikv-peer.lab15b.svc"
+    - "*.lab15-tikv-peer"
+    - "*.lab15-tikv-peer.lab15b"
+    - "*.lab15-tikv-peer.lab15b.svc"
+  ipAddresses:
+    - "127.0.0.1"
+    - "::1"
+  issuerRef:
+    name: lab15-ca-issuer
+    kind: Issuer
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lab15-tidb-cluster-secret
+spec:
+  secretName: lab15-tidb-cluster-secret
+  duration: 8760h
+  renewBefore: 720h
+  commonName: "TiDB"
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - "lab15-tidb"
+    - "lab15-tidb.lab15b"
+    - "lab15-tidb.lab15b.svc"
+    - "lab15-tidb-peer"
+    - "lab15-tidb-peer.lab15b"
+    - "lab15-tidb-peer.lab15b.svc"
+    - "*.lab15-tidb-peer"
+    - "*.lab15-tidb-peer.lab15b"
+    - "*.lab15-tidb-peer.lab15b.svc"
+  ipAddresses:
+    - "127.0.0.1"
+    - "::1"
+  issuerRef:
+    name: lab15-ca-issuer
+    kind: Issuer
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lab15-cluster-client-secret
+spec:
+  secretName: lab15-cluster-client-secret
+  duration: 8760h
+  renewBefore: 720h
+  commonName: "TiDB"
+  usages:
+    - client auth
+  issuerRef:
+    name: lab15-ca-issuer
+    kind: Issuer
+
+---
+apiVersion: pingcap.com/v1alpha1
+kind: TidbCluster
+metadata:
+  name: lab15
+spec:
+  version: v8.5.6
+  timezone: UTC
+  pvReclaimPolicy: Delete
+  enableDynamicConfiguration: true
+  configUpdateStrategy: RollingUpdate
+  schedulerName: default-scheduler
+  tlsCluster:
+    enabled: true
+  pd:
+    baseImage: pingcap/pd
+    replicas: 1
+    requests:
+      storage: "1Gi"
+      cpu: "100m"
+      memory: "256Mi"
+    storageClassName: standard
+    config: {}
+  tikv:
+    baseImage: pingcap/tikv
+    replicas: 1
+    requests:
+      storage: "1Gi"
+      cpu: "100m"
+      memory: "512Mi"
+    storageClassName: standard
+    config: |
+      [storage]
+      reserve-space = "0MB"
+      [rocksdb]
+      max-open-files = 256
+      [raftdb]
+      max-open-files = 256
+  tidb:
+    baseImage: pingcap/tidb
+    replicas: 1
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    service:
+      type: ClusterIP
+    config: {}

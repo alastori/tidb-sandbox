@@ -1,0 +1,8 @@
+# TiKV TLS overlay for phase 3 TLS-on. Mounted into the lab15-tikv-0 container
+# at /etc/tikv/tikv.toml. Cert paths point at /certs/ which is bind-mounted
+# from ./certs/ on the host (see docker-compose-tls.yml).
+
+[security]
+ca-path   = "/certs/ca.pem"
+cert-path = "/certs/server.pem"
+key-path  = "/certs/server-key.pem"
