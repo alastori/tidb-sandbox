@@ -13,9 +13,11 @@ products: [tidb, tikv, pd]
 - TiDB v8.5.6 (`pingcap/tidb:v8.5.6`, `8.0.11-TiDB-v8.5.6`, git_hash `ae18096e023780bb56bfce33698abec0d4640d0a`)
 - TiKV v8.5.6 (`pingcap/tikv:v8.5.6`)
 - PD v8.5.6 (`pingcap/pd:v8.5.6`)
-- TiUP v1.16.x with `tiup playground v8.5.6`
+- TiUP v1.16.x with `tiup playground v8.5.6` (used by phases 1, 2, 3)
+- Docker Engine 28.5.x (Colima backend on macOS) with `docker compose` v2 (used by phase 4)
+- Probe container: `nicolaka/netshoot:v0.13` (used by phase 4)
 - macOS 15.x on arm64
-- Default TiUP playground ports: TiDB SQL 4000, TiDB status 10080, TiKV status 20180, PD client 2379
+- Default ports: TiDB SQL 4000, TiDB status 10080, TiKV cluster 20160, TiKV status 20180, PD client 2379, PD peer 2380
 
 ## Hypotheses
 
@@ -67,7 +69,9 @@ Tear down with `./cleanup.sh` when done with phases 2 and 3.
 
 This phase brings up TiDB / TiKV / PD each in its own container via [`docker-compose.yml`](docker-compose.yml), and probes each component's listeners from a separate `lab14-probe` container on the same bridge network. The multi-container topology emulates a production multi-host deployment: each component runs in its own network namespace and reaches the others via container hostnames (`pd-0`, `tikv-0`, `tidb-0`), the same way binaries on separate hosts would reach each other on a routable network.
 
-This is not a `tiup cluster deploy` install (which requires SSH between hosts and is heavy to set up); it is a faithful proxy for the bind-and-reach behavior. The compose file pins `pingcap/pd:v8.5.6`, `pingcap/tikv:v8.5.6`, `pingcap/tidb:v8.5.6`, and `nicolaka/netshoot:v0.13` (probe container).
+This is not a `tiup cluster deploy` install (which requires SSH between hosts and is heavy to set up); it is a faithful proxy for the binary's bind-and-reach behavior in a multi-host topology. The compose file pins `pingcap/pd:v8.5.6`, `pingcap/tikv:v8.5.6`, `pingcap/tidb:v8.5.6`, and `nicolaka/netshoot:v0.13` (probe container).
+
+> **Note:** First run pulls roughly 700 MB of images (`pingcap/{pd,tikv,tidb}:v8.5.6` plus the netshoot probe image). Subsequent runs use the local image cache.
 
 After Phase 4, run `./cleanup.sh` to tear down both the docker-compose topology and any leftover playground from phases 2 and 3.
 
@@ -106,7 +110,7 @@ The architectural prerequisite for binding the TiDB / TiKV admin listener to loc
 
 PD is a separate case. PD inherits etcd's two-listener model and its admin / debug routes share `--client-urls` with the etcd-style cluster client API. To localhost-bind PD's admin without breaking cluster operation, PD would need either a new admin listener (etcd divergence) or per-route filtering on the existing one.
 
-The single-host `tiup playground` audit is not representative of production. Phase 4 exercises a multi-container topology that emulates a production multi-host deployment and confirms what the [`tiup cluster` topology reference](https://docs.pingcap.com/tidb/stable/tiup-cluster-topology-reference/) documents (`listen_host: 0.0.0.0` global default): every listener (TiDB status, TiKV status, PD client) binds to a routable address and is reachable from any other node on the cluster network without authentication. TiDB Operator deployments on Kubernetes are expected (per the standard Kubernetes networking model, not tested in this lab) to bind pods to `0.0.0.0` and rely on Services and NetworkPolicy for cross-pod reach. Any default-flip work would need to be coordinated across `tiup playground`, `tiup cluster`, and the TiDB Operator chart.
+The single-host `tiup playground` audit is not representative of production. Phase 4 exercises a multi-container topology that emulates a production multi-host deployment and shows that the binaries' built-in defaults bind to a routable address in each container's network namespace, so every listener (TiDB status, TiKV status, PD client) is reachable from any other node on the cluster network without authentication. The [`tiup cluster` topology reference](https://docs.pingcap.com/tidb/stable/tiup-cluster-topology-reference/) documents the same observable outcome via a different mechanism: `tiup cluster` writes a config-template default of `listen_host: 0.0.0.0` for each node, which results in the same per-host bind behavior that Phase 4 demonstrates per-container. The lab tests the binary defaults; the docs describe the config-template defaults; both converge on the same exposure shape. TiDB Operator deployments on Kubernetes are expected (per the standard Kubernetes networking model, not tested in this lab) to bind pods to `0.0.0.0` and rely on Services and NetworkPolicy for cross-pod reach. Any default-flip work would need to be coordinated across `tiup playground`, `tiup cluster`, and the TiDB Operator chart.
 
 ## What this lab does not test
 
