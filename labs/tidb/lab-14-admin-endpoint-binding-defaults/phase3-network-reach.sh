@@ -16,7 +16,7 @@ if [ "$#" -lt 1 ]; then
   cat <<EOF >&2
 Usage: $0 <HOST_IP>
 
-  HOST_IP  the host's non-loopback IP (e.g., 192.168.1.10).
+  HOST_IP  the host's non-loopback IP (e.g., 192.0.2.10 - use the host's actual LAN IP).
            On macOS:  HOST_IP=\$(ipconfig getifaddr en0)
            On Linux:  HOST_IP=\$(hostname -I | awk '{print \$1}')
 
