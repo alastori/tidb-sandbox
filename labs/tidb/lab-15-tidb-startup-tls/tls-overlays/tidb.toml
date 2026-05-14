@@ -1,0 +1,8 @@
+# TiDB TLS overlay for phase 3 TLS-on. Mounted into the lab15-tidb-0 container
+# at /etc/tidb/tidb.toml. Cert paths point at /certs/ which is bind-mounted
+# from ./certs/ on the host (see docker-compose-tls.yml).
+
+[security]
+cluster-ssl-ca   = "/certs/ca.pem"
+cluster-ssl-cert = "/certs/server.pem"
+cluster-ssl-key  = "/certs/server-key.pem"

@@ -1,0 +1,85 @@
+# Multi-container topology with inter-component TLS enabled. Companion to
+# docker-compose.yml (which is TLS-off). Used by phase 3 TLS-on pass.
+#
+# Each component mounts:
+#   - ./certs/             ->  /certs/             (read-only, the CA + server cert)
+#   - ./tls-overlays/X.toml ->  /etc/X/X.toml      (read-only, the [security] section)
+# and adds --config to its command so the TOML overlay is loaded.
+#
+# TiFlash is intentionally absent from this TLS-on variant: its full TLS
+# config (tiflash.toml + tiflash_proxy.toml + RaftStore CA wiring) is heavier
+# than the 3-binary core needs. TiFlash TLS is exercised by phase 2 with --tls
+# (tiup playground auto-generates and wires the certs end-to-end across all 4
+# components).
+
+services:
+  pd-0:
+    image: pingcap/pd:v8.5.6
+    container_name: lab15-pd-0
+    networks:
+      - lab15-net
+    volumes:
+      - ./certs:/certs:ro
+      - ./tls-overlays/pd.toml:/etc/pd/pd.toml:ro
+    command:
+      - --name=pd-0
+      - --client-urls=https://0.0.0.0:2379
+      - --advertise-client-urls=https://pd-0:2379
+      - --peer-urls=https://0.0.0.0:2380
+      - --advertise-peer-urls=https://pd-0:2380
+      - --initial-cluster=pd-0=https://pd-0:2380
+      - --data-dir=/data/pd
+      - --config=/etc/pd/pd.toml
+
+  tikv-0:
+    image: pingcap/tikv:v8.5.6
+    container_name: lab15-tikv-0
+    networks:
+      - lab15-net
+    depends_on:
+      - pd-0
+    volumes:
+      - ./certs:/certs:ro
+      - ./tls-overlays/tikv.toml:/etc/tikv/tikv.toml:ro
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv-0:20160
+      - --status-addr=0.0.0.0:20180
+      - --advertise-status-addr=tikv-0:20180
+      - --pd=pd-0:2379
+      - --data-dir=/data/tikv
+      - --config=/etc/tikv/tikv.toml
+
+  tidb-0:
+    image: pingcap/tidb:v8.5.6
+    container_name: lab15-tidb-0
+    networks:
+      - lab15-net
+    depends_on:
+      - tikv-0
+    volumes:
+      - ./certs:/certs:ro
+      - ./tls-overlays/tidb.toml:/etc/tidb/tidb.toml:ro
+    command:
+      - --store=tikv
+      - --path=pd-0:2379
+      - --advertise-address=tidb-0
+      - --config=/etc/tidb/tidb.toml
+
+  probe:
+    image: nicolaka/netshoot:v0.13
+    container_name: lab15-probe
+    networks:
+      - lab15-net
+    depends_on:
+      - tidb-0
+    volumes:
+      - ./certs:/certs:ro
+    command:
+      - sleep
+      - infinity
+
+networks:
+  lab15-net:
+    name: lab15-net
+    driver: bridge
