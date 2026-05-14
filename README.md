@@ -62,6 +62,7 @@ and troubleshooting patterns.
 | [lab-10](labs/tidb/lab-10-cloud-dns-failover) | Cloud DNS failover: Dedicated ↔ Essential via CoreDNS CNAME | Scripted |
 | [lab-11](labs/tidb/lab-11-cloud-proxy-failover) | Cloud proxy failover: HAProxy (L4) vs ProxySQL (L7) on EC2 | Scripted |
 | [lab-13](labs/tidb/lab-13-inline-fk-syntax) | Inline FK syntax: silent accept-and-ignore across 8 engines | Manual |
+| [lab-14](labs/tidb/lab-14-admin-endpoint-binding-defaults) | TiDB / TiKV / PD admin-endpoint binding defaults (flag inventory, bind audit, network reach) | Investigation |
 
 ## Lab Types
 
