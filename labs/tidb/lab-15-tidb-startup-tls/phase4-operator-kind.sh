@@ -162,6 +162,123 @@ run_operator_pass() {
   kubectl delete namespace "${ns}" --wait=false 2>&1 || true
 }
 
+# Run the silence-flag-via-overlay verification pass (4C). Sets the proposed
+# silence flag in spec.{pd,tikv}.config and verifies the operator passes it
+# through to the rendered per-component ConfigMap (which gets mounted into
+# the pod as the binary's config file). The ConfigMap check is the
+# definitive evidence of the operator's overlay path; we then cross-check
+# PD's logs for the WARN about the unknown key as a secondary end-to-end
+# signal that the key actually reached the pod's startup parser.
+#
+# Component coverage today (pre-implementation):
+#   - PD:    ConfigMap check (definitive) + WARN log (lenient parser).
+#   - TiKV:  ConfigMap check (definitive). TiKV silently accepts unknown
+#            [security] keys, so no log signal is available today.
+#   - TiDB:  Skipped here - tidb-server strict-parses and would refuse to
+#            start with an unknown key (verified empirically in lab-15
+#            phase 1 state C). The operator's overlay path for spec.tidb.
+#            config is per-component-symmetric with PD/TiKV, so PD+TiKV
+#            verification covers the operator-side mechanism for TiDB too.
+#
+# When the warning + silence flag ship in TiDB/TiKV/PD, the same overlay
+# path verified here will deliver the silence flag to the pod's config
+# file and the future-aware binary will recognize it.
+# Args: <pass_label> <namespace> <manifest_path>
+run_overlay_pass() {
+  local pass_label="$1"
+  local ns="$2"
+  local manifest="$3"
+
+  echo
+  echo "--- ${pass_label} (namespace=${ns}, manifest=${manifest}) ---"
+
+  if kubectl get namespace "${ns}" >/dev/null 2>&1; then
+    echo "  namespace ${ns} already exists; deleting and waiting for full removal..."
+    kubectl delete namespace "${ns}" --wait=false 2>/dev/null || true
+    local waited=0
+    until ! kubectl get namespace "${ns}" >/dev/null 2>&1; do
+      sleep 5
+      waited=$((waited + 5))
+      if [ "${waited}" -gt 180 ]; then
+        echo "  TIMEOUT after ${waited}s waiting for namespace ${ns} to terminate."
+        return 1
+      fi
+    done
+    echo "  namespace ${ns} fully removed after ${waited}s; recreating fresh."
+  fi
+  kubectl create namespace "${ns}"
+  kubectl apply -n "${ns}" -f "${manifest}"
+
+  # Wait for the operator to render the per-component ConfigMaps. These are
+  # named lab15-{pd,tikv,tidb}-<hash> and appear within ~5-15s of the apply,
+  # well before the pods themselves are ready.
+  echo "  waiting for operator-rendered ConfigMaps (timeout 60s)..."
+  local probe_key="enable-cluster-tls-warning"
+  local cm_waited=0
+  until kubectl get configmap -n "${ns}" -o name 2>/dev/null | grep -q "lab15-pd-" \
+     && kubectl get configmap -n "${ns}" -o name 2>/dev/null | grep -q "lab15-tikv-"; do
+    sleep 5
+    cm_waited=$((cm_waited + 5))
+    if [ "${cm_waited}" -gt 60 ]; then
+      echo "  TIMEOUT after ${cm_waited}s waiting for lab15-{pd,tikv}-<hash> ConfigMaps."
+      return 1
+    fi
+  done
+  echo "  ConfigMaps rendered after ${cm_waited}s."
+
+  # Definitive check: does each component's ConfigMap contain the proposed
+  # silence-flag key? If yes, the operator delivered spec.<comp>.config
+  # verbatim into the file the pod will mount. Track failures so the
+  # function can exit non-zero (and trip set -e in the caller) if a future
+  # operator version breaks passthrough silently.
+  echo "  verifying operator passthrough of silence-flag key '${probe_key}' into rendered ConfigMaps:"
+  local cm_name cm_content
+  local fail_count=0
+  for comp in pd tikv; do
+    cm_name=$(kubectl get configmap -n "${ns}" -o name 2>/dev/null | grep "lab15-${comp}-" | head -1)
+    if [ -z "${cm_name}" ]; then
+      echo "    [${comp}] FAIL - no lab15-${comp}-<hash> ConfigMap found"
+      fail_count=$((fail_count + 1))
+      continue
+    fi
+    cm_content=$(kubectl get "${cm_name}" -n "${ns}" -o jsonpath='{.data.config-file}' 2>/dev/null || true)
+    if grep -qiE "${probe_key}" <<< "${cm_content}"; then
+      echo "    [${comp}] PASS - ConfigMap ${cm_name##*/} contains '${probe_key}' in [security]:"
+      grep -iE "(\\[security\\]|${probe_key})" <<< "${cm_content}" | sed 's/^/      /' || true
+    else
+      echo "    [${comp}] FAIL - ConfigMap ${cm_name##*/} does NOT contain '${probe_key}'; spec.${comp}.config did not flow through"
+      fail_count=$((fail_count + 1))
+    fi
+  done
+
+  # Secondary end-to-end signal (PD only): once pods come up, PD logs a WARN
+  # about the undefined config item. This confirms not just that the
+  # ConfigMap was rendered correctly but that the pod actually mounted and
+  # parsed it. TiKV is silent on unknown [security] keys, so it has no
+  # secondary signal today. We do NOT fail the pass on a missing log signal
+  # because the ConfigMap check above is the definitive evidence; a missing
+  # log message could just mean a future PD version stopped warning about
+  # unknown items, which would not invalidate the passthrough.
+  echo "  waiting for pd/tikv/tidb to all start logging (timeout 600s)..."
+  wait_for_pods_logged "${ns}"
+  local out
+  out="$(kubectl logs -n "${ns}" lab15-pd-0 2>/dev/null || true)"
+  if grep -qiE "${probe_key}" <<< "${out}"; then
+    echo "    [pd-log-cross-check] PASS - pd-0 startup log mentions '${probe_key}':"
+    grep -iE "${probe_key}" <<< "${out}" | sed 's/^/      /' || true
+  else
+    echo "    [pd-log-cross-check] WARN - pd-0 startup log did not mention '${probe_key}'; operator passthrough confirmed via ConfigMap above, but the pod-side parser signal is missing"
+  fi
+
+  echo "  tearing down namespace ${ns}..."
+  kubectl delete namespace "${ns}" --wait=false 2>&1 || true
+
+  if [ "${fail_count}" -gt 0 ]; then
+    echo "  4C FAIL: ${fail_count} component(s) did not show the overlay key in their ConfigMap; operator passthrough is broken in this version."
+    return 1
+  fi
+}
+
 {
   echo "=== Phase 4 - TiDB Operator on kind ==="
   echo "Timestamp: ${TS}"
@@ -233,6 +350,12 @@ run_operator_pass() {
     "lab15b" \
     "${LAB_DIR}/kind/tidb-cluster-tls.yaml"
 
+  # Pass 4C: silence-flag-via-overlay verification.
+  run_overlay_pass \
+    "Run 4C: silence-flag-via-overlay" \
+    "lab15c" \
+    "${LAB_DIR}/kind/tidb-cluster-config-overlay.yaml"
+
   echo
   echo "Expected with the default '(tls|ssl)' pattern (counts; deltas are the signal):"
   echo "  4A (TLS off) - PD ~1 (config dump SSL keys); TiKV ~2 (openssl-vendored,"
@@ -242,6 +365,11 @@ run_operator_pass() {
   echo "                 TiKV ~3 (4A noise + config dump cert paths populated);"
   echo "                 TiDB ~2 (4A noise; the cluster-ssl-* paths in the config"
   echo "                 dump are populated but still match the same line)."
+  echo "  4C (overlay) - PD and TiKV ConfigMaps both PASS (operator delivered the"
+  echo "                 silence-flag key into the pod's mounted config file). PD's"
+  echo "                 startup log additionally mentions the key (cross-check);"
+  echo "                 TiKV silently accepts unknown [security] keys today, so it"
+  echo "                 has no secondary log signal."
   echo
   echo "Note: namespaces are cleaned up but the kind cluster ${KIND_CLUSTER}, the"
   echo "tidb-operator install, and cert-manager are left in place for re-runs."

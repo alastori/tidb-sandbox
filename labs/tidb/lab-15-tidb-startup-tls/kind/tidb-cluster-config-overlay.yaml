@@ -1,0 +1,70 @@
+# TidbCluster CR for phase 4C (silence-flag-via-overlay verification).
+#
+# Same minimal sizing as tidb-cluster-no-tls.yaml, but with the proposed
+# silence flag set in spec.{pd,tikv}.config to verify that the operator's
+# TOML overlay support actually passes the key through to the running pod's
+# config file.
+#
+# Today, the binaries do not recognize `enable-cluster-tls-warning` (the
+# warning that the silence flag would silence has not shipped yet). PD and
+# TiKV are lenient parsers and emit a WARN about the undefined item; that
+# WARN is the verifiable evidence that the operator passed the key through.
+# When the warning + silence flag ship, the same overlay mechanism will
+# make the pod recognize the key and silence the warning.
+#
+# We deliberately omit `spec.tidb.config = "[security] ... = false"` here:
+# tidb-server strict-parses the config and would refuse to start with an
+# unknown key (verified empirically in lab-15 phase 1 state C). For TiDB
+# the verification is by inference: phase 1 state C confirms tidb-server
+# rejects the same overlay content; phase 4C confirms the operator does
+# pass `spec.tidb.config` through to the pod by analogy with PD and TiKV
+# (the operator's overlay path is per-component-symmetric).
+
+apiVersion: pingcap.com/v1alpha1
+kind: TidbCluster
+metadata:
+  name: lab15
+spec:
+  version: v8.5.6
+  timezone: UTC
+  pvReclaimPolicy: Delete
+  enableDynamicConfiguration: true
+  configUpdateStrategy: RollingUpdate
+  schedulerName: default-scheduler
+  pd:
+    baseImage: pingcap/pd
+    replicas: 1
+    requests:
+      storage: "1Gi"
+      cpu: "100m"
+      memory: "256Mi"
+    storageClassName: standard
+    config: |
+      [security]
+      enable-cluster-tls-warning = false
+  tikv:
+    baseImage: pingcap/tikv
+    replicas: 1
+    requests:
+      storage: "1Gi"
+      cpu: "100m"
+      memory: "512Mi"
+    storageClassName: standard
+    config: |
+      [storage]
+      reserve-space = "0MB"
+      [rocksdb]
+      max-open-files = 256
+      [raftdb]
+      max-open-files = 256
+      [security]
+      enable-cluster-tls-warning = false
+  tidb:
+    baseImage: pingcap/tidb
+    replicas: 1
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    service:
+      type: ClusterIP
+    config: {}
