@@ -137,7 +137,7 @@ Run 3B: TLS on
 
 ### TiDB Operator on Kubernetes (phase 4)
 
-A/B comparison across two `TidbCluster` CRs (one with `spec.tlsCluster.enabled` unset, one with it set + cert-manager-issued Secrets). Requires `kind` + `helm` + `kubectl`; first run also installs `cert-manager` and the operator chart, ~5 min.
+Three passes: A/B comparison across two `TidbCluster` CRs (one with `spec.tlsCluster.enabled` unset, one with it set + cert-manager-issued Secrets), plus a 4C pass that verifies the operator passes a custom `[security]` key from `spec.{pd,tikv}.config` through to the rendered per-component ConfigMap (the silence-flag-via-overlay mechanism). Requires `kind` + `helm` + `kubectl`; first run also installs `cert-manager` and the operator chart, ~5 min.
 
 ```bash
 ./phase4-operator-kind.sh
@@ -169,6 +169,16 @@ Run 4B: TLS on
   [lab15-tidb-0] 2 matches:
     ["loaded config"] [config="...security:{cluster-ssl-ca:"/var/lib/tidb-tls/ca.crt",cluster-ssl-cert:"/var/lib/tidb-tls/tls.crt"...
     [WARN] ["Automatic TLS Certificate creation is disabled"]
+
+Run 4C: silence-flag-via-overlay (probe key: enable-cluster-tls-warning)
+  ConfigMaps rendered after ~25s.
+  verifying operator passthrough into rendered ConfigMaps:
+    [pd]   PASS - lab15-pd-<hash> ConfigMap contains 'enable-cluster-tls-warning' in [security]
+    [tikv] PASS - lab15-tikv-<hash> ConfigMap contains 'enable-cluster-tls-warning' in [security]
+    [pd-log-cross-check] PASS - pd-0 startup log mentions 'enable-cluster-tls-warning'
+    (TiKV silently accepts unknown [security] keys today, so no log cross-check;
+     TiDB skipped because tidb-server strict-parses and rejects unknown keys -
+     verified separately in phase 1 state C.)
 ```
 
 </details>
@@ -260,12 +270,13 @@ The script prints every line in each container's `docker logs` output that match
 ./phase4-operator-kind.sh
 ```
 
-Two sequential passes against one `kind` cluster:
+Three sequential passes against one `kind` cluster:
 
 - **4A. TLS off** - applies `kind/tidb-cluster-no-tls.yaml` to namespace `lab15a`. `spec.tlsCluster.enabled` is unset (today's default).
 - **4B. TLS on** - applies `kind/tidb-cluster-tls.yaml` to namespace `lab15b`. The manifest includes a `cert-manager` self-signed `Issuer` plus per-component `Certificate` resources whose `secretName` matches the convention the operator looks up when `spec.tlsCluster.enabled = true` (`<cluster>-{pd,tikv,tidb}-cluster-secret` and `<cluster>-cluster-client-secret`).
+- **4C. Silence-flag-via-overlay** - applies `kind/tidb-cluster-config-overlay.yaml` to namespace `lab15c`. The manifest sets a custom `[security]` key (`enable-cluster-tls-warning = false`) in `spec.{pd,tikv}.config`. Verification reads the operator-rendered ConfigMaps for each component and confirms the key was passed through to the file the pod will mount. PD's startup log additionally emits a WARN about the undefined item (cross-check). TiKV silently accepts unknown `[security]` keys today, so its only signal is the ConfigMap. `spec.tidb.config` is intentionally not exercised here because tidb-server strict-parses unknown keys and would refuse to start (verified separately in phase 1 state C); the operator's overlay path is per-component-symmetric so PD+TiKV verification establishes the same mechanism for TiDB.
 
-The script bootstraps the cluster + operator + cert-manager on first run (idempotent) and tears down only the per-pass namespaces between passes. It prints every line in each pod's `kubectl logs` output that matches `LOG_SUBSTR`. Pass 4B adds PD's etcd `["starting with peer TLS"]` / `["starting with client TLS"]` init lines and TiKV's `["using config"]` line (the latter matches because the operator mounts certs at `/var/lib/tikv-tls/`, which contains the `tls` substring). TiDB's `cluster-ssl-*` paths populate but land on the same config-dump line that already matched in 4A.
+The script bootstraps the cluster + operator + cert-manager on first run (idempotent) and tears down only the per-pass namespaces between passes. For 4A and 4B it prints every line in each pod's `kubectl logs` output that matches `LOG_SUBSTR`. Pass 4B adds PD's etcd `["starting with peer TLS"]` / `["starting with client TLS"]` init lines and TiKV's `["using config"]` line (the latter matches because the operator mounts certs at `/var/lib/tikv-tls/`, which contains the `tls` substring). TiDB's `cluster-ssl-*` paths populate but land on the same config-dump line that already matched in 4A. Pass 4C uses a different verification (ConfigMap content + PD log cross-check) targeted at the operator's TOML-overlay passthrough specifically.
 
 Heaviest of the four phases (requires `kind`, `helm`, `kubectl`; the script also installs `cert-manager` on first run). First run takes ~5 min for the kind cluster + operator + cert-manager bootstrap; subsequent runs reuse all of that and finish in ~2-3 min per pass.
 
@@ -279,6 +290,7 @@ Each phase script prints every matching line; this section consolidates the per-
 | 2 | H2 (`tiup playground` no-TLS only; `--tls` is not a supported flag) | low baseline counts per component | N/A (TLS-on not supported by `tiup playground`; covered by phase 1 in the dev-environment context) |
 | 3 | H3 (multi-container production-style PD / TiKV / TiDB, TLS off vs TLS on) | PD=1, TiKV=2, TiDB=2 | PD=3 (etcd peer + client TLS init lines added); TiKV=2 and TiDB=2 stay flat (host-mounted `/certs/` path does not contain `tls`/`ssl` substrings, and the populated cert paths land on the already-matched config-dump line) |
 | 4 | H4 (Operator default vs `tlsCluster.enabled`) | PD=1 (config-dump SSL keys), TiKV=2 (`openssl-vendored`, `OpenSSL FIPS`), TiDB=2 (config-dump empty `cluster-ssl-*`, SQL-side warning) | PD=3 (4A line + etcd peer TLS + etcd client TLS), TiKV=3 (4A noise + populated cert paths in config dump), TiDB=2 (4A lines, populated `cluster-ssl-*` paths land on the same config-dump line) |
+| 4C | Operator passes a custom `[security]` key from `spec.{pd,tikv}.config` through to the rendered per-component ConfigMap | n/a | PASS for both PD and TiKV ConfigMaps (key `enable-cluster-tls-warning` lands in `[security]` of the rendered config-file). PD's startup log additionally mentions the undefined-item WARN (end-to-end cross-check); TiKV silently accepts unknown `[security]` keys so its only signal is the ConfigMap. TiDB skipped (strict-parse rejects unknown keys; verified separately in phase 1 state C). |
 | 1-4 | H5 (forward-looking) | No directed startup warning about missing inter-component TLS in any phase. The baseline-noise lines that match `(tls|ssl)` are not warnings about cluster TLS being off | If a startup warning is ever added, retarget `LOG_SUBSTR` at its text and re-run any phase to verify |
 
 ## Conclusion
