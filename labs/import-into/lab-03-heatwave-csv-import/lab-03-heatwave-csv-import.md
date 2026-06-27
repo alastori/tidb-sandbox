@@ -304,7 +304,7 @@ aws iam list-role-policies \
 Expected:
 
 - The trust policy allows the TiDB Cloud import runtime principal shown by the helper for the selected target instance.
-- The permissions policy allows `s3:ListBucket` for the bucket and `s3:GetObject` for the exact `${S3_PREFIX}` objects that will be imported.
+- The permissions policy allows `s3:ListBucket` for the bucket and `s3:GetObject` and `s3:GetObjectVersion` for the exact `${S3_PREFIX}` objects that will be imported.
 - The policy does not grant write access and does not grant broader read access than the staging prefix used by this lab.
 
 If the Role ARN setup helper or CloudFormation flow is not available in your environment, configure the equivalent AWS IAM role manually from the official external storage access docs. If the later bucket access test fails with `AccessDenied` on `sts:AssumeRole`, use [Appendix D - Troubleshooting - S3 AccessDenied on AssumeRole](#appendix-d---troubleshooting---s3-accessdenied-on-assumerole).
@@ -375,6 +375,8 @@ If SQL access is not configured yet, use the TiDB Cloud UI first. For the full U
 4. In the **Connect** dialog, choose **MySQL CLI** and the lab client host OS, then copy the generated host, port, username, TLS mode, and CA guidance into your local environment variables.
 5. If the target user does not have a password yet, generate one from the dialog and store it in your password manager. Do not save the password in this lab file, helper scripts, screenshots, or logs.
 
+[TiDB Cloud target instance list](screenshots/00-tidb-resource-list.png).
+
 [TiDB Cloud Essential target instance overview](screenshots/01-target-overview.png).
 
 Set the target connection details from the TiDB Cloud Connect dialog:
@@ -423,6 +425,19 @@ mysql \
   --ssl-ca="${TIDB_CA_PATH}" \
   -p \
   < "${TARGET_SCHEMA_SQL}"
+```
+
+If the target schema includes foreign keys, temporarily disable target FK checks before the import and re-enable them after the import completes in Step 11. Do this only on a dedicated lab target instance.
+
+```bash
+mysql \
+  --host "${TIDB_HOST}" \
+  --port "${TIDB_PORT}" \
+  --user "${TIDB_USER}" \
+  --ssl-mode="${TIDB_SSL_MODE}" \
+  --ssl-ca="${TIDB_CA_PATH}" \
+  -p \
+  -e "SET GLOBAL foreign_key_checks = OFF;"
 ```
 
 ## Step 10 - Run TiDB Cloud import from S3
@@ -483,6 +498,19 @@ In **Pre-check**:
 Capture the import task ID, start time, end time, scan results, warnings, and completion status.
 
 ## Step 11 - Verify Imported Data
+
+If you disabled target FK checks in Step 9, re-enable them before verification:
+
+```bash
+mysql \
+  --host "${TIDB_HOST}" \
+  --port "${TIDB_PORT}" \
+  --user "${TIDB_USER}" \
+  --ssl-mode="${TIDB_SSL_MODE}" \
+  --ssl-ca="${TIDB_CA_PATH}" \
+  -p \
+  -e "SET GLOBAL foreign_key_checks = ON;"
+```
 
 Generate target row counts and compare the result set with the source baseline from Step 1.
 
@@ -873,8 +901,6 @@ AWS AccessDenied on sts:AssumeRole.
 The TiDB Cloud import runtime role shown by the wizard is not allowed to assume the selected AWS import role.
 ```
 
-[S3 AccessDenied in the TiDB Cloud import wizard](screenshots/05-s3-access-denied.png).
-
 It means the selected AWS import role trust policy does not allow the TiDB Cloud import runtime role shown by the wizard. S3 bucket permissions are evaluated after AWS STS lets TiDB Cloud assume the selected AWS role, so changing only the S3 bucket policy will not fix an `AssumeRole` denial.
 
 Do this:
@@ -969,7 +995,10 @@ cat > /tmp/tidbcloud-import-s3-read-policy.json <<EOF
     {
       "Sid": "ReadImportObjects",
       "Effect": "Allow",
-      "Action": "s3:GetObject",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
       "Resource": "arn:aws:s3:::${IMPORT_BUCKET}/${IMPORT_PREFIX}*"
     }
   ]
