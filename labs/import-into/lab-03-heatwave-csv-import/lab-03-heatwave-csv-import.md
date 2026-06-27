@@ -45,7 +45,7 @@ Cloud resources and access:
 
 - MySQL HeatWave on AWS DB System reachable from the lab client host on port `3306`.
 - TiDB Cloud account access with permission to create an Essential target instance.
-- AWS access that can create a staging bucket, or use an existing bucket and update the IAM or bucket policies required by TiDB Cloud import.
+- AWS access that can create or use a staging S3 bucket and later create or update the IAM role, trust policy, and prefix-scoped S3 read policy that TiDB Cloud import uses to read that bucket.
 
 A lab client host with:
 
@@ -265,55 +265,13 @@ aws s3api put-bucket-tagging \
   --tagging 'TagSet=[{Key=project,Value=tidb-sandbox},{Key=lab,Value=heatwave-manual-import}]'
 ```
 
-The bucket remains private. TiDB Cloud still needs explicit access through a Role ARN or AWS access key before the import wizard can read this prefix.
+The bucket remains private. You will grant TiDB Cloud prefix-scoped read access from the import wizard in Step 10.
 
-## Step 5 - Configure TiDB Cloud Access to the S3 Prefix
-
-Configure TiDB Cloud access to the S3 prefix before exporting data. The happy path is to use the TiDB Cloud import UI helper for Amazon S3 access because it provides the current Role ARN setup path for the selected target instance.
-
-For the official setup flow, see [Configure Amazon S3 access](https://docs.pingcap.com/tidbcloud/configure-external-storage-access#configure-amazon-s3-access).
-
-Open the target TiDB Cloud Essential instance, go to **Data** > **Import**, click **Import data from Cloud Storage**, set **Storage Provider** to **Amazon S3**, and open the Role ARN setup helper from the **AWS Role ARN** credential option.
-
-[TiDB Cloud AWS Role ARN setup helper](screenshots/04-s3-role-setup.png).
-
-Use the helper or CloudFormation template to create an AWS IAM role for this target instance and S3 prefix, or update an existing role to match the current helper values.
-
-Set the Role ARN for the import wizard:
-
-```bash
-export IMPORT_ROLE_ARN="arn:aws:iam::<customer-aws-account-id>:role/<tidb-cloud-import-role-name>"
-```
-
-Confirm the role exists and keep the role permissions prefix-scoped to the import location:
-
-```bash
-export IMPORT_ROLE_NAME="<tidb-cloud-import-role-name>"
-
-aws iam get-role \
-  --role-name "${IMPORT_ROLE_NAME}" \
-  --profile "${AWS_PROFILE}" \
-  --region "${AWS_REGION}" >/dev/null
-
-aws iam list-role-policies \
-  --role-name "${IMPORT_ROLE_NAME}" \
-  --profile "${AWS_PROFILE}" \
-  --region "${AWS_REGION}"
-```
-
-Expected:
-
-- The trust policy allows the TiDB Cloud import runtime principal shown by the helper for the selected target instance.
-- The permissions policy allows `s3:ListBucket` for the bucket and `s3:GetObject` and `s3:GetObjectVersion` for the exact `${S3_PREFIX}` objects that will be imported.
-- The policy does not grant write access and does not grant broader read access than the staging prefix used by this lab.
-
-If the Role ARN setup helper or CloudFormation flow is not available in your environment, configure the equivalent AWS IAM role manually from the official external storage access docs. If the later bucket access test fails with `AccessDenied` on `sts:AssumeRole`, use [Appendix D - Troubleshooting - S3 AccessDenied on AssumeRole](#appendix-d---troubleshooting---s3-accessdenied-on-assumerole).
-
-## Step 6 - Export HeatWave Data and Preserve Dumpling Metadata
+## Step 5 - Export HeatWave Data and Preserve Dumpling Metadata
 
 Use `--consistency lock` for this lab because it relies on `LOCK TABLES`, not `RELOAD`. If the source environment cannot tolerate read locks, run during a maintenance window or use `--consistency none` and document the consistency risk.
 
-Use `--no-schemas` because the lab creates the target schema explicitly in Step 9.
+Use `--no-schemas` because the lab creates the target schema explicitly in Step 8.
 
 Dumpling writes a `metadata` object that includes the dump-window binlog file, position, and GTID set. Preserve it if you plan to configure incremental replication later, such as with TiDB Data Migration (DM). Optional handoff commands are in [Appendix C - Optional DM Handoff Metadata](#appendix-c---optional-dm-handoff-metadata).
 
@@ -343,7 +301,7 @@ Notes:
 - Dumpling's default CSV mode includes a header row unless `--no-header` is set. In the TiDB Cloud import wizard, configure the CSV settings to indicate that the files contain a header row.
 - If you need to inspect Dumpling output locally before uploading it to S3, use [Appendix E - Troubleshooting - Local Export and S3 Sync](#appendix-e---troubleshooting---local-export-and-s3-sync).
 
-## Step 7 - Confirm S3 CSV Objects
+## Step 6 - Confirm S3 CSV Objects
 
 Confirm the S3 prefix contains the `${SOURCE_DB}.*.csv.gz` files that TiDB Cloud should import. Dumpling also writes a `metadata` object in the export prefix; keep it for later replication planning, but do not map it as an import file.
 
@@ -363,7 +321,7 @@ s3://<bucket>/<source-db>/<source-db>.<another-table>.000000000.csv.gz
 
 If the expected CSV objects are missing, use [Appendix E - Troubleshooting - Local Export and S3 Sync](#appendix-e---troubleshooting---local-export-and-s3-sync) to isolate whether the issue is in Dumpling export or S3 upload.
 
-## Step 8 - Confirm TiDB Cloud SQL Access
+## Step 7 - Confirm TiDB Cloud SQL Access
 
 Confirm SQL access to the target TiDB Cloud Essential instance before creating target tables. The happy path assumes the target instance exists by this step. If it does not, create the instance in TiDB Cloud first, then return here.
 
@@ -375,9 +333,9 @@ If SQL access is not configured yet, use the TiDB Cloud UI first. For the full U
 4. In the **Connect** dialog, choose **MySQL CLI** and the lab client host OS, then copy the generated host, port, username, TLS mode, and CA guidance into your local environment variables.
 5. If the target user does not have a password yet, generate one from the dialog and store it in your password manager. Do not save the password in this lab file, helper scripts, screenshots, or logs.
 
-[TiDB Cloud target instance list](screenshots/00-tidb-resource-list.png).
+![TiDB Cloud target instance list](screenshots/00-tidb-resource-list.png)
 
-[TiDB Cloud Essential target instance overview](screenshots/01-target-overview.png).
+![TiDB Cloud Essential target instance overview](screenshots/01-target-overview.png)
 
 Set the target connection details from the TiDB Cloud Connect dialog:
 
@@ -410,7 +368,7 @@ mysql --comments \
 
 For TiDB Cloud Essential public endpoints, the official connection dialog provides the MySQL CLI command and CA guidance. Prefer `VERIFY_IDENTITY` with the CA path from the dialog. If CA verification fails during troubleshooting, `--ssl-mode=REQUIRED` can verify that the endpoint, credentials, IP access list, and TLS path work, but it does not verify server identity and should not be treated as final security validation.
 
-## Step 9 - Create Target Tables
+## Step 8 - Create Target Tables
 
 TiDB Cloud import requires empty target tables. This lab creates the target tables before import using the reviewed target schema.
 
@@ -427,7 +385,7 @@ mysql \
   < "${TARGET_SCHEMA_SQL}"
 ```
 
-If the target schema includes foreign keys, temporarily disable target FK checks before the import and re-enable them after the import completes in Step 11. Do this only on a dedicated lab target instance.
+If the target schema includes foreign keys, temporarily disable target FK checks before the import and re-enable them after the import completes in Step 14. Do this only on a dedicated lab target instance.
 
 ```bash
 mysql \
@@ -440,37 +398,76 @@ mysql \
   -e "SET GLOBAL foreign_key_checks = OFF;"
 ```
 
-## Step 10 - Run TiDB Cloud import from S3
+## Step 9 - Start TiDB Cloud Import
 
-Use the TiDB Cloud import wizard for this step. This lab validates the physical full-load import path, not Data Migration and not incremental replication.
+Use the TiDB Cloud import wizard for the remaining import steps. This lab validates the physical full-load import path, not Data Migration and not incremental replication.
 
 Open the target TiDB Cloud Essential instance.
 
-The linked screenshots use sanitized placeholder values for user names, organization IDs, instance IDs, S3 bucket names, account IDs, and role ARNs.
+The screenshots use sanitized placeholder values for user names, organization IDs, instance IDs, S3 bucket names, account IDs, and role ARNs.
 
 Go to **Data** > **Import**.
 
 The Import page offers **Import data from Cloud Storage** for CSV, Parquet, SQL files, and Aurora Snapshot formats. Use this entry point for the full-load import.
 
-[TiDB Cloud import entry point](screenshots/02-import-entry.png).
+![TiDB Cloud import entry point](screenshots/02-import-entry.png)
 
 Click **Import data from Cloud Storage**.
 
-The first wizard step is **Source and Target Connection**. It accepts the cloud storage source, the external storage credentials, and the TiDB target credentials.
+The first wizard step is **Source and Target Connection**. It accepts the cloud storage source, the external storage credentials, and the TiDB target credentials. The next two lab steps split that wizard screen into source-side and target-side configuration.
 
-[TiDB Cloud import source and target connection form](screenshots/03-source-target-connection-empty.png).
+![TiDB Cloud import source and target connection form](screenshots/03-source-target-connection-empty.png)
 
-Use the S3 URI from Step 4 and the Role ARN from Step 5.
+## Step 10 - Configure Source Connection and S3 Access
 
-Set the source connection:
+Use the S3 URI from Step 4 for the source connection. The happy path is to use the TiDB Cloud Role ARN helper for Amazon S3 access because it provides the current IAM setup path for the selected target instance.
+
+For the official setup flow, see [Configure Amazon S3 access](https://docs.pingcap.com/tidbcloud/configure-external-storage-access#configure-amazon-s3-access).
 
 1. Set **Storage Provider** to **Amazon S3**.
 2. Set **Source Files URI** to the folder URI in `${S3_URI}`. Keep the trailing slash for directory import.
-3. Select **AWS Role ARN** and enter `${IMPORT_ROLE_ARN}`.
-4. Click **Test Bucket Access**.
-5. Confirm the bucket access test passes before continuing. If it fails with `AccessDenied` on `sts:AssumeRole`, the Role ARN setup from Step 5 is stale or incomplete. Stop and use [Appendix D - Troubleshooting - S3 AccessDenied on AssumeRole](#appendix-d---troubleshooting---s3-accessdenied-on-assumerole) before changing import settings.
+3. Select **AWS Role ARN**.
+4. If you have not created the import role yet, open the Role ARN setup helper from the AWS Role ARN credential option.
 
-Set the target connection:
+![TiDB Cloud AWS Role ARN setup helper](screenshots/04-s3-role-setup.png)
+
+Use the helper or CloudFormation template to create an AWS IAM role for this target instance and S3 prefix, or update an existing role to match the current helper values.
+
+Set the Role ARN for the import wizard:
+
+```bash
+export IMPORT_ROLE_ARN="arn:aws:iam::<customer-aws-account-id>:role/<tidb-cloud-import-role-name>"
+```
+
+Confirm the role exists and keep the role permissions prefix-scoped to the import location:
+
+```bash
+export IMPORT_ROLE_NAME="<tidb-cloud-import-role-name>"
+
+aws iam get-role \
+  --role-name "${IMPORT_ROLE_NAME}" \
+  --profile "${AWS_PROFILE}" \
+  --region "${AWS_REGION}" >/dev/null
+
+aws iam list-role-policies \
+  --role-name "${IMPORT_ROLE_NAME}" \
+  --profile "${AWS_PROFILE}" \
+  --region "${AWS_REGION}"
+```
+
+Expected:
+
+- The trust policy allows the TiDB Cloud import runtime principal shown by the helper for the selected target instance.
+- The permissions policy allows `s3:ListBucket` for the bucket and `s3:GetObject` and `s3:GetObjectVersion` for the exact `${S3_PREFIX}` objects that will be imported.
+- The policy does not grant write access and does not grant broader read access than the staging prefix used by this lab.
+
+Enter `${IMPORT_ROLE_ARN}` in the wizard, then click **Test Bucket Access**.
+
+Confirm the bucket access test passes before continuing. If it fails with `AccessDenied` on `sts:AssumeRole`, the role trust or permissions policy is stale or incomplete. Stop and use [Appendix D - Troubleshooting - S3 AccessDenied on AssumeRole](#appendix-d---troubleshooting---s3-accessdenied-on-assumerole) before changing import settings.
+
+If the Role ARN setup helper or CloudFormation flow is not available in your environment, configure the equivalent AWS IAM role manually from the official external storage access docs, then return to the wizard and test bucket access.
+
+## Step 11 - Configure Target Connection
 
 1. Enter the TiDB username and password for the target instance.
 2. Click **Test Connection**.
@@ -478,13 +475,13 @@ Set the target connection:
 
 After **Test Bucket Access** and **Test Connection** both pass, click **Next**.
 
-In **Mapping and Job Configuration**:
+## Step 12 - Review Mapping and Job Configuration
 
 1. Keep **Use TiDB file naming conventions for automatic mapping** selected.
 2. Keep or edit the generated job name.
 3. Click **Next** and wait for TiDB Cloud to scan the source files.
 
-In **Pre-check**:
+## Step 13 - Run Pre-check and Start Import
 
 1. Confirm the scan result found the expected `${SOURCE_DB}.*.csv.gz` objects.
 2. Confirm every source object maps to the intended empty target table.
@@ -497,9 +494,9 @@ In **Pre-check**:
 
 Capture the import task ID, start time, end time, scan results, warnings, and completion status.
 
-## Step 11 - Verify Imported Data
+## Step 14 - Verify Imported Data
 
-If you disabled target FK checks in Step 9, re-enable them before verification:
+If you disabled target FK checks in Step 8, re-enable them before verification:
 
 ```bash
 mysql \
@@ -573,7 +570,7 @@ Expected:
 
 If the row counts differ, stop and inspect the export files, import mapping, and import job warnings before running application-level checks.
 
-## Step 12 - Run Workload-Specific Checks
+## Step 15 - Run Workload-Specific Checks
 
 After generic table and row-count checks pass, run any workload-specific SQL checks that matter for the source application. Examples include orphan checks, aggregate totals, critical lookup queries, and transaction-wrapped DML smoke tests.
 
