@@ -335,8 +335,6 @@ If SQL access is not configured yet, use the TiDB Cloud UI first:
 
 ![TiDB Cloud target instance list](screenshots/00-tidb-resource-list.png)
 
-![TiDB Cloud Essential target instance overview](screenshots/01-target-overview.png)
-
 For more details, see [Connect to TiDB Cloud Starter or Essential via Public Endpoint](https://docs.pingcap.com/tidbcloud/connect-via-standard-connection-serverless/).
 
 Set the target connection details from the TiDB Cloud Connect dialog:
@@ -497,7 +495,7 @@ Click **Next**.
 
 ## Step 12 - Review Scan Results and Start Import
 
-After you click **Next**, TiDB Cloud scans the S3 prefix and shows the source files, generated table mappings, and CSV parsing configuration before the import starts. For this lab, expect one mapping row per target table. A table can have multiple CSV objects if Dumpling splits output, so validate by the generated target table mapping and expected file prefix rather than expecting one file per table.
+After you click **Next**, TiDB Cloud scans the S3 prefix and shows the generated table mappings and CSV parsing configuration before the import starts. With TiDB file naming conventions, the scan result is grouped by target table: split Dumpling CSV files for the same table are represented as one mapping row with a matching source file pattern.
 
 1. Confirm the scan result found the expected `${SOURCE_DB}.*.csv.gz` objects from [Step 6](#step-6---confirm-s3-csv-objects).
 2. Confirm the generated mappings cover the target tables you expect to load.
@@ -526,11 +524,11 @@ Apply the configuration and start the import:
 
 ## Step 13 - Confirm Import Completion
 
-After you start the import, TiDB Cloud shows the import task status and run details. Use this screen to confirm the job completed and to record the import evidence for the run before moving to SQL verification.
+After you start the import, TiDB Cloud shows the import task status. Use this screen as the gate before SQL verification.
 
 1. Wait until the import task shows **Completed**.
-2. Review the scan results, warnings, and completion status.
-3. Record the import task ID, start time, end time, scan results, warnings, completion status, S3 folder URI, and target instance name in your lab notes.
+2. If the task is **Completed** and has no warnings or errors, continue to [Step 14](#step-14---verify-imported-data).
+3. If the task fails or shows warnings, copy the task ID, status, time range, S3 folder URI, target instance name, and error or warning message into your troubleshooting notes or support ticket before changing settings or rerunning the import.
 
 The completed import task should look like this:
 
