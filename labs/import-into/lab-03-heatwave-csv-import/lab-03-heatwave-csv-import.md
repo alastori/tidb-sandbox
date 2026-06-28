@@ -12,13 +12,15 @@ products: [dumpling, tidb-cloud, mysql]
 
 Use this lab when you need a full-load migration path from MySQL HeatWave on AWS to TiDB Cloud and can use Amazon S3 as the staging location. The flow is useful when you want to validate the baseline load first, then evaluate incremental replication separately.
 
+The tested flow, screenshots, and step-by-step instructions assume a TiDB Cloud Essential target instance. The same pattern should work with other TiDB Cloud tiers with small adjustments to target provisioning, connection details, import access, and UI labels.
+
 In this lab, you will:
 
 - Confirm SQL access to the HeatWave source and TiDB Cloud target.
-- Export schema and CSV data with Dumpling, writing the data directly to S3.
+- Export schema locally and CSV data directly to S3 with Dumpling.
 - Use the Dumpling schema files as the source of truth for target DDL preparation.
 - Import the S3 data into TiDB Cloud in physical import mode.
-- Verify the target with row-count checks and a simple compatibility smoke test.
+- Verify the target with row-count checks and a simple compatibility check.
 - Preserve the Dumpling metadata needed to plan a later incremental replication setup, such as with TiDB Data Migration (DM).
 
 This lab does not configure or validate incremental replication. Treat that as a follow-up after the physical full-load path is confirmed.
@@ -58,7 +60,7 @@ A lab client host with:
 
 ## Step 1 - Confirm Source Access and Scope
 
-Set the source connection details for the HeatWave DB System. Keep passwords in your shell session or password manager only. Do not save real credentials in this Markdown file, helper scripts, screenshots, or committed logs.
+Set the source connection details for the HeatWave DB System.
 
 ```bash
 export HEATWAVE_HOST="replace-with-source-host"
@@ -91,7 +93,7 @@ If the source requires a custom CA or mutual TLS, set `HEATWAVE_DUMPLING_TLS_ARG
 export HEATWAVE_DUMPLING_TLS_ARGS="--ca /path/to/ca.pem"
 ```
 
-Capture exact source row counts before exporting for post-import comparison. This result set is the source baseline for table names and row counts. Dumpling metadata is preserved later for replication coordinates, but it does not include this comparison data.
+Capture exact source row counts before exporting for post-import comparison. This row-count comparison assumes the source tables do not receive writes between the count capture and the Dumpling export. Dumpling metadata is preserved later for replication coordinates, but it does not include this comparison data.
 
 ```bash
 mkdir -p "results/${SOURCE_DB}"
@@ -150,7 +152,7 @@ tiup install dumpling
 tiup dumpling --version
 ```
 
-Export schema only into a local working directory. Keep this local because the schema needs review and adaptation before it is applied to TiDB.
+Export schema only into a local working directory. The `--no-data` option makes this a schema-only export. Keep this local because the schema needs review and adaptation before it is applied to TiDB.
 
 ```bash
 rm -rf "schema/${SOURCE_DB}"
@@ -184,22 +186,20 @@ schema/<source-db>/<source-db>-schema-create.sql
 schema/<source-db>/<source-db>.<table-name>-schema.sql
 ```
 
+> **Note:** This lab uses `--consistency lock` for Dumpling commands that connect to HeatWave. Dumpling's default `auto` consistency uses `flush` for MySQL, which uses `FLUSH TABLES WITH READ LOCK` and requires `RELOAD`. The `lock` mode uses read locks on exported tables and requires `LOCK TABLES` instead. This matters for HeatWave on AWS because the validation run for this lab had `LOCK TABLES` and `FLUSH_TABLES`, but not `RELOAD`.
+
 ## Step 3 - Prepare TiDB Target DDL
 
-Use the Dumpling schema files as the source of truth for target DDL preparation.
+For CSV import, TiDB Cloud loads rows into existing tables, so create the target database and empty tables before starting the import. Use the Dumpling schema files generated in [Step 2](#step-2---export-source-schema-with-dumpling) as the starting point, then review the combined DDL for TiDB compatibility.
 
-Create one reviewed SQL file:
-
-- `TARGET_SCHEMA_SQL`: database and table DDL to run before TiDB Cloud import.
-
-Set the target database name and schema file path for the reviewed DDL:
+Set the target database name and the path for the combined DDL file:
 
 ```bash
 export TARGET_DB="${SOURCE_DB}"
 export TARGET_SCHEMA_SQL="schema/${SOURCE_DB}/target-schema.sql"
 ```
 
-Build `TARGET_SCHEMA_SQL` from the Dumpling schema files generated in Step 2, then review it before applying. For schemas without inline foreign key dependencies, a sorted concatenation is usually enough:
+Generate a single `TARGET_SCHEMA_SQL` file from the Dumpling schema files. For schemas without inline foreign key dependencies, a sorted concatenation is usually enough:
 
 ```bash
 {
@@ -214,9 +214,9 @@ Build `TARGET_SCHEMA_SQL` from the Dumpling schema files generated in Step 2, th
 } > "${TARGET_SCHEMA_SQL}"
 ```
 
-Typical adaptations include reordering generated table files when inline foreign keys require referenced tables to be created first, removing source-specific table options that TiDB does not accept, and normalizing legacy character sets or collations if needed. Keep the happy path narrow: make the DDL valid for TiDB, create empty target tables, then import the CSV files. See [Appendix A - Target DDL Compatibility Notes](#appendix-a---target-ddl-compatibility-notes) for links and troubleshooting guidance.
+Review `TARGET_SCHEMA_SQL` before applying it. Typical adaptations include reordering generated table files when inline foreign keys require referenced tables to be created first, removing source-specific table options that TiDB does not accept, and normalizing legacy character sets or collations if needed. Keep the main flow narrow: make the DDL valid for TiDB, create empty target tables, then import the CSV files. See [Appendix A - Target DDL Compatibility Notes](#appendix-a---target-ddl-compatibility-notes) for links and troubleshooting guidance.
 
-For [Appendix B - Optional Sample Schema](#appendix-b---optional-sample-schema), use the Dumpling-generated schema files from Step 2. The sample appendix includes the dependency-ordered concatenation command for that schema.
+For [Appendix B - Optional Sample Schema](#appendix-b---optional-sample-schema), use the Dumpling-generated schema files from [Step 2](#step-2---export-source-schema-with-dumpling). The sample appendix includes the dependency-ordered concatenation command for that schema.
 
 ## Step 4 - Create or Select an S3 Staging Bucket
 
@@ -265,15 +265,15 @@ aws s3api put-bucket-tagging \
   --tagging 'TagSet=[{Key=project,Value=tidb-sandbox},{Key=lab,Value=heatwave-manual-import}]'
 ```
 
-The bucket remains private. You will grant TiDB Cloud prefix-scoped read access from the import wizard in Step 10.
+The bucket remains private. You will grant TiDB Cloud prefix-scoped read access from the import wizard in [Step 9](#step-9---start-tidb-cloud-import-and-configure-s3-access).
 
-## Step 5 - Export HeatWave Data and Preserve Dumpling Metadata
+## Step 5 - Export HeatWave Data and Preserve Replication Coordinates
 
-Use `--consistency lock` for this lab because it relies on `LOCK TABLES`, not `RELOAD`. If the source environment cannot tolerate read locks, run during a maintenance window or use `--consistency none` and document the consistency risk.
+Use the same `--consistency lock` setting for the data export. If the source environment cannot tolerate read locks, run during a maintenance window or use `--consistency none` and document the consistency risk.
 
-Use `--no-schemas` because the lab creates the target schema explicitly in Step 8.
+Use `--no-schemas` because the lab creates the target schema explicitly in [Step 8](#step-8---create-target-tables).
 
-Dumpling writes a `metadata` object that includes the dump-window binlog file, position, and GTID set. Preserve it if you plan to configure incremental replication later, such as with TiDB Data Migration (DM). Optional handoff commands are in [Appendix C - Optional DM Handoff Metadata](#appendix-c---optional-dm-handoff-metadata).
+Dumpling writes a `metadata` object that includes replication coordinates for the dump window: binlog file, position, and GTID set. Preserve it if you plan to configure incremental replication later, such as with TiDB Data Migration (DM). Optional commands are in [Appendix C - Optional Replication Coordinates](#appendix-c---optional-replication-coordinates).
 
 ```bash
 tiup dumpling \
@@ -298,7 +298,7 @@ tiup dumpling \
 Notes:
 
 - In Dumpling v8.5.6, `.Index` is already a zero-padded string. Do not wrap it with `printf "%09d"`, or Dumpling generates filenames like `%!d(string=000000000)`.
-- Dumpling's default CSV mode includes a header row unless `--no-header` is set. In the TiDB Cloud import wizard, configure the CSV settings to indicate that the files contain a header row.
+- Dumpling's default CSV mode includes a header row unless `--no-header=true` is set. In the TiDB Cloud import wizard, configure the CSV settings to indicate that the files contain a header row.
 - If you need to inspect Dumpling output locally before uploading it to S3, use [Appendix E - Troubleshooting - Local Export and S3 Sync](#appendix-e---troubleshooting---local-export-and-s3-sync).
 
 ## Step 6 - Confirm S3 CSV Objects
@@ -323,9 +323,9 @@ If the expected CSV objects are missing, use [Appendix E - Troubleshooting - Loc
 
 ## Step 7 - Confirm TiDB Cloud SQL Access
 
-Confirm SQL access to the target TiDB Cloud Essential instance before creating target tables. The happy path assumes the target instance exists by this step. If it does not, create the instance in TiDB Cloud first, then return here.
+Confirm SQL access to the target TiDB Cloud Essential instance before creating target tables. This step assumes the target instance already exists. If it does not, create the instance in TiDB Cloud first, then return here.
 
-If SQL access is not configured yet, use the TiDB Cloud UI first. For the full UI flow, see [Connect to TiDB Cloud Starter or Essential via Public Endpoint](https://docs.pingcap.com/tidbcloud/connect-via-standard-connection-serverless/).
+If SQL access is not configured yet, use the TiDB Cloud UI first:
 
 1. Open the target TiDB Cloud Essential instance overview page and click **Connect**.
 2. Keep **Connection Type** as **Public**. If **Public** is disabled, go to **Settings** > **Networking** and enable the public endpoint.
@@ -335,7 +335,7 @@ If SQL access is not configured yet, use the TiDB Cloud UI first. For the full U
 
 ![TiDB Cloud target instance list](screenshots/00-tidb-resource-list.png)
 
-![TiDB Cloud Essential target instance overview](screenshots/01-target-overview.png)
+For more details, see [Connect to TiDB Cloud Starter or Essential via Public Endpoint](https://docs.pingcap.com/tidbcloud/connect-via-standard-connection-serverless/).
 
 Set the target connection details from the TiDB Cloud Connect dialog:
 
@@ -366,13 +366,11 @@ mysql --comments \
   "
 ```
 
-For TiDB Cloud Essential public endpoints, the official connection dialog provides the MySQL CLI command and CA guidance. Prefer `VERIFY_IDENTITY` with the CA path from the dialog. If CA verification fails during troubleshooting, `--ssl-mode=REQUIRED` can verify that the endpoint, credentials, IP access list, and TLS path work, but it does not verify server identity and should not be treated as final security validation.
+For TiDB Cloud Essential public endpoints, the TiDB Cloud Connect dialog provides the MySQL CLI command and CA guidance. Prefer `VERIFY_IDENTITY` with the CA path from the dialog. If CA verification fails during troubleshooting, `--ssl-mode=REQUIRED` can verify that the endpoint, credentials, IP access list, and TLS path work, but it does not verify server identity and should not be treated as final security validation.
 
 ## Step 8 - Create Target Tables
 
-TiDB Cloud import requires empty target tables. This lab creates the target tables before import using the reviewed target schema.
-
-For a rerun, use a new `TARGET_DB` or drop the previous target lab database before applying the schema again. Do not drop a production target database.
+TiDB Cloud CSV import requires empty target tables. This lab creates the target tables before import using the reviewed target schema. If you rerun the lab, clean up the previous lab database before applying the schema again.
 
 ```bash
 mysql \
@@ -385,7 +383,7 @@ mysql \
   < "${TARGET_SCHEMA_SQL}"
 ```
 
-If the target schema includes foreign keys, temporarily disable target FK checks before the import and re-enable them after the import completes in Step 14. Do this only on a dedicated lab target instance.
+Confirm the target objects exist and the target base tables are still empty:
 
 ```bash
 mysql \
@@ -395,121 +393,150 @@ mysql \
   --ssl-mode="${TIDB_SSL_MODE}" \
   --ssl-ca="${TIDB_CA_PATH}" \
   -p \
-  -e "SET GLOBAL foreign_key_checks = OFF;"
-```
+  --batch \
+  --raw \
+  --database information_schema \
+  -e "
+    SET SESSION group_concat_max_len = 1024 * 1024;
+    SET @target_db = '${TARGET_DB}';
 
-## Step 9 - Start TiDB Cloud Import
+    SELECT table_name, table_type
+    FROM tables
+    WHERE table_schema = @target_db
+    ORDER BY table_type, table_name;
 
-Use the TiDB Cloud import wizard for the remaining import steps. This lab validates the physical full-load import path, not Data Migration and not incremental replication.
+    SET @zero_check_sql = (
+      SELECT GROUP_CONCAT(
+        CONCAT(
+          'SELECT ', QUOTE(table_name),
+          ' AS table_name, COUNT(*) AS row_count FROM \`',
+          REPLACE(table_schema, '\`', '\`\`'), '\`.\`',
+          REPLACE(table_name, '\`', '\`\`'), '\`'
+        )
+        SEPARATOR ' UNION ALL '
+      )
+      FROM tables
+      WHERE table_schema = @target_db
+        AND table_type = 'BASE TABLE'
+    );
 
-Open the target TiDB Cloud Essential instance.
+    SET @zero_check_sql = IF(
+      @zero_check_sql IS NULL,
+      'SELECT NULL AS table_name, 0 AS row_count WHERE FALSE',
+      CONCAT(
+        'SELECT table_name, row_count FROM (',
+        @zero_check_sql,
+        ') AS counts ORDER BY table_name'
+      )
+    );
 
-The screenshots use sanitized placeholder values for user names, organization IDs, instance IDs, S3 bucket names, account IDs, and role ARNs.
-
-Go to **Data** > **Import**.
-
-The Import page offers **Import data from Cloud Storage** for CSV, Parquet, SQL files, and Aurora Snapshot formats. Use this entry point for the full-load import.
-
-![TiDB Cloud import entry point](screenshots/02-import-entry.png)
-
-Click **Import data from Cloud Storage**.
-
-The first wizard step is **Source and Target Connection**. It accepts the cloud storage source, the external storage credentials, and the TiDB target credentials. The next two lab steps split that wizard screen into source-side and target-side configuration.
-
-![TiDB Cloud import source and target connection form](screenshots/03-source-target-connection-empty.png)
-
-## Step 10 - Configure Source Connection and S3 Access
-
-Use the S3 URI from Step 4 for the source connection. The happy path is to use the TiDB Cloud Role ARN helper for Amazon S3 access because it provides the current IAM setup path for the selected target instance.
-
-For the official setup flow, see [Configure Amazon S3 access](https://docs.pingcap.com/tidbcloud/configure-external-storage-access#configure-amazon-s3-access).
-
-1. Set **Storage Provider** to **Amazon S3**.
-2. Set **Source Files URI** to the folder URI in `${S3_URI}`. Keep the trailing slash for directory import.
-3. Select **AWS Role ARN**.
-4. If you have not created the import role yet, open the Role ARN setup helper from the AWS Role ARN credential option.
-
-![TiDB Cloud AWS Role ARN setup helper](screenshots/04-s3-role-setup.png)
-
-Use the helper or CloudFormation template to create an AWS IAM role for this target instance and S3 prefix, or update an existing role to match the current helper values.
-
-Set the Role ARN for the import wizard:
-
-```bash
-export IMPORT_ROLE_ARN="arn:aws:iam::<customer-aws-account-id>:role/<tidb-cloud-import-role-name>"
-```
-
-Confirm the role exists and keep the role permissions prefix-scoped to the import location:
-
-```bash
-export IMPORT_ROLE_NAME="<tidb-cloud-import-role-name>"
-
-aws iam get-role \
-  --role-name "${IMPORT_ROLE_NAME}" \
-  --profile "${AWS_PROFILE}" \
-  --region "${AWS_REGION}" >/dev/null
-
-aws iam list-role-policies \
-  --role-name "${IMPORT_ROLE_NAME}" \
-  --profile "${AWS_PROFILE}" \
-  --region "${AWS_REGION}"
+    PREPARE stmt FROM @zero_check_sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+  "
 ```
 
 Expected:
 
-- The trust policy allows the TiDB Cloud import runtime principal shown by the helper for the selected target instance.
-- The permissions policy allows `s3:ListBucket` for the bucket and `s3:GetObject` and `s3:GetObjectVersion` for the exact `${S3_PREFIX}` objects that will be imported.
-- The policy does not grant write access and does not grant broader read access than the staging prefix used by this lab.
+- The first result set lists the tables, and any views, created by `TARGET_SCHEMA_SQL`.
+- The second result set lists one row per target base table, with `row_count = 0` for every table.
 
-Enter `${IMPORT_ROLE_ARN}` in the wizard, then click **Test Bucket Access**.
+## Step 9 - Start TiDB Cloud Import and Configure S3 Access
+
+Use the TiDB Cloud import wizard to load the CSV files from the Dumpling export in S3 into the empty target tables.
+
+Open the target TiDB Cloud Essential instance, go to **Data** > **Import**, and click **Import data from Cloud Storage**.
+
+![TiDB Cloud import entry point](screenshots/02-import-entry.png)
+
+![TiDB Cloud import source and target connection form](screenshots/03-source-target-connection-empty.png)
+
+Use the S3 URI from [Step 4](#step-4---create-or-select-an-s3-staging-bucket) for the source connection. The recommended access option is **AWS Role ARN** because it avoids long-lived access keys.
+
+1. Set **Storage Provider** to **Amazon S3**.
+2. Select **AWS Role ARN**.
+3. Enter the value of **Source Files URI** using the S3 folder URI prepared in [Step 4](#step-4---create-or-select-an-s3-staging-bucket). Keep the trailing slash for directory import.
+4. Under **Role ARN**, click **Click here to create new one with AWS CloudFormation.**
+
+![TiDB Cloud Add New Role ARN dialog](screenshots/04-s3-role-setup.png)
+
+The **Add New Role ARN** dialog guides the creation of the IAM role on the AWS side that allows TiDB Cloud to read from the S3 prefix. It uses an AWS CloudFormation template in your AWS account with the trust policy and S3 read policy values for this target instance.
+
+1. Click **AWS Console with CloudFormation Template**.
+2. In AWS, review and click **Create stack**.
+3. Wait until the stack creation completes.
+4. In the stack detail page, open **Outputs** and copy the role ARN value.
+5. Return to TiDB Cloud, paste the role ARN into **Paste the Role ARN value here**, and click **Confirm**.
+6. Click **Test Bucket Access**.
 
 Confirm the bucket access test passes before continuing. If it fails with `AccessDenied` on `sts:AssumeRole`, the role trust or permissions policy is stale or incomplete. Stop and use [Appendix D - Troubleshooting - S3 AccessDenied on AssumeRole](#appendix-d---troubleshooting---s3-accessdenied-on-assumerole) before changing import settings.
 
-If the Role ARN setup helper or CloudFormation flow is not available in your environment, configure the equivalent AWS IAM role manually from the official external storage access docs, then return to the wizard and test bucket access.
+If you prefer to configure the equivalent AWS IAM role manually, click **Having trouble? Create Role ARN manually** in the **Add New Role ARN** dialog to get the required role configuration. For more details on the required trust and permissions policies, see [Configure Amazon S3 access](https://docs.pingcap.com/tidbcloud/configure-external-storage-access#configure-amazon-s3-access).
 
-## Step 11 - Configure Target Connection
+## Step 10 - Configure Target Connection
 
 1. Enter the TiDB username and password for the target instance.
 2. Click **Test Connection**.
 3. Confirm the target connection test passes before continuing.
+4. Click **Next** to continue from the connection screen.
 
-After **Test Bucket Access** and **Test Connection** both pass, click **Next**.
+## Step 11 - Review Mapping and Job Configuration
 
-## Step 12 - Review Mapping and Job Configuration
+The **Mapping and Job Configuration** screen defines how TiDB Cloud should interpret object names when it scans the S3 prefix, and lets you name the import job. This lab uses Dumpling output names that follow TiDB Cloud import naming conventions, so automatic mapping can match the S3 objects to existing target tables.
 
 1. Keep **Use TiDB file naming conventions for automatic mapping** selected.
 2. Keep or edit the generated job name.
-3. Click **Next** and wait for TiDB Cloud to scan the source files.
 
-## Step 13 - Run Pre-check and Start Import
+Before continuing, confirm the mapping and job configuration look like this:
 
-1. Confirm the scan result found the expected `${SOURCE_DB}.*.csv.gz` objects.
-2. Confirm every source object maps to the intended empty target table.
-3. Open **edit CSV configuration here**.
-4. Keep the Dumpling-compatible CSV defaults: line terminator `\r\n`, delimiter `"`, escape character `\`, separator `,`, and NULL value `\N`.
-5. Set **Skip first** to `1` row. Dumpling writes one header row by default when `--no-header=false`.
-6. Apply the CSV configuration.
-7. Click **Start Import**.
-8. Wait until the import job shows **Completed**, then check the imported tables.
+![TiDB Cloud mapping and job configuration](screenshots/05-mapping-job-configuration.png)
 
-Capture the import task ID, start time, end time, scan results, warnings, and completion status.
+Click **Next**.
+
+## Step 12 - Review Scan Results and Start Import
+
+After you click **Next**, TiDB Cloud scans the S3 prefix and shows the generated table mappings and CSV parsing configuration before the import starts. With TiDB file naming conventions, the scan result is grouped by target table: split Dumpling CSV files for the same table are represented as one mapping row with a matching source file pattern.
+
+1. Confirm the scan result found the expected `${SOURCE_DB}.*.csv.gz` objects from [Step 6](#step-6---confirm-s3-csv-objects).
+2. Confirm the generated mappings cover the target tables you expect to load.
+
+The scan results and table mappings should look like this:
+
+![TiDB Cloud import scan results and table mappings](screenshots/06-import-scan-results.png)
+
+Open the CSV configuration:
+
+1. Open **edit CSV configuration here**.
+
+Set the Dumpling-compatible CSV options:
+
+1. Keep the Dumpling-compatible CSV defaults: line terminator `\r\n`, delimiter `"`, escape character `\`, separator `,`, and NULL value `\N`.
+2. Set **Skip first** to `1` row. Dumpling writes one header row by default when `--no-header=false`.
+
+Before applying, confirm the CSV configuration looks like this:
+
+![TiDB Cloud CSV configuration](screenshots/07-csv-configuration.png)
+
+Apply the configuration and start the import:
+
+1. Apply the CSV configuration.
+2. Click **Start Import**.
+
+## Step 13 - Confirm Import Completion
+
+After you start the import, TiDB Cloud shows the import task status. Use this screen as the gate before SQL verification.
+
+1. Wait until the import task shows **Completed**.
+2. If the task is **Completed** and has no warnings or errors, continue to [Step 14](#step-14---verify-imported-data).
+3. If the task fails or shows warnings, copy the task ID, status, time range, S3 folder URI, target instance name, and error or warning message into your troubleshooting notes or support ticket before changing settings or rerunning the import.
+
+The completed import task should look like this:
+
+![TiDB Cloud completed import task](screenshots/08-import-completed.png)
 
 ## Step 14 - Verify Imported Data
 
-If you disabled target FK checks in Step 8, re-enable them before verification:
-
-```bash
-mysql \
-  --host "${TIDB_HOST}" \
-  --port "${TIDB_PORT}" \
-  --user "${TIDB_USER}" \
-  --ssl-mode="${TIDB_SSL_MODE}" \
-  --ssl-ca="${TIDB_CA_PATH}" \
-  -p \
-  -e "SET GLOBAL foreign_key_checks = ON;"
-```
-
-Generate target row counts and compare the result set with the source baseline from Step 1.
+Generate target row counts and compare the result set with the source baseline from [Step 1](#step-1---confirm-source-access-and-scope).
 
 ```bash
 mkdir -p "results/${SOURCE_DB}"
@@ -568,15 +595,17 @@ Expected:
 - The source and target row-count result sets contain the same intended base tables.
 - The source and target row-count result sets match.
 
-If the row counts differ, stop and inspect the export files, import mapping, and import job warnings before running application-level checks.
+If the row counts differ, first confirm the source tables did not receive writes between the source count capture in [Step 1](#step-1---confirm-source-access-and-scope) and the Dumpling export. If the source was quiet, stop and inspect the export files, import mapping, and import job warnings before running application-level checks.
+
+For a more robust data comparison, run `sync-diff-inspector` after the row-count check. It can compare table schemas and row data between MySQL-compatible sources and TiDB, and writes comparison details to `summary.txt` and `sync_diff.log`. Follow the official restrictions for MySQL-to-TiDB checks: keep the compared source data unchanged during the check, or compare a stable range. Learn more: [sync-diff-inspector](https://docs.pingcap.com/tidb/stable/sync-diff-inspector-overview/).
 
 ## Step 15 - Run Workload-Specific Checks
 
-After generic table and row-count checks pass, run any workload-specific SQL checks that matter for the source application. Examples include orphan checks, aggregate totals, critical lookup queries, and transaction-wrapped DML smoke tests.
+After generic table and row-count checks pass, run any workload-specific SQL checks that matter for the source application. Examples include orphan checks, aggregate totals, critical lookup queries, and transaction-wrapped DML compatibility checks.
 
-For schemas that rely on foreign keys with cascade actions, add a transaction-wrapped cascade smoke test after import. This checks TiDB compatibility at the database layer. It is not an incremental replication guarantee.
+For schemas that rely on foreign keys with cascade actions, add a transaction-wrapped cascade compatibility check after import. This checks TiDB compatibility at the database layer. It is not an incremental replication guarantee.
 
-[Appendix B - Optional Sample Schema](#appendix-b---optional-sample-schema) includes a concrete cascade smoke script.
+[Appendix B - Optional Sample Schema](#appendix-b---optional-sample-schema) includes a concrete cascade verification script.
 
 ## Cleanup
 
@@ -648,28 +677,28 @@ rm -rf \
 
 Use this appendix only when target DDL fails to apply or TiDB Cloud import reports a schema-related error.
 
-The happy path is:
+The recommended flow is:
 
 1. Export source schema with Dumpling.
 2. Review the generated DDL.
 3. Apply a TiDB-compatible `TARGET_SCHEMA_SQL` before import.
 4. Keep target tables empty before importing CSV files.
 
-The public TiDB Cloud CSV import docs ground this flow: CSV files do not contain schema information, so table schemas must be created before import, and the target tables must be empty for this import flow.
+The public TiDB Cloud CSV import docs ground this flow: CSV files do not contain schema information, so table schemas must be created before import, and the target tables must be empty for this import flow. For more details, see [Import CSV Files from Cloud Storage into TiDB Cloud Starter or Essential](https://docs.pingcap.com/tidbcloud/import-csv-files-serverless/).
 
 Typical DDL review items:
 
-- Remove source-specific table options or SQL syntax that TiDB rejects.
-- Normalize legacy or unsupported character sets and collations.
+- Remove source-specific table options or SQL syntax that TiDB rejects. For more details, see [TiDB MySQL compatibility](https://docs.pingcap.com/tidb/stable/mysql-compatibility/).
+- Normalize legacy or unsupported character sets and collations. For more details, see [TiDB character set and collation](https://docs.pingcap.com/tidb/stable/character-set-and-collation/).
 - Keep primary keys, unique keys, and secondary indexes that are valid on TiDB.
-- Keep compatible foreign keys only when the source workload needs them and the DDL validates on TiDB. If foreign key behavior matters, run a workload-specific post-import smoke test.
 
-Reference docs:
+Foreign key handling depends on the import path:
 
-- [TiDB Cloud - Import CSV Files from Cloud Storage into TiDB Cloud Starter or Essential](https://docs.pingcap.com/tidbcloud/import-csv-files-serverless/)
-- [TiDB - MySQL Compatibility](https://docs.pingcap.com/tidb/stable/mysql-compatibility/)
-- [TiDB - Character Set and Collation](https://docs.pingcap.com/tidb/stable/character-set-and-collation/)
-- [TiDB - FOREIGN KEY Constraints](https://docs.pingcap.com/tidb/stable/foreign-key/)
+- Keep compatible foreign keys only when the source workload needs them and the DDL validates on TiDB. If foreign key behavior matters, run a workload-specific post-import compatibility check. For more details, see [TiDB foreign key constraints](https://docs.pingcap.com/tidb/stable/foreign-key/).
+- For this TiDB Cloud CSV import lab, do not manually toggle `foreign_key_checks` in the main flow. Create compatible empty target tables, run the TiDB Cloud import wizard, then run workload-specific foreign key or cascade compatibility checks if the application depends on that behavior.
+- TiDB Cloud Import uses `IMPORT INTO` or TiDB Lightning as the underlying engine, depending on the target tier and import path. `IMPORT INTO` imports data into existing empty tables, which is the relevant SQL behavior for this lab's physical import path. TiDB Lightning has separate foreign key guidance for Lightning-backed flows and self-managed Lightning usage. For more details, see [IMPORT INTO](https://docs.pingcap.com/tidb/stable/sql-statement-import-into/) and [TiDB Lightning Physical Import Mode](https://docs.pingcap.com/tidb/stable/tidb-lightning-physical-import-mode-usage/).
+- TiDB foreign key checks default to `ON`. The TiDB foreign key docs explain that disabling `foreign_key_checks` can allow child-table data to load before parent-table data, but foreign key checks and reference operations are not executed while it is disabled. Treat that as troubleshooting guidance, not a default lab step. For more details, see [TiDB foreign key constraints](https://docs.pingcap.com/tidb/stable/foreign-key/).
+- TiDB Data Migration (DM) is separate from this full-load import. The TiDB foreign key docs state that DM support for tables with foreign key constraints starts as an experimental feature in v8.5.6; earlier DM versions disabled `foreign_key_checks` when replicating data to TiDB, so cascading operations were not replicated downstream. For more details, see [TiDB foreign key constraints](https://docs.pingcap.com/tidb/stable/foreign-key/).
 
 ## Appendix B - Optional Sample Schema
 
@@ -685,7 +714,7 @@ Supporting files:
 - [`sql/source-schema-with-fks.sql`](sql/source-schema-with-fks.sql): sample source schema with foreign keys.
 - [`sql/seed.sql`](sql/seed.sql): deterministic seed data.
 - [`sql/verify.sql`](sql/verify.sql): row count and orphan checks.
-- [`sql/cascade-smoke.sql`](sql/cascade-smoke.sql): transactional cascade behavior check.
+- [`sql/cascade-smoke.sql`](sql/cascade-smoke.sql): transactional cascade behavior verification script.
 
 Use the optional sample by setting these lab variables:
 
@@ -716,7 +745,7 @@ mysql \
   < sql/seed.sql
 ```
 
-After Step 2 exports the source schema with Dumpling, build the target DDL from the generated Dumpling schema files:
+After [Step 2](#step-2---export-source-schema-with-dumpling) exports the source schema with Dumpling, build the target DDL from the generated Dumpling schema files:
 
 ```bash
 export TARGET_SCHEMA_SQL="schema/${SOURCE_DB}/target-schema.sql"
@@ -756,7 +785,7 @@ Expected seed row counts:
 | `shipment_events` | 5 |
 | `inventory_adjustments` | 4 |
 
-Run the optional verification and cascade smoke checks on the HeatWave source:
+Run the optional verification and cascade compatibility checks on the HeatWave source:
 
 ```bash
 mysql \
@@ -798,11 +827,11 @@ mysql \
   < sql/cascade-smoke.sql
 ```
 
-## Appendix C - Optional DM Handoff Metadata
+## Appendix C - Optional Replication Coordinates
 
 Use this appendix only if you plan to configure incremental replication after the full load, such as with TiDB Data Migration (DM). It is not required for TiDB Cloud import.
 
-Preserve the Dumpling `metadata` object from the export prefix. It contains useful information for a later DM handoff, including dump-window timestamps, binlog file and position, and GTID set when available.
+Preserve the Dumpling `metadata` object from the export prefix. It contains useful information for a later incremental replication setup, including dump-window timestamps, binlog file and position, and GTID set when available.
 
 ```bash
 export EXPORT_RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -877,7 +906,7 @@ Optionally, capture source replication readiness context for a later DM task. Th
 
 ```
 
-The handoff metadata should include:
+The replication coordinates should include:
 
 - Dumpling `Started dump at` and `Finished dump at` timestamps.
 - Dumpling `SHOW MASTER STATUS` or `SHOW BINARY LOG STATUS` output.
@@ -885,7 +914,7 @@ The handoff metadata should include:
 - GTID set for GTID-based DM configuration.
 - Source host, port, source database, export run ID, and data S3 URI in the lab notes. Do not store passwords.
 
-If you capture the optional readiness context, keep the source `server_uuid`, `server_id`, `log_bin`, `binlog_format`, `binlog_row_image`, `gtid_mode`, and `enforce_gtid_consistency` values with the same handoff notes. These values help the DM task owner decide whether to use GTID or file-position based replication.
+If you capture the optional readiness context, keep the source `server_uuid`, `server_id`, `log_bin`, `binlog_format`, `binlog_row_image`, `gtid_mode`, and `enforce_gtid_consistency` values with the same replication notes. These values help the DM task owner decide whether to use GTID or file-position based replication.
 
 ## Appendix D - Troubleshooting - S3 AccessDenied on AssumeRole
 
@@ -1010,6 +1039,26 @@ aws iam put-role-policy \
   --region "${AWS_REGION}"
 ```
 
+If you need to inspect the selected role before retrying the wizard:
+
+```bash
+aws iam get-role \
+  --role-name "${IMPORT_ROLE_NAME}" \
+  --profile "${AWS_PROFILE}" \
+  --region "${AWS_REGION}" >/dev/null
+
+aws iam list-role-policies \
+  --role-name "${IMPORT_ROLE_NAME}" \
+  --profile "${AWS_PROFILE}" \
+  --region "${AWS_REGION}"
+```
+
+Expected:
+
+- The trust policy allows the TiDB Cloud import runtime principal shown by the helper for the selected target instance.
+- The permissions policy allows `s3:ListBucket` for the bucket and `s3:GetObject` and `s3:GetObjectVersion` for the exact `${IMPORT_PREFIX}` objects that will be imported.
+- The policy does not grant write access and does not grant broader read access than the staging prefix used by this lab.
+
 Then return to the TiDB Cloud import wizard and click **Test Bucket Access** again. If it still fails, capture the new error text before changing the role again. A later `s3:GetObject` or `s3:ListBucket` denial means the trust policy is fixed and the remaining problem is in the prefix-scoped S3 permissions.
 
 ## Appendix E - Troubleshooting - Local Export and S3 Sync
@@ -1066,12 +1115,19 @@ aws s3 sync "export/${SOURCE_DB}/" "${S3_URI}" \
 
 ## References
 
-- [TiDB Cloud - Import CSV Files from Cloud Storage into TiDB Cloud Starter or Essential](https://docs.pingcap.com/tidbcloud/import-csv-files-serverless/)
-- [TiDB Cloud - Configure Amazon S3 Access](https://docs.pingcap.com/tidbcloud/configure-external-storage-access#configure-amazon-s3-access)
+- [Microsoft - Windows Subsystem for Linux 2](https://learn.microsoft.com/en-us/windows/wsl/about)
+- [TiDB - TiUP Overview - Install TiUP](https://docs.pingcap.com/tidb/stable/tiup-overview/#install-tiup)
+- [TiDB - Dumpling Overview](https://docs.pingcap.com/tidb/stable/dumpling-overview/)
 - [TiDB Cloud - Connect to TiDB Cloud Starter or Essential via Public Endpoint](https://docs.pingcap.com/tidbcloud/connect-via-standard-connection-serverless/)
 - [TiDB Cloud - TLS Connections to TiDB Cloud Starter or Essential](https://docs.pingcap.com/tidbcloud/secure-connections-to-serverless-clusters/)
+- [TiDB Cloud - Configure Amazon S3 Access](https://docs.pingcap.com/tidbcloud/configure-external-storage-access#configure-amazon-s3-access)
 - [TiDB Cloud - Naming Conventions for Data Import](https://docs.pingcap.com/tidbcloud/naming-conventions-for-data-import)
-- [TiDB - TiUP Overview](https://docs.pingcap.com/tidb/stable/tiup-overview/)
-- [TiDB - Dumpling Overview](https://docs.pingcap.com/tidb/stable/dumpling-overview/)
+- [TiDB - sync-diff-inspector Overview](https://docs.pingcap.com/tidb/stable/sync-diff-inspector-overview/)
+- [TiDB Cloud - Import CSV Files from Cloud Storage into TiDB Cloud Starter or Essential](https://docs.pingcap.com/tidbcloud/import-csv-files-serverless/)
+- [TiDB - MySQL Compatibility](https://docs.pingcap.com/tidb/stable/mysql-compatibility/)
+- [TiDB - Character Set and Collation](https://docs.pingcap.com/tidb/stable/character-set-and-collation/)
+- [TiDB - FOREIGN KEY Constraints](https://docs.pingcap.com/tidb/stable/foreign-key/)
+- [TiDB - IMPORT INTO](https://docs.pingcap.com/tidb/stable/sql-statement-import-into/)
+- [TiDB Lightning - Physical Import Mode](https://docs.pingcap.com/tidb/stable/tidb-lightning-physical-import-mode-usage/)
 - [TiDB Data Migration - Source Configuration File](https://docs.pingcap.com/tidb/stable/dm-source-configuration-file/)
 - [TiDB Data Migration - Task Configuration Guide](https://docs.pingcap.com/tidb/stable/dm-task-configuration-guide/)
