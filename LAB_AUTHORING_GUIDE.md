@@ -254,10 +254,12 @@ findings.
 
 - In **References sections**, use the full link format with a single dash
   separator: `[repo#number - description](url)`
+
   ```markdown
   - [tiflow#12329 - DDL whitelist for DM sync](https://github.com/pingcap/tiflow/issues/12329)
   - [tidb#36982 - Foreign key cascade behavior](https://github.com/pingcap/tidb/issues/36982)
   ```
+
 - In **body text**, use the inline `repo#number` format (GitHub auto-links
   these in some contexts): "This behavior was fixed in `tidb#36982`."
 - Use a **single dash with spaces** (` - `) as the separator in reference list
@@ -302,6 +304,38 @@ Use `text` for command output:
 
 > **Warning:** This operation is destructive and cannot be undone.
 ```
+
+### 3.9 UI Screenshots and Wizard Flows
+
+Use screenshots only when they help the reader complete or verify a UI step.
+Prefer one clear screenshot over several decorative or redundant screenshots.
+
+Screenshot rules:
+
+- Store UI screenshots in `screenshots/` inside the lab directory.
+- Embed screenshots with Markdown image syntax so they render in GitHub.
+- Use a consistent viewport for a lab, normally `1440x900`.
+- Place the screenshot after the actions that produce the shown state.
+- Capture stable final states, not loading spinners or transient hover states.
+- Keep error screenshots in troubleshooting appendices, not in the main flow.
+- Sanitize screenshots before committing. Do not expose passwords, tokens, API
+  keys, private customer data, internal tickets, personal inboxes, account IDs,
+  role ARNs, public IPs, bucket names, organization IDs, instance IDs, or email
+  addresses unless they are intentionally public-safe placeholders.
+- If a screenshot cannot be sanitized without losing the point, omit it and use
+  text instructions instead.
+
+Wizard flow rules:
+
+- Scope steps to UI screens or obvious screen sections. Avoid one step spanning
+  several wizard screens unless the UI treats them as one decision.
+- Start each wizard step with what the screen is for, then list the actions.
+- End each wizard screen with the expected state or the button that advances to
+  the next screen.
+- For review or completion screens, give a go/no-go check. For example, continue
+  only when the task is `Completed` with no warnings; if it fails, copy the task
+  ID, status, time range, resource URI, target name, and error message before
+  rerunning.
 
 ---
 
@@ -569,3 +603,15 @@ Per-archetype checklists. Complete the one matching your lab's archetype.
 - [ ] Findings summary in master doc references specific phases
 - [ ] Results directory captures phase outputs
 - [ ] Tested Environment covers all engines/versions compared
+
+### 7.5 UI-Backed Labs
+
+Use this additional checklist for labs that depend on cloud consoles, web UIs,
+or multi-screen wizards:
+
+- [ ] Main flow follows the UI screen order.
+- [ ] Each wizard screen has a clear purpose, actions, and expected state.
+- [ ] Screenshots are useful, rendered inline, consistently sized, and sanitized.
+- [ ] Troubleshooting screenshots and known failure states are in appendices.
+- [ ] Evidence capture instructions explain what the reader should do with the
+      captured task ID, status, logs, or timestamps.
