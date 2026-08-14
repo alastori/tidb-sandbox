@@ -43,6 +43,7 @@ and troubleshooting patterns.
 
 | Lab | Description | Type |
 |-----|-------------|------|
+| [lab-00](labs/sync-diff-inspector/lab-00-build-from-source) | Build traceable Linux binaries from a TiFlow PR or branch | Scripted |
 | [lab-01](labs/sync-diff-inspector/lab-01-data-types-validation) | Data type validation: MySQL vs TiDB | Scripted |
 | [lab-02](labs/sync-diff-inspector/lab-02-ticdc-syncpoint-validation) | TiCDC syncpoint + sync-diff-inspector validation | Scripted |
 
