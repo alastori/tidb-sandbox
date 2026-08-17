@@ -94,13 +94,13 @@ build_linux_binary() {
     local source_kind="$1"
     local source_value="$2"
     local source_label="$3"
-    local git_hash short_hash release_version build_timestamp artifact_name artifact_dir
-    local binary_path tarball_path build_ldflags container_id
+    local git_hash short_hash release_version build_started_at artifact_name artifact_dir
+    local binary_path tarball_path container_id
 
     git_hash="$(git -C "${TIFLOW_DIR}" rev-parse HEAD)"
     short_hash="$(git -C "${TIFLOW_DIR}" rev-parse --short=12 HEAD)"
     release_version="$(sanitize_label "${source_label}-${short_hash}")"
-    build_timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    build_started_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
     artifact_name="sync-diff-inspector-$(sanitize_label "${source_label}")-${TARGET_OS}-${TARGET_ARCH}-${short_hash}-${TS}"
     artifact_dir="${DIST_DIR}/${artifact_name}"
     binary_path="${artifact_dir}/sync_diff_inspector"
@@ -108,23 +108,18 @@ build_linux_binary() {
 
     mkdir -p "${artifact_dir}"
 
-    build_ldflags="-X=github.com/pingcap/tiflow/pkg/version.ReleaseVersion=${release_version}"
-    build_ldflags+=" -X=github.com/pingcap/tiflow/pkg/version.BuildTS=${build_timestamp}"
-    build_ldflags+=" -X=github.com/pingcap/tiflow/pkg/version.GitHash=${git_hash}"
-    build_ldflags+=" -X=github.com/pingcap/tiflow/pkg/version.GitBranch=${source_label}"
-    build_ldflags+=" -X=github.com/pingcap/tidb/pkg/parser/mysql.TiDBReleaseVersion=${release_version}"
-
     echo "Building sync-diff-inspector from ${source_kind} ${source_value}..."
     echo "Commit: ${git_hash}"
     echo "Output: ${binary_path}"
+    echo "Command: make sync-diff-inspector"
 
     container_id="$(docker create \
-        --env CGO_ENABLED=0 \
         --env GOOS="${TARGET_OS}" \
         --env GOARCH="${TARGET_ARCH}" \
-        --env BUILD_LDFLAGS="${build_ldflags}" \
+        --env RELEASE_VERSION="${release_version}" \
+        --env SOURCE_LABEL="${source_label}" \
         "${BUILDER_IMAGE}" \
-        bash -ceu 'cd /src; mkdir -p /out; go build -buildvcs=false -trimpath -ldflags "$BUILD_LDFLAGS" -o /out/sync_diff_inspector ./sync_diff_inspector')"
+        bash -ceu 'git config --global --add safe.directory /src; cd /src; mkdir -p /out; make RELEASE_VERSION="$RELEASE_VERSION" GITBRANCH="$SOURCE_LABEL" sync-diff-inspector; cp bin/sync_diff_inspector /out/sync_diff_inspector')"
 
     if ! docker cp "${TIFLOW_DIR}" "${container_id}:/src"; then
         docker rm -f "${container_id}" >/dev/null 2>&1 || true
@@ -150,7 +145,8 @@ build_linux_binary() {
         echo "source_repository=${TIFLOW_REPO}"
         echo "git_hash=${git_hash}"
         echo "release_version=${release_version}"
-        echo "build_timestamp_utc=${build_timestamp}"
+        echo "build_started_at_utc=${build_started_at}"
+        echo "build_command=make sync-diff-inspector"
         echo "builder_image=${BUILDER_IMAGE}"
         echo "target_os=${TARGET_OS}"
         echo "target_arch=${TARGET_ARCH}"
