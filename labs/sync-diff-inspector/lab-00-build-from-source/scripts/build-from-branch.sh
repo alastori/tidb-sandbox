@@ -5,8 +5,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "${SCRIPT_DIR}/common.sh"
+prepare_output_directories
 
-TIFLOW_BRANCH="${TIFLOW_BRANCH:-${1:-master}}"
+TIFLOW_BRANCH="${1:-${TIFLOW_BRANCH:-master}}"
 if ! git check-ref-format --branch "${TIFLOW_BRANCH}" >/dev/null 2>&1; then
     echo "ERROR: invalid Git branch name: ${TIFLOW_BRANCH}."
     exit 1

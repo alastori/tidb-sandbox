@@ -5,8 +5,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "${SCRIPT_DIR}/common.sh"
+prepare_output_directories
 
-PR_NUMBER="${PR_NUMBER:-${1:?Usage: build-from-pr.sh <PR_NUMBER>}}"
+PR_NUMBER="${1:-${PR_NUMBER:-}}"
+if [[ -z "${PR_NUMBER}" ]]; then
+    echo "ERROR: usage: build-from-pr.sh <PR_NUMBER>."
+    exit 1
+fi
 if [[ ! "${PR_NUMBER}" =~ ^[0-9]+$ ]]; then
     echo "ERROR: PR number must contain only digits; got ${PR_NUMBER}."
     exit 1

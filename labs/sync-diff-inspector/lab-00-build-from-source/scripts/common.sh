@@ -7,22 +7,60 @@ LAB_DIR="$(dirname "${SCRIPT_DIR}")"
 
 ENV_FILE="${ENV_FILE:-${LAB_DIR}/.env}"
 if [[ -f "${ENV_FILE}" ]]; then
+    _ENV_OVERRIDE_NAMES=()
+    _ENV_OVERRIDE_VALUES=()
+    for _env_name in \
+        TS RESULTS_DIR DIST_DIR TIFLOW_REPO TIFLOW_DIR BUILDER_IMAGE \
+        TARGET_OS TARGET_ARCH PR_NUMBER TIFLOW_BRANCH; do
+        if declare -p "${_env_name}" >/dev/null 2>&1; then
+            _ENV_OVERRIDE_NAMES+=("${_env_name}")
+            _ENV_OVERRIDE_VALUES+=("${!_env_name}")
+        fi
+    done
     set -a
     # shellcheck source=/dev/null
     source "${ENV_FILE}"
     set +a
+    for ((_env_index = 0; _env_index < ${#_ENV_OVERRIDE_NAMES[@]}; _env_index++)); do
+        printf -v "${_ENV_OVERRIDE_NAMES[_env_index]}" '%s' \
+            "${_ENV_OVERRIDE_VALUES[_env_index]}"
+        export "${_ENV_OVERRIDE_NAMES[_env_index]}"
+    done
+    unset _ENV_OVERRIDE_NAMES _ENV_OVERRIDE_VALUES _env_name _env_index
 fi
 
 TS="${TS:-$(date -u +%Y%m%dT%H%M%SZ)}"
-RESULTS_DIR="${RESULTS_DIR:-${LAB_DIR}/results}"
-DIST_DIR="${DIST_DIR:-${LAB_DIR}/dist}"
+DEFAULT_RESULTS_DIR="${LAB_DIR}/results"
+DEFAULT_DIST_DIR="${LAB_DIR}/dist"
+DEFAULT_TIFLOW_DIR="${LAB_DIR}/tiflow"
+RESULTS_DIR="${RESULTS_DIR:-${DEFAULT_RESULTS_DIR}}"
+DIST_DIR="${DIST_DIR:-${DEFAULT_DIST_DIR}}"
 TIFLOW_REPO="${TIFLOW_REPO:-https://github.com/pingcap/tiflow.git}"
-TIFLOW_DIR="${TIFLOW_DIR:-${LAB_DIR}/tiflow}"
+TIFLOW_DIR="${TIFLOW_DIR:-${DEFAULT_TIFLOW_DIR}}"
 BUILDER_IMAGE="${BUILDER_IMAGE:-golang:1.25.12-bookworm@sha256:6359592445455f2dbe2412bed411336035bc019a50017720d77454ffdd6d0f82}"
 TARGET_OS="${TARGET_OS:-linux}"
 TARGET_ARCH="${TARGET_ARCH:-amd64}"
+OWNERSHIP_MARKER_NAME=".tidb-sandbox-lab00-owned"
+TIFLOW_OWNERSHIP_MARKER="${TIFLOW_DIR}.tidb-sandbox-lab00-owned"
 
-mkdir -p "${RESULTS_DIR}" "${DIST_DIR}"
+prepare_managed_directory() {
+    local directory="$1"
+    local marker="${directory}/${OWNERSHIP_MARKER_NAME}"
+
+    if [[ -e "${directory}" && ! -d "${directory}" ]]; then
+        echo "ERROR: output path exists but is not a directory: ${directory}."
+        return 1
+    fi
+    if [[ ! -d "${directory}" ]]; then
+        mkdir -p "${directory}"
+        printf '%s\n' "${directory}" > "${marker}"
+    fi
+}
+
+prepare_output_directories() {
+    prepare_managed_directory "${RESULTS_DIR}"
+    prepare_managed_directory "${DIST_DIR}"
+}
 
 check_command() {
     local command_name="$1"
@@ -74,6 +112,7 @@ prepare_tiflow_checkout() {
     else
         echo "Cloning TiFlow into ${TIFLOW_DIR}..."
         git clone --filter=blob:none "${TIFLOW_REPO}" "${TIFLOW_DIR}"
+        printf '%s\n' "${TIFLOW_DIR}" > "${TIFLOW_OWNERSHIP_MARKER}"
     fi
 }
 
@@ -182,4 +221,6 @@ clean_log() {
 }
 
 export SCRIPT_DIR LAB_DIR TS RESULTS_DIR DIST_DIR
+export DEFAULT_RESULTS_DIR DEFAULT_DIST_DIR DEFAULT_TIFLOW_DIR
 export TIFLOW_REPO TIFLOW_DIR BUILDER_IMAGE TARGET_OS TARGET_ARCH
+export OWNERSHIP_MARKER_NAME TIFLOW_OWNERSHIP_MARKER
