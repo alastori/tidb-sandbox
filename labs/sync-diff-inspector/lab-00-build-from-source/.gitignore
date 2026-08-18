@@ -1,3 +1,4 @@
 .env
 /dist/
 /tiflow/
+/tiflow.tidb-sandbox-lab00-owned
