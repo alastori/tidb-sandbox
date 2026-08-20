@@ -28,9 +28,71 @@ tiup list sync-diff-inspector
 
 This check does not install or update anything, and an available version does not by itself prove that it contains the required fix. Confirm release inclusion with engineering. When the fix is published, run the confirmed version with `tiup sync-diff-inspector:<version> -V`. TiUP accepts stable, nightly, or explicit versions when that version is published for a component. See the [official TiUP component-management guide](https://docs.pingcap.com/tidb/stable/tiup-component-management/) for version-selection and execution syntax.
 
+## Fast Path - Engineering-Provided Staging Nightly
+
+When engineering confirms that the staging TiUP nightly contains the required
+fix, it can provide a faster test path than compiling from source. The staging
+nightly is mutable and is not an official release, so capture its `-V` output
+with the customer case.
+
+> **Warning:** The staging mirror is served over HTTP. TiUP warns that it is
+> trusting the component distribution key over an insecure connection. Use this
+> path only with engineering approval, and do not present the binary as a
+> supported release.
+
+First, record the active mirror. The restore command below assumes that the
+official mirror is currently in use. If `tiup mirror show` reports a custom
+mirror, restore that address instead of using `--reset`.
+
+```bash
+tiup mirror show
+```
+
+Switch to the staging mirror, refresh the nightly component, and record its
+embedded version:
+
+```bash
+tiup mirror set http://staging.tiup-server.pingcap.net
+tiup update sync-diff-inspector:nightly --force
+tiup sync-diff-inspector:nightly -V
+```
+
+Confirm with engineering that the reported `Git Commit Hash` contains the
+required fix before running the customer configuration:
+
+```bash
+tiup sync-diff-inspector:nightly --config=/path/to/config.toml
+```
+
+Restore the official mirror immediately after the test, even if the validation
+fails:
+
+```bash
+tiup mirror set --reset
+tiup update sync-diff-inspector:nightly --force
+```
+
+The 2026-08-18 UTC smoke test returned:
+
+```text
+Release Version: v9.0.0-beta.2.pre-131-g712a34b4f
+Git Commit Hash: 712a34b4f3bb6a77af8221c230c6494cbbeb5beb
+Git Branch: HEAD
+UTC Build Time: 2026-08-14 02:47:24
+Go Version: go1.25.12
+Failpoint Build: false
+```
+
+GitHub ancestry confirmed that this staging commit contains merged fix commit
+`cc048ec82154a02ccd65520d1dd4477087ad48d3` from `tiflow#12804`. Because the
+staging nightly moves over time, later runs must repeat the `-V` and ancestry
+checks. Use the source-build path below when an exact, reproducible commit is
+required.
+
 ## Tested Environment
 
 - TiFlow PR [#12804](https://github.com/pingcap/tiflow/pull/12804), head commit `62ea21b60babc437f897f216182e63b59e791c7c`
+- Staging nightly `v9.0.0-beta.2.pre-131-g712a34b4f`, commit `712a34b4f3bb6a77af8221c230c6494cbbeb5beb`, on Darwin arm64
 - Go 1.25.12 builder (`golang:1.25.12-bookworm@sha256:6359592445455f2dbe2412bed411336035bc019a50017720d77454ffdd6d0f82`)
 - Target: Linux amd64, statically linked with `CGO_ENABLED=0`
 - Docker client 28.5.1 and server 28.3.3 with a Linux arm64 engine
@@ -42,6 +104,7 @@ The recorded smoke test used the pinned Go 1.25.12 builder container. The host h
 
 ## Scenarios
 
+- **S0 - Test staging nightly:** Install the engineering-approved pre-release binary, verify its commit, run the customer configuration, and restore the official mirror.
 - **S1 - Build from PR:** Fetch `pull/12804/head`, embed its commit metadata, and package a Linux amd64 binary.
 - **S2 - Verify artifact:** Check SHA-256, execute `-V` and `--help` under Linux amd64, and verify that version output contains the expected commit.
 - **S3 - Build from branch:** Use the same process for `master`, a release branch, or another named branch.
@@ -190,6 +253,7 @@ The scripts are convenience automation, not a separate build implementation. TiF
 
 | Scenario | Target | Status | Evidence |
 |----------|--------|--------|----------|
+| S0 - Staging nightly | Darwin arm64 | ✅ | Inline `-V` output and verified GitHub ancestry |
 | S1 - PR #12804 build | Linux amd64 | ✅ | `results/build-pr-*.log` |
 | S2 - Binary verification | Linux amd64 | ✅ | `results/verify-*.log` |
 | S3 - Branch build | Linux amd64/arm64 | N/A | Reusable path, not part of the #12804 smoke test |
