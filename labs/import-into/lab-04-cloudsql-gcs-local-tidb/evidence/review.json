@@ -1,0 +1,187 @@
+{
+  "verified_at": "2026-10-05T19:57:08.767408+00:00",
+  "review_scope": "Independent agent read-only review; parent verified each finding and applied fixes",
+  "findings": [
+    {
+      "id": 1,
+      "finding": "Setup SELECT prerequisite",
+      "resolution": "Added to lab and fixture SQL header; verified against MySQL UPDATE privilege documentation"
+    },
+    {
+      "id": 2,
+      "finding": "Bucket metadata-read prerequisite",
+      "resolution": "Added storage.buckets.get with official IAM reference"
+    },
+    {
+      "id": 3,
+      "finding": "Existing-source configuration overwritten",
+      "resolution": "Instruction now replaces values inside Step 1 before TABLE_LIST is built"
+    },
+    {
+      "id": 4,
+      "finding": "Password exposure through process arguments",
+      "resolution": "Warning added at first Dumpling invocation"
+    },
+    {
+      "id": 5,
+      "finding": "Zero-item orders omitted by relationship checks",
+      "resolution": "LEFT JOIN checks now include orders without items; reproduced old failure and passed five cases on Cloud SQL and TiDB"
+    }
+  ],
+  "remaining_review_blockers": [],
+  "post_review_replay": {
+    "exit_code": 0,
+    "fresh_playground": true,
+    "fresh_working_directory": true,
+    "fresh_gcs_prefix": true,
+    "fresh_schema_and_csv_exports": true,
+    "source_fixture": "Previously seeded deterministic Cloud SQL data, unchanged",
+    "adaptations": [
+      "Filled project/instance/bucket/user placeholders",
+      "Used protected MySQL option file instead of interactive password prompts",
+      "Reused existing verified ADC login",
+      "Playground launched in a separate terminal as documented"
+    ],
+    "jobs": [
+      {
+        "table": "customers",
+        "job_id": 1,
+        "status": "finished",
+        "imported_rows": 3000
+      },
+      {
+        "table": "orders",
+        "job_id": 2,
+        "status": "finished",
+        "imported_rows": 12000
+      },
+      {
+        "table": "order_items",
+        "job_id": 3,
+        "status": "finished",
+        "imported_rows": 24000
+      }
+    ],
+    "csv_files_per_table": {
+      "customers": 3,
+      "orders": 11,
+      "order_items": 24
+    },
+    "full_row_outputs_equal": true,
+    "aggregate_and_join_outputs_equal": true,
+    "admin_check_table": "passed",
+    "phase": "After independent review fixes",
+    "verification_sql_sha256": "9a2e93b0554debb0ee26808552e1e3522ae6f32acd06410037e86ebc2fbd00b5",
+    "all_five_relationship_cases_pass_on_cloudsql_and_tidb": true,
+    "source_unchanged_after_replay": true
+  },
+  "relationship_regression_cases": [
+    {
+      "engine": "Cloud SQL MySQL",
+      "case": "zero_items",
+      "counters": [
+        1,
+        1
+      ],
+      "pass": true
+    },
+    {
+      "engine": "Cloud SQL MySQL",
+      "case": "valid_two_items",
+      "counters": [
+        0,
+        0
+      ],
+      "pass": true
+    },
+    {
+      "engine": "Cloud SQL MySQL",
+      "case": "one_item",
+      "counters": [
+        1,
+        1
+      ],
+      "pass": true
+    },
+    {
+      "engine": "Cloud SQL MySQL",
+      "case": "three_items_matching_total",
+      "counters": [
+        0,
+        1
+      ],
+      "pass": true
+    },
+    {
+      "engine": "Cloud SQL MySQL",
+      "case": "wrong_total",
+      "counters": [
+        1,
+        0
+      ],
+      "pass": true
+    },
+    {
+      "engine": "TiDB",
+      "case": "zero_items",
+      "counters": [
+        1,
+        1
+      ],
+      "pass": true
+    },
+    {
+      "engine": "TiDB",
+      "case": "valid_two_items",
+      "counters": [
+        0,
+        0
+      ],
+      "pass": true
+    },
+    {
+      "engine": "TiDB",
+      "case": "one_item",
+      "counters": [
+        1,
+        1
+      ],
+      "pass": true
+    },
+    {
+      "engine": "TiDB",
+      "case": "three_items_matching_total",
+      "counters": [
+        0,
+        1
+      ],
+      "pass": true
+    },
+    {
+      "engine": "TiDB",
+      "case": "wrong_total",
+      "counters": [
+        1,
+        0
+      ],
+      "pass": true
+    }
+  ],
+  "static_checks": {
+    "verified_at": "2026-10-05T19:57:08.767408+00:00",
+    "bash_blocks": 17,
+    "markdownlint_exit": 0,
+    "links": "passed",
+    "reference_equality": "passed",
+    "private_identifier_and_secret_scan": "passed",
+    "source_rows_unchanged_after_replay": true,
+    "document_sha256": "ae39493f42d59bc64a8279f7f98e55b9c6e6d609554d4fb0127178caa73efd6b"
+  },
+  "release_readiness": "Technical validation supports promotion of the playground-only synthetic lab; promotion/publication not performed",
+  "limits": [
+    "No concurrent source-write consistency test",
+    "Existing remote TiUP cluster not tested",
+    "No customer data or application acceptance",
+    "No import-speed benchmark"
+  ]
+}

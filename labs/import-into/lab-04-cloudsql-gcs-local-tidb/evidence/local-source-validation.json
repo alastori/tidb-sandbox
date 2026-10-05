@@ -1,0 +1,25 @@
+{
+  "scope": "Synthetic local MySQL -> real GCS -> TiUP playground via IMPORT INTO. Cloud SQL source NOT executed.",
+  "source_version": "26.7.0",
+  "dumpling_version": "v8.5.6",
+  "tidb_version": "v8.5.7",
+  "playground_version": "v1.16.5",
+  "import_job": {
+    "Job_ID": "1",
+    "Target_Table": "`cloudsql_gcs_import_lab`.`orders`",
+    "Status": "finished",
+    "Source_File_Size": "281B",
+    "Imported_Rows": "4",
+    "Result_Message": ""
+  },
+  "explicit_columns_import_job": {
+    "Job_ID": "2",
+    "Target_Table": "`cloudsql_gcs_import_lab`.`orders_explicit_columns`",
+    "Status": "finished",
+    "Imported_Rows": "4",
+    "Result_Message": ""
+  },
+  "verification": "Exact source/target TSV equality, including Unicode, decimal, NULL, empty string, quote/comma and newline. The explicit-column import also matched all rows.",
+  "nonempty_target_guard": "Non-empty target rejected (verified).",
+  "customer_delivery": "Not sent."
+}

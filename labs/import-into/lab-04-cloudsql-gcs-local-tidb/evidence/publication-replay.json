@@ -1,0 +1,159 @@
+{
+  "utc": "2026-10-05T23:23:58.619749+00:00",
+  "scope": "Fresh disposable Cloud SQL MySQL source -> private GCS -> fresh local TiDB playground; synthetic data only",
+  "source_version": "8.4.11-google",
+  "source_fixture": "Created from the revised Appendix A SQL on an empty database, with a separate scoped setup user",
+  "setup_statistics": "ANALYZE TABLE customers, orders, order_items",
+  "total_rows": 39000,
+  "jobs": [
+    {
+      "table": "customers",
+      "job_id": 1,
+      "status": "finished",
+      "imported_rows": 3000,
+      "csv_files": 3
+    },
+    {
+      "table": "orders",
+      "job_id": 2,
+      "status": "finished",
+      "imported_rows": 12000,
+      "csv_files": 11
+    },
+    {
+      "table": "order_items",
+      "job_id": 3,
+      "status": "finished",
+      "imported_rows": 24000,
+      "csv_files": 24
+    }
+  ],
+  "csv_audit": {
+    "baseline": {
+      "rows": {
+        "customers": 3000,
+        "orders": 12000,
+        "order_items": 24000
+      },
+      "files": {
+        "customers": 1,
+        "orders": 1,
+        "order_items": 1
+      },
+      "all_headers_valid": true,
+      "all_column_counts_valid": true,
+      "largest_file_bytes": 1056595,
+      "csv_dialect": "Dumpling backslash escape, doublequote=False; shape/count validation only"
+    },
+    "split": {
+      "rows": {
+        "customers": 3000,
+        "orders": 12000,
+        "order_items": 24000
+      },
+      "files": {
+        "customers": 3,
+        "orders": 11,
+        "order_items": 24
+      },
+      "all_headers_valid": true,
+      "all_column_counts_valid": true,
+      "largest_file_bytes": 88719,
+      "csv_dialect": "Dumpling backslash escape, doublequote=False; shape/count validation only"
+    }
+  },
+  "verification": {
+    "source_and_target_rows_sha256": "1db55a0ae93db81ddbf11945ec3b859acad3bd795b739d324630e392ea338ad8",
+    "full_row_outputs_equal": true,
+    "aggregates_and_joins_equal": true,
+    "admin_check_table": "passed",
+    "nonempty_target_rejected": true,
+    "repeat_source_initialization_rejected": true,
+    "reuse_unchanged_source_path": "passed"
+  },
+  "reader_review": {
+    "read_only_agent_review": true,
+    "findings_verified": 5,
+    "findings_resolved": 5,
+    "additional_runtime_gap": "New tables can have stale row estimates; fixed by analyzing fixture tables before exporting",
+    "final_pass": {
+      "verdict": "No remaining reader-order blocker found",
+      "five_reader_findings_verified_resolved": true,
+      "scope": "Read-only agent review; parent verified every cited claim against current doc/SQL; not independent human execution",
+      "citations": {
+        "baseline_order": [
+          153,
+          168
+        ],
+        "job_client_context": [
+          227,
+          233
+        ],
+        "sample_names": [
+          34,
+          41
+        ],
+        "author_checks_scope": [
+          259,
+          259
+        ],
+        "source_reuse": [
+          279,
+          299
+        ],
+        "sorting_directory": [
+          184,
+          206
+        ],
+        "source_sql_statistics": [
+          91,
+          92
+        ]
+      },
+      "verified_utc": "2026-10-05T23:34:54.757628+00:00"
+    }
+  },
+  "test_adaptations": [
+    "Filled source/bucket/user placeholders",
+    "Used protected MySQL option files instead of interactive password prompts",
+    "Reused valid Google user credentials in an isolated gcloud configuration; interactive Google sign-in not retested",
+    "Used an isolated TiUP home and explicit per-playground temp-dir on a volume with more than 90 GiB free; verified by SHOW CONFIG",
+    "Started playground in a separate terminal; checked actual target readiness"
+  ],
+  "limits": [
+    "No independent human reproduction",
+    "No remote or distributed TiDB cluster validation",
+    "No concurrent source-write consistency test",
+    "No customer data or application acceptance",
+    "No import-speed benchmark",
+    "Google interactive browser sign-in not retested"
+  ],
+  "cleanup": {
+    "cloudsql_deleted": true,
+    "cloudsql_delete_operation": "DONE",
+    "no_retained_cloudsql_backups": true,
+    "active_bucket_deleted": true,
+    "soft_deleted_bucket_retained": true,
+    "verified_hard_delete_time": "2026-10-12T23:27:53.437Z",
+    "possible_temporary_retained_storage_charges": true,
+    "soft_delete_retention_before_deletion_seconds": 0,
+    "note": "Clearing the bucket policy did not remove the retained soft-deleted bucket record; API readback is authoritative",
+    "local_archive_objects": 143,
+    "all_remote_md5_and_sizes_match_local_archive": true,
+    "source_and_target_rows_equal": true,
+    "unrelated_existing_instance_metadata_unchanged": true,
+    "archive_scope": "SQL/data/configuration reconstruction, not point-in-time Cloud SQL recovery",
+    "local_process_cleanup": "verified no listeners on source, target and export ports",
+    "task_only_credential_copies_removed": true,
+    "task_only_external_playground_storage_removed": true,
+    "original_adc_bytes_unchanged": true
+  },
+  "static_checks": {
+    "markdownlint": "passed",
+    "bash_blocks_checked": 19,
+    "references_equal": true,
+    "local_links_and_anchors": "passed",
+    "reader_order_regressions": "passed",
+    "external_sources": "12 HTTP 200 references; 3 MySQL direct fetches blocked but official content retrieved through alternate extraction"
+  }
+}

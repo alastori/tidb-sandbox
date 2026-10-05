@@ -1,0 +1,5 @@
+VERSION()	CURRENT_USER()
+8.4.11-google	lab_export@%
+Grants for lab_export@%
+GRANT RELOAD, REPLICATION CLIENT ON *.* TO `lab_export`@`%`
+GRANT SELECT, SHOW VIEW ON `cloudsql_csv_lab`.* TO `lab_export`@`%`

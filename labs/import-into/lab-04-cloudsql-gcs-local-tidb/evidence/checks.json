@@ -1,0 +1,113 @@
+{
+  "admin_check_table": {
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "nonempty_import": {
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "ERROR 8173 (HY000) at line 1: PreCheck failed: target table is not empty\n"
+  },
+  "full_row_comparison": {
+    "full_row_outputs_equal": true,
+    "source_unchanged_during_export": true,
+    "aggregates_and_joins_equal": true,
+    "orphan_orders": 0,
+    "orphan_items": 0,
+    "order_total_mismatches": 0,
+    "line_count_mismatches": 0,
+    "admin_check_table": "passed",
+    "nonempty_target_rejected": true,
+    "source_rows_sha256": "1db55a0ae93db81ddbf11945ec3b859acad3bd795b739d324630e392ea338ad8",
+    "target_rows_sha256": "1db55a0ae93db81ddbf11945ec3b859acad3bd795b739d324630e392ea338ad8"
+  },
+  "document_replay": {
+    "exit_code": 0,
+    "fresh_playground": true,
+    "fresh_working_directory": true,
+    "fresh_gcs_prefix": true,
+    "fresh_schema_and_csv_exports": true,
+    "source_fixture": "Previously seeded deterministic Cloud SQL data, unchanged",
+    "adaptations": [
+      "Filled project/instance/bucket/user placeholders",
+      "Used protected MySQL option file instead of interactive password prompts",
+      "Reused existing verified ADC login",
+      "Playground launched in a separate terminal as documented"
+    ],
+    "jobs": [
+      {
+        "table": "customers",
+        "job_id": 1,
+        "status": "finished",
+        "imported_rows": 3000
+      },
+      {
+        "table": "orders",
+        "job_id": 2,
+        "status": "finished",
+        "imported_rows": 12000
+      },
+      {
+        "table": "order_items",
+        "job_id": 3,
+        "status": "finished",
+        "imported_rows": 24000
+      }
+    ],
+    "csv_files_per_table": {
+      "customers": 3,
+      "orders": 11,
+      "order_items": 24
+    },
+    "full_row_outputs_equal": true,
+    "aggregate_and_join_outputs_equal": true,
+    "admin_check_table": "passed"
+  },
+  "post_review_document_replay": {
+    "exit_code": 0,
+    "fresh_playground": true,
+    "fresh_working_directory": true,
+    "fresh_gcs_prefix": true,
+    "fresh_schema_and_csv_exports": true,
+    "source_fixture": "Previously seeded deterministic Cloud SQL data, unchanged",
+    "adaptations": [
+      "Filled project/instance/bucket/user placeholders",
+      "Used protected MySQL option file instead of interactive password prompts",
+      "Reused existing verified ADC login",
+      "Playground launched in a separate terminal as documented"
+    ],
+    "jobs": [
+      {
+        "table": "customers",
+        "job_id": 1,
+        "status": "finished",
+        "imported_rows": 3000
+      },
+      {
+        "table": "orders",
+        "job_id": 2,
+        "status": "finished",
+        "imported_rows": 12000
+      },
+      {
+        "table": "order_items",
+        "job_id": 3,
+        "status": "finished",
+        "imported_rows": 24000
+      }
+    ],
+    "csv_files_per_table": {
+      "customers": 3,
+      "orders": 11,
+      "order_items": 24
+    },
+    "full_row_outputs_equal": true,
+    "aggregate_and_join_outputs_equal": true,
+    "admin_check_table": "passed",
+    "phase": "After independent review fixes",
+    "verification_sql_sha256": "9a2e93b0554debb0ee26808552e1e3522ae6f32acd06410037e86ebc2fbd00b5",
+    "all_five_relationship_cases_pass_on_cloudsql_and_tidb": true,
+    "source_unchanged_after_replay": true
+  }
+}

@@ -1,0 +1,268 @@
+[
+  {
+    "name": "cloudsql_csv_lab.customers.0000000000000.csv",
+    "table": "customers",
+    "rows": 1000,
+    "size_bytes": 85395,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.customers.0000000010000.csv",
+    "table": "customers",
+    "rows": 1000,
+    "size_bytes": 88718,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.customers.0000000020000.csv",
+    "table": "customers",
+    "rows": 1000,
+    "size_bytes": 88719,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000000000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 41134,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000010000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 42472,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000020000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 43513,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000030000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 43522,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000040000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 43471,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000050000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 43490,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000060000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 43530,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000070000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 43453,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000080000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 43472,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000090000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 43547,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000100000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44460,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000110000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44465,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000120000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44508,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000130000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44523,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000140000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44473,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000150000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44493,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000160000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44540,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000170000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44455,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000180000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44467,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000190000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 44543,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000200000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 45462,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000210000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 45464,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000220000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 45504,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.order_items.0000000230000.csv",
+    "table": "order_items",
+    "rows": 1000,
+    "size_bytes": 45520,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000000000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 75545,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000010000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 77750,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000020000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 77368,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000030000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 77025,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000040000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 77750,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000050000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 77110,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000060000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 77325,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000070000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 77758,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000080000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 76833,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000090000.csv",
+    "table": "orders",
+    "rows": 1091,
+    "size_bytes": 78473,
+    "header_valid": true
+  },
+  {
+    "name": "cloudsql_csv_lab.orders.0000000100000.csv",
+    "table": "orders",
+    "rows": 1090,
+    "size_bytes": 78780,
+    "header_valid": true
+  }
+]

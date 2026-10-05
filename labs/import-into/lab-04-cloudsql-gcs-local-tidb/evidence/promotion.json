@@ -1,0 +1,28 @@
+{
+  "verified_at": "2026-10-05T20:27:46.438203+00:00",
+  "lab_id": "lab-04",
+  "path": "labs/import-into/lab-04-cloudsql-gcs-local-tidb",
+  "metadata_status": "released",
+  "promotion_scope": "Local filesystem promotion only; no commit, push or external publication",
+  "checks": {
+    "markdownlint_exit": 0,
+    "bash_blocks_syntax_checked": 17,
+    "documented_cd_executed": true,
+    "local_links_and_index_links_valid": true,
+    "inline_and_final_reference_urls_equal": true,
+    "external_reference_count": 10,
+    "all_payload_files_not_ignored_by_git": true,
+    "private_identifier_and_secret_scan_passed": true,
+    "all_prior_sql_and_evidence_bytes_preserved": true,
+    "unrelated_untracked_file_count_unchanged": 23,
+    "git_head_unchanged": true
+  },
+  "document_sha256": "ad1919f6f0bdc8eeda0617e13354da2dcebcbe0a7ee938cecf2af00c32aed186",
+  "runtime_evidence": "Previously verified Cloud SQL -> GCS -> IMPORT INTO clean replays and 39000-row comparisons retained; no new runtime test during path/metadata promotion",
+  "limits": [
+    "Playground-only target",
+    "Static synthetic source",
+    "No customer application acceptance",
+    "No performance certification"
+  ]
+}

@@ -1,0 +1,4 @@
+table	job_id	status	imported_rows	csv_files	sql_warnings
+customers	1	finished	3000	3	0
+orders	2	finished	12000	11	0
+order_items	3	finished	24000	24	0

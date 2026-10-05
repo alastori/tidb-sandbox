@@ -1,0 +1,27 @@
+table_name	row_count	active_customers
+customers	3000	1500
+table_name	row_count	total_amount	null_notes	empty_notes	paid_orders
+orders	12000	3389909.06	2000	2000	3000
+table_name	row_count	total_quantity	total_amount
+order_items	24000	72000	3389909.06
+check_name	must_be_zero
+orphan_orders	0
+check_name	must_be_zero
+orphan_items	0
+check_name	must_be_zero
+order_total_mismatches	0
+check_name	must_be_zero
+line_count_mismatches	0
+region	status	order_count	total_quantity	total_amount
+APAC	cancelled	1000	6000	282665.05
+APAC	new	1000	6000	282332.52
+APAC	paid	1000	6000	282171.04
+APAC	shipped	1000	6000	282035.86
+EMEA	cancelled	1000	6000	283974.87
+EMEA	new	1000	6000	283514.23
+EMEA	paid	1000	6000	283532.10
+EMEA	shipped	1000	6000	283402.05
+LATAM	cancelled	1000	6000	281494.10
+LATAM	new	1000	6000	281211.48
+LATAM	paid	1000	6000	281622.46
+LATAM	shipped	1000	6000	281953.30

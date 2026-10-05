@@ -1,0 +1,19 @@
+{
+  "verified_at": "2026-10-05T20:19:09.732290+00:00",
+  "authorization": "User authorized deletion of no-longer-needed lab cloud resources",
+  "synthetic_cloudsql_instance": "Deleted; DELETE operation DONE with no error; exact describe returned 404",
+  "private_lab_bucket": "Deleted with its objects; exact describe returned 404",
+  "cloudsql_retained_backups": 0,
+  "archived_objects": 161,
+  "archived_bytes": 13042734,
+  "all_archived_objects_match_remote_sizes_and_md5": true,
+  "schema_fixture_and_validation_evidence_preserved": true,
+  "unrelated_cloudsql_instance": "Before/after metadata unchanged",
+  "soft_delete_limit": "Exact bucket soft deletion verified through the documented Cloud Storage API after the CLI listing failed; retained data can incur storage charges until hard deletion.",
+  "promotion": "Not performed; lab remains draft",
+  "gcs_soft_deleted_bucket": {
+    "soft_delete_time": "2026-10-05T20:15:02.700Z",
+    "hard_delete_time": "2026-10-12T20:16:02.303Z",
+    "retention_seconds": 604800
+  }
+}

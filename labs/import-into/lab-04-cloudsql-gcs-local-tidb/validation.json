@@ -1,0 +1,209 @@
+{
+  "scope": "Actual Cloud SQL MySQL 8.4.11 -> private GCS -> TiUP playground TiDB v8.5.7; synthetic data only",
+  "source_version": "8.4.11-google",
+  "source_tier": "db-f1-micro",
+  "source_region": "us-central1",
+  "proxy_version": "2.26.0",
+  "dumpling_version": "v8.5.6",
+  "playground_version": "v1.16.5",
+  "tidb_version": "v8.5.7",
+  "consistency": "flush",
+  "exporter_grants": [
+    "SELECT, SHOW VIEW ON cloudsql_csv_lab.*",
+    "RELOAD, REPLICATION CLIENT ON *.*"
+  ],
+  "row_splitting": {
+    "rows": 1000,
+    "threads": 4,
+    "filesize": "64MiB",
+    "baseline_rows_0_files": {
+      "customers": 1,
+      "order_items": 1,
+      "orders": 1
+    },
+    "rows_1000_files": {
+      "customers": 3,
+      "order_items": 24,
+      "orders": 11
+    },
+    "all_headers_valid": true,
+    "all_file_row_totals_match": true,
+    "largest_file_bytes": 88719,
+    "not_mysql_partitioned_tables": true,
+    "file_count_not_exact_rows_divided_by_chunk_size": true
+  },
+  "jobs": [
+    {
+      "table": "customers",
+      "job_id": 1,
+      "status": "finished",
+      "imported_rows": 3000,
+      "csv_files": 3,
+      "sql_warnings": 0
+    },
+    {
+      "table": "orders",
+      "job_id": 2,
+      "status": "finished",
+      "imported_rows": 12000,
+      "csv_files": 11,
+      "sql_warnings": 0
+    },
+    {
+      "table": "order_items",
+      "job_id": 3,
+      "status": "finished",
+      "imported_rows": 24000,
+      "csv_files": 24,
+      "sql_warnings": 0
+    }
+  ],
+  "total_rows": 39000,
+  "verification": {
+    "full_row_outputs_equal": true,
+    "source_unchanged_during_export": true,
+    "aggregates_and_joins_equal": true,
+    "orphan_orders": 0,
+    "orphan_items": 0,
+    "order_total_mismatches": 0,
+    "line_count_mismatches": 0,
+    "admin_check_table": "passed",
+    "nonempty_target_rejected": true,
+    "source_rows_sha256": "1db55a0ae93db81ddbf11945ec3b859acad3bd795b739d324630e392ea338ad8",
+    "target_rows_sha256": "1db55a0ae93db81ddbf11945ec3b859acad3bd795b739d324630e392ea338ad8"
+  },
+  "limits": [
+    "No concurrent source-write consistency test",
+    "Existing remote TiUP cluster not tested",
+    "No customer data or application acceptance",
+    "No import-speed benchmark"
+  ],
+  "document_replay": {
+    "exit_code": 0,
+    "fresh_playground": true,
+    "fresh_working_directory": true,
+    "fresh_gcs_prefix": true,
+    "fresh_schema_and_csv_exports": true,
+    "source_fixture": "Previously seeded deterministic Cloud SQL data, unchanged",
+    "adaptations": [
+      "Filled project/instance/bucket/user placeholders",
+      "Used protected MySQL option file instead of interactive password prompts",
+      "Reused existing verified ADC login",
+      "Playground launched in a separate terminal as documented"
+    ],
+    "jobs": [
+      {
+        "table": "customers",
+        "job_id": 1,
+        "status": "finished",
+        "imported_rows": 3000
+      },
+      {
+        "table": "orders",
+        "job_id": 2,
+        "status": "finished",
+        "imported_rows": 12000
+      },
+      {
+        "table": "order_items",
+        "job_id": 3,
+        "status": "finished",
+        "imported_rows": 24000
+      }
+    ],
+    "csv_files_per_table": {
+      "customers": 3,
+      "orders": 11,
+      "order_items": 24
+    },
+    "full_row_outputs_equal": true,
+    "aggregate_and_join_outputs_equal": true,
+    "admin_check_table": "passed"
+  },
+  "post_review_document_replay": {
+    "exit_code": 0,
+    "fresh_playground": true,
+    "fresh_working_directory": true,
+    "fresh_gcs_prefix": true,
+    "fresh_schema_and_csv_exports": true,
+    "source_fixture": "Previously seeded deterministic Cloud SQL data, unchanged",
+    "adaptations": [
+      "Filled project/instance/bucket/user placeholders",
+      "Used protected MySQL option file instead of interactive password prompts",
+      "Reused existing verified ADC login",
+      "Playground launched in a separate terminal as documented"
+    ],
+    "jobs": [
+      {
+        "table": "customers",
+        "job_id": 1,
+        "status": "finished",
+        "imported_rows": 3000
+      },
+      {
+        "table": "orders",
+        "job_id": 2,
+        "status": "finished",
+        "imported_rows": 12000
+      },
+      {
+        "table": "order_items",
+        "job_id": 3,
+        "status": "finished",
+        "imported_rows": 24000
+      }
+    ],
+    "csv_files_per_table": {
+      "customers": 3,
+      "orders": 11,
+      "order_items": 24
+    },
+    "full_row_outputs_equal": true,
+    "aggregate_and_join_outputs_equal": true,
+    "admin_check_table": "passed",
+    "phase": "After independent review fixes",
+    "verification_sql_sha256": "9a2e93b0554debb0ee26808552e1e3522ae6f32acd06410037e86ebc2fbd00b5",
+    "all_five_relationship_cases_pass_on_cloudsql_and_tidb": true,
+    "source_unchanged_after_replay": true
+  },
+  "independent_review": {
+    "findings_verified_and_fixed": 5,
+    "remaining_review_blockers": [],
+    "receipt": "evidence/review.json",
+    "scope": "Read-only agent review, not independent human runtime reproduction"
+  },
+  "cloud_resource_cleanup": {
+    "receipt": "evidence/cleanup.json",
+    "cloudsql_deleted": true,
+    "active_bucket_deleted": true,
+    "data_and_configuration_archived_locally": true,
+    "no_retained_cloudsql_backups": true,
+    "soft_deleted_gcs_retention": {
+      "api_readback_verified": true,
+      "hard_delete_time": "2026-10-12T20:16:02.303Z",
+      "possible_temporary_storage_charges": true
+    }
+  },
+  "local_promotion": {
+    "lab_id": "lab-04",
+    "status": "released",
+    "receipt": "evidence/promotion.json"
+  },
+  "fresh_source_publication_replay": {
+    "receipt": "evidence/publication-replay.json",
+    "new_cloudsql_source": true,
+    "source_fixture_created_from_scratch": true,
+    "fixture_statistics_refreshed": true,
+    "all_eight_steps_and_referenced_appendices_exercised": true,
+    "interactive_google_signin_retested": false,
+    "protected_mysql_option_files_used": true,
+    "custom_target_temp_dir_used_and_verified": true,
+    "jobs_finished": 3,
+    "total_rows": 39000,
+    "full_rows_equal": true,
+    "new_cloud_resources_active_deleted": true,
+    "gcs_soft_deleted_record_retained_until": "2026-10-12T23:27:53.437Z",
+    "final_reader_review": "Passed; all five findings resolved and cited claims verified by parent",
+    "remaining_reader_order_blockers": []
+  }
+}

@@ -1,0 +1,7 @@
+draft-*/
+.env
+*.log
+results/
+export/
+metadata/
+schema/
