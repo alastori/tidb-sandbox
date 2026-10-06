@@ -8,9 +8,9 @@ products: [dumpling, import-into, tidb, mysql]
 
 **Goal:** Export selected MySQL tables from Cloud SQL to Google Cloud Storage (GCS) with Dumpling, then load them into local TiDB with `IMPORT INTO`.
 
-The sample has customers, orders, and line items. It tests multiple CSV files per table, secondary indexes, Unicode, decimals, microsecond timestamps, NULL, empty text, quotes, backslashes, and newlines. This is a functional test, not an import-speed benchmark.
+This lab demonstrates the procedure with a small synthetic dataset in Cloud SQL MySQL. Dumpling and the TiDB target run on the same desktop computer. TiUP playground provides the local TiDB test cluster.
 
-These commands use a small synthetic dataset. Dumpling and the local TiUP playground run on the same computer. For multi-GB or TB data, read [Appendix E](#appendix-e---larger-datasets). For production sources, read [Appendix G](#appendix-g---consistent-export-and-production-sources) before you start. For later DM replication, read [Appendix H](#appendix-h---preserve-the-export-for-later-dm) before export. VM exports, read replicas, remote TiDB targets, and DM were not tested.
+For multi-GB or TB datasets from a live Cloud SQL MySQL source, read [Appendix E](#appendix-e---larger-datasets) for export settings and target sizing. Before exporting production data, read [Appendix G](#appendix-g---consistent-export-and-production-sources) for consistent exports and ways to reduce production impact. If you plan to add incremental replication with TiDB Data Migration (DM), read [Appendix H](#appendix-h---preserve-the-export-for-later-dm) before export.
 
 ## Prerequisites
 
@@ -365,7 +365,7 @@ For this small sample, expect one CSV per table. A larger table can still produc
 - Target: TiDB `v8.5.7`, TiUP playground `v1.16.5`, one TiDB/PD/TiKV, no TiFlash.
 - Client host: macOS `26.6.2`, arm64; MySQL client `9.7.1`; Google Cloud SDK `587.0.0`.
 
-The Cloud SQL → GCS → playground path passed with synthetic data. See [validation.json](validation.json). Remote TiUP clusters, concurrent source writes, and application compatibility are outside the tested scope.
+The Cloud SQL → GCS → playground path passed with synthetic data. See [validation.json](validation.json). VM exports, read replicas, remote TiUP clusters, concurrent source writes, DM, and application compatibility are outside the tested scope.
 
 The fresh-source replay used a separate TiUP home and a configured `temp-dir` on an external volume. Existing Google credentials and protected MySQL option files replaced interactive sign-in and password entry. See the [replay checks](evidence/publication-replay.json).
 
