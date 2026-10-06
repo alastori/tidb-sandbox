@@ -10,7 +10,7 @@ products: [dumpling, import-into, tidb, mysql]
 
 The sample has customers, orders, and line items. It tests multiple CSV files per table, secondary indexes, Unicode, decimals, microsecond timestamps, NULL, empty text, quotes, backslashes, and newlines. This is a functional test, not an import-speed benchmark.
 
-These commands use a small synthetic dataset. Dumpling and the local TiUP playground run on the same computer. For multi-GB or TB data, read [Appendix E](#appendix-e---larger-datasets) before you start. The VM export and remote TiDB cases were not tested.
+These commands use a small synthetic dataset. Dumpling and the local TiUP playground run on the same computer. For multi-GB or TB data, read [Appendix E](#appendix-e---larger-datasets). For production sources, read [Appendix G](#appendix-g---consistent-export-and-production-sources) before you start. For later DM replication, read [Appendix H](#appendix-h---preserve-the-export-for-later-dm) before export. VM exports, read replicas, remote TiDB targets, and DM were not tested.
 
 ## Prerequisites
 
@@ -108,7 +108,9 @@ SOURCE_MYSQL=(mysql --protocol=TCP --host "$SOURCE_HOST" \
 
 For the synthetic test, first create the data using [Appendix A](#appendix-a---synthetic-data). For existing data, replace `SOURCE_DB` and `TABLES` in the Step 1 block before it builds `TABLE_LIST`.
 
-Keep source writes and DDL paused from these checks until the [Step 5](#step-5---export-multiple-csv-files-to-gcs) CSV export is complete. If you run [Appendix C](#appendix-c---compare-export-without-row-splitting), include that export in the same paused-write period. This keeps source counts comparable and prevents schema changes during export.
+Keep source writes and DDL paused from these checks until the [Step 5](#step-5---export-multiple-csv-files-to-gcs) CSV export is complete. This keeps the counts, schema, and exported rows comparable.
+
+[Appendix C](#appendix-c---compare-export-without-row-splitting) is an optional test. It exports the same tables without row-range splitting. Compare its file count with Step 5. If you use it, run it before Step 5 while the source is still unchanged. Omit this extra export for large datasets.
 
 ```bash
 COUNT_SQL=""
@@ -119,13 +121,13 @@ done
   > "$WORK_DIR/results/source-count.tsv"
 ```
 
-The sample contains 3,000 customers, 12,000 orders, and 24,000 line items.
+The synthetic data in [Appendix A](#appendix-a---synthetic-data) has 39,000 rows across three tables: 3,000 customer rows, 12,000 order rows, and 24,000 line-item rows. The [tested split export](evidence/csv-manifest.json) contains about 0.002 GiB (2.07 MiB) of uncompressed CSV data, including headers. This is the CSV size, not the database storage size.
 
 ## Step 4 - Export and Prepare the Schema
 
 Export only the selected tables using [Dumpling's table list](https://docs.pingcap.com/tidb/v8.5/dumpling-overview/).
 
-> **Warning:** `--consistency flush` uses `FLUSH TABLES WITH READ LOCK`. It briefly blocks writes across the source instance, not just the selected tables. Use an agreed test window. If privileges are rejected, stop; do not switch to `none` on a changing source. See [Dumpling consistency options](https://docs.pingcap.com/tidb/v8.5/dumpling-overview/#adjust-dumplings-data-consistency-options).
+> **Warning:** `--consistency flush` uses `FLUSH TABLES WITH READ LOCK`. It can block writes across the source instance, not only the selected tables. Agree on an export window. If privileges are rejected, stop. Do not use `none` on a changing source. For consistent exports and read replicas, see [Appendix G](#appendix-g---consistent-export-and-production-sources).
 
 The prompt hides typing, but Dumpling receives the password in process arguments. Run on a trusted host. Do not enable shell tracing (`set -x`) or share process listings while exporting.
 
@@ -152,7 +154,7 @@ TARGET_SCHEMA_SQL="$WORK_DIR/target-schema.sql"
 
 Review `TARGET_SCHEMA_SQL` for [MySQL compatibility](https://docs.pingcap.com/tidb/v8.5/mysql-compatibility/). It creates the same database name on TiDB. If using another target name, update the database-create statement and `TARGET_DB`. Resolve unsupported objects and foreign-key dependencies before applying the DDL. The sample uses logical relationships without foreign-key constraints.
 
-For the optional sample baseline comparison, run [Appendix C](#appendix-c---compare-export-without-row-splitting) now, before Step 5 clears the password. Then return to Step 5. For large exports, omit this comparison unless you need it. It exports the selected data a second time.
+If you chose the optional file-count test in [Step 3](#step-3---prepare-data-and-capture-source-counts), run [Appendix C](#appendix-c---compare-export-without-row-splitting) now. Keep the source unchanged. Then return to Step 5, which clears the password.
 
 ## Step 5 - Export Multiple CSV Files to GCS
 
@@ -175,7 +177,7 @@ for table in "${TABLES[@]}"; do
 done
 ```
 
-Confirm more than one CSV file exists for each sample table. Schema files and `metadata` are not data files; Step 7 excludes them with a table-specific pattern. Keeping `metadata` alone does not establish a usable incremental-replication setup.
+Confirm more than one CSV file exists for each sample table. Schema files and `metadata` are not data files. Step 7 excludes them with a table-specific pattern. For later DM replication, save this export's `metadata` as described in [Appendix H](#appendix-h---preserve-the-export-for-later-dm).
 
 [Dumpling in-table concurrency](https://docs.pingcap.com/tidb/v8.5/dumpling-overview/#improve-export-efficiency-through-concurrency) uses primary-key ranges on MySQL. The sample has integer primary keys. `--rows 1000` enables chunked export, `--threads 4` runs export workers, and `--filesize 64MiB` separately limits file size. Do not expect exactly 1,000 rows per file. This is file splitting, not MySQL `PARTITION BY`.
 
@@ -378,7 +380,7 @@ Use the [Dumpling options](https://docs.pingcap.com/tidb/v8.5/dumpling-overview/
 - Stop increasing workers if export speed does not improve or application response time increases. Reduce workers if the source is overloaded.
 - Adjust row chunk size and file size separately. Larger row chunks reduce the number of export tasks. More workers increase the source load.
 
-The sample uses `--rows 1000` to make file splitting visible. Do not use it as a recommended setting for large exports. A VM does not remove the source-lock or paused-write requirements in Steps 3 and 4.
+The sample uses `--rows 1000` to make file splitting visible. Do not use it as a recommended setting for large exports. A VM does not remove source locking or make the separate checks in Step 3 consistent with a changing source. See [Appendix G](#appendix-g---consistent-export-and-production-sources).
 
 This appendix gives planning guidance. It is not a tested VM procedure. The main commands assume one computer. If you separate the export and target hosts, configure paths, credentials, and shell variables on each host.
 
@@ -425,6 +427,70 @@ For 1 TiB, local Dumpling has an estimated transfer cost of $317.44. VM Dumpling
 
 The 24-hour duration is an assumption, not a measured export time. The figures exclude discounts, free allowances, VM disks, NAT/IP charges, GCS storage and operations, and source/target compute. Extra exports, retries, and full-row checks can add transfer charges. Check the linked prices before estimating your run.
 
+## Appendix G - Consistent Export and Production Sources
+
+This appendix gives planning guidance. Read-replica exports and concurrent writes were not tested.
+
+### Consistent MySQL Export
+
+For InnoDB tables, the [Dumpling `flush` mode](https://docs.pingcap.com/tidb/v8.5/dumpling-overview/#adjust-dumplings-data-consistency-options) starts export transactions under a global read lock. It releases the lock after all export connections start their transactions. The CSV export then reads a consistent view of the data. Lock waits can delay startup. Do not assume a fixed lock duration.
+
+Do not use `--consistency snapshot` or `--snapshot` for Cloud SQL MySQL. These options select a historical snapshot on a TiDB source.
+
+Keep DDL paused during export. Check that all selected tables use InnoDB before planning an export with concurrent writes. Do not extend this snapshot behavior to non-transactional tables.
+
+The main steps keep writes paused for a separate reason. The counts in Step 3, schema in Step 4, and sample value checks in Appendix A run outside the CSV export transactions. On a changing source, these checks can read different data. A read-only replica can also change as it applies replication. For an online migration, use checks aligned with the export snapshot or verify after DM catches up at an agreed write pause.
+
+### Production Source
+
+Prefer a dedicated [Cloud SQL read replica](https://cloud.google.com/sql/docs/mysql/replication) for production exports. This moves export scans and locks away from the primary. Set `INSTANCE` in [Step 1](#step-1---set-connection-details) to the authorized export replica. Use the replica for source checks, schema export, and CSV export. Do not run sample setup on a read replica.
+
+Check replica CPU, storage I/O, and [replication lag](https://cloud.google.com/sql/docs/mysql/replication/replication-lag) before and during export. An export can delay replication and affect applications that read from the replica. Reduce export workers if the replica is overloaded.
+
+Check the [Cloud SQL replica requirements](https://cloud.google.com/sql/docs/mysql/replication/create-replica) before creating a replica. Enabling binary logging on the primary can require a restart. Google also documents that connector enforcement prevents read-replica creation. The tested instance used connector enforcement. Do not change production security settings to follow this lab.
+
+## Appendix H - Preserve the Export for Later DM
+
+For later TiDB Data Migration (DM), check the retention and source requirements below before export. After [Step 5](#step-5---export-multiple-csv-files-to-gcs), save the export information. This appendix does not start or validate DM.
+
+Copy the metadata from the same GCS prefix as the CSV files that Step 7 imports:
+
+```bash
+DM_NOTES_DIR="$WORK_DIR/results/dm"
+mkdir -p "$DM_NOTES_DIR"
+gcloud storage cp "${GCS_URI}/metadata" \
+  "$DM_NOTES_DIR/dumpling-metadata.txt" --project "$GCP_PROJECT"
+{
+  printf 'export_run_id: %s\n' "$RUN_ID"
+  printf 'export_instance: %s\n' "$INSTANCE"
+  printf 'csv_uri: %s\n' "$GCS_URI"
+  printf 'source_database: %s\n' "$SOURCE_DB"
+  printf 'target_database: %s\n' "$TARGET_DB"
+  printf 'selected_table: %s\n' "${TABLES[@]}"
+} > "$DM_NOTES_DIR/export-scope.txt"
+```
+
+Keep these files with the reviewed `target-schema.sql`, export log, and import results. Record the export server's UUID and the planned DM source. Keep this information private. Do not add passwords.
+
+### Later DM Configuration
+
+Complete and verify every table import before DM writes to the target. Use the same selected tables. Add table routes if the target database name differs.
+
+Use the [DM source configuration](https://docs.pingcap.com/tidb/v8.5/dm-source-configuration-file/) and [task configuration](https://docs.pingcap.com/tidb/v8.5/task-configuration-file-full/) to map the saved export information:
+
+| DM setting | Value or check |
+| --- | --- |
+| `task-mode` | Use `incremental`. The full load is already complete. |
+| `mysql-instances[].meta.binlog-name` and `binlog-pos` | Use the export's file and position only when DM reads the same binlog stream. |
+| Source `enable-gtid` and task `meta.binlog-gtid` | For GTID mode, use the export's GTID set after you verify that it matches the planned DM source. |
+| Existing task checkpoint | A checkpoint overrides task `meta`. Do not reuse an old task checkpoint for this export. |
+
+Use Step 5's metadata. Do not use the schema-only export, Appendix C export, or a status query run after export as the start point.
+
+A replica's local binlog file and position are not the primary's file and position. If Dumpling reads a replica and DM reads the primary, verify the snapshot's executed GTID set against the primary before configuring DM. If that mapping is not verified, stop.
+
+Before export, arrange binlog retention for the full export, import, verification, and DM startup period. Check the planned DM source's binlog settings, replication-user privileges, and network access. Confirm that the required logs are still available before DM starts. Validate DM compatibility with the exact Cloud SQL MySQL version in a separate test.
+
 ## Troubleshooting
 
 | Error | Check |
@@ -460,3 +526,8 @@ The 24-hour duration is an assumption, not a measured export time. The figures e
 - [MySQL 8.4 - WITH and Recursive Common Table Expressions](https://dev.mysql.com/doc/refman/8.4/en/with.html)
 - [MySQL 8.4 - UPDATE Statement](https://dev.mysql.com/doc/refman/8.4/en/update.html)
 - [MySQL 8.4 - ANALYZE TABLE Statement](https://dev.mysql.com/doc/refman/8.4/en/analyze-table.html)
+- [Google Cloud - About Replication in Cloud SQL](https://cloud.google.com/sql/docs/mysql/replication)
+- [Google Cloud - Create Read Replicas](https://cloud.google.com/sql/docs/mysql/replication/create-replica)
+- [Google Cloud - Replication Lag](https://cloud.google.com/sql/docs/mysql/replication/replication-lag)
+- [TiDB Data Migration - Source Configuration File](https://docs.pingcap.com/tidb/v8.5/dm-source-configuration-file/)
+- [TiDB Data Migration - Task Configuration File](https://docs.pingcap.com/tidb/v8.5/task-configuration-file-full/)
