@@ -10,6 +10,8 @@ products: [dumpling, import-into, tidb, mysql]
 
 The sample has customers, orders, and line items. It tests multiple CSV files per table, secondary indexes, Unicode, decimals, microsecond timestamps, NULL, empty text, quotes, backslashes, and newlines. This is a functional test, not an import-speed benchmark.
 
+These commands use a small synthetic dataset. Dumpling and the local TiUP playground run on the same computer. For multi-GB or TB data, read [Appendix E](#appendix-e---larger-datasets) before you start. The VM export and remote TiDB cases were not tested.
+
 ## Prerequisites
 
 | What you need | Use in this lab | Required checks |
@@ -106,7 +108,7 @@ SOURCE_MYSQL=(mysql --protocol=TCP --host "$SOURCE_HOST" \
 
 For the synthetic test, first create the data using [Appendix A](#appendix-a---synthetic-data). For existing data, replace `SOURCE_DB` and `TABLES` in the Step 1 block before it builds `TABLE_LIST`.
 
-Keep source writes and DDL paused from these checks through the end of both exports. This keeps source counts comparable and prevents schema changes between exports.
+Keep source writes and DDL paused from these checks until the [Step 5](#step-5---export-multiple-csv-files-to-gcs) CSV export is complete. If you run [Appendix C](#appendix-c---compare-export-without-row-splitting), include that export in the same paused-write period. This keeps source counts comparable and prevents schema changes during export.
 
 ```bash
 COUNT_SQL=""
@@ -150,7 +152,7 @@ TARGET_SCHEMA_SQL="$WORK_DIR/target-schema.sql"
 
 Review `TARGET_SCHEMA_SQL` for [MySQL compatibility](https://docs.pingcap.com/tidb/v8.5/mysql-compatibility/). It creates the same database name on TiDB. If using another target name, update the database-create statement and `TARGET_DB`. Resolve unsupported objects and foreign-key dependencies before applying the DDL. The sample uses logical relationships without foreign-key constraints.
 
-For the baseline comparison, run [Appendix C](#appendix-c---compare-export-without-row-splitting) now, before Step 5 clears the password. Then return to Step 5.
+For the optional sample baseline comparison, run [Appendix C](#appendix-c---compare-export-without-row-splitting) now, before Step 5 clears the password. Then return to Step 5. For large exports, omit this comparison unless you need it. It exports the selected data a second time.
 
 ## Step 5 - Export Multiple CSV Files to GCS
 
@@ -177,9 +179,11 @@ Confirm more than one CSV file exists for each sample table. Schema files and `m
 
 [Dumpling in-table concurrency](https://docs.pingcap.com/tidb/v8.5/dumpling-overview/#improve-export-efficiency-through-concurrency) uses primary-key ranges on MySQL. The sample has integer primary keys. `--rows 1000` enables chunked export, `--threads 4` runs export workers, and `--filesize 64MiB` separately limits file size. Do not expect exactly 1,000 rows per file. This is file splitting, not MySQL `PARTITION BY`.
 
-For larger data, choose chunk size and concurrency for the source's resources. The small value here makes splitting observable, not fast.
+These settings are for the small sample. For large exports and target sizing, see [Appendix E](#appendix-e---larger-datasets). For export costs with TiDB kept local, see [Appendix F](#appendix-f---export-cost-with-a-local-tidb-target).
 
 ## Step 6 - Start TiDB and Create the Target Tables
+
+Use playground only for this small functional test. For large imports, see [Appendix E](#appendix-e---larger-datasets).
 
 In another terminal, start a local playground. If the default sorting directory has too little space, configure [temp-dir](https://docs.pingcap.com/tidb/v8.5/tidb-configuration-file/#temp-dir-new-in-v630) in a TiDB configuration file. Add `--db.config /path/to/tidb.toml` to the command below:
 
@@ -363,6 +367,64 @@ The Cloud SQL → GCS → playground path passed with synthetic data. See [valid
 
 The fresh-source replay used a separate TiUP home and a configured `temp-dir` on an external volume. Existing Google credentials and protected MySQL option files replaced interactive sign-in and password entry. See the [replay checks](evidence/publication-replay.json).
 
+## Appendix E - Larger Datasets
+
+For large exports, use a suitably sized [Compute Engine VM](https://cloud.google.com/sql/docs/mysql/connect-compute-engine) in the Cloud SQL region. Use private IP if the VM can reach the source VPC. Write directly to GCS. Keep the bucket in the same region where practical. This avoids sending the export through your workstation. It does not remove source CPU or storage limits.
+
+Use the [Dumpling options](https://docs.pingcap.com/tidb/v8.5/dumpling-overview/) to adjust the export. Set `EXPORT_ROWS` in [Step 1](#step-1---set-connection-details). Change `--filesize` and `--threads` in the [Step 5](#step-5---export-multiple-csv-files-to-gcs) export command:
+
+- For an initial trial, set `EXPORT_ROWS="200000"` and change `--filesize` to `256MiB`. These values are starting points, not tested performance settings.
+- Start with four export workers or fewer. Increase `--threads` gradually. Check source CPU, storage I/O, connection usage, and application response time.
+- Stop increasing workers if export speed does not improve or application response time increases. Reduce workers if the source is overloaded.
+- Adjust row chunk size and file size separately. Larger row chunks reduce the number of export tasks. More workers increase the source load.
+
+The sample uses `--rows 1000` to make file splitting visible. Do not use it as a recommended setting for large exports. A VM does not remove the source-lock or paused-write requirements in Steps 3 and 4.
+
+This appendix gives planning guidance. It is not a tested VM procedure. The main commands assume one computer. If you separate the export and target hosts, configure paths, credentials, and shell variables on each host.
+
+For a local TiDB target, transfer these files to the computer used for the target SQL commands:
+
+- `$WORK_DIR/target-schema.sql` from [Step 4](#step-4---export-and-prepare-the-schema).
+- `$WORK_DIR/results/source-count.tsv` from [Step 3](#step-3---prepare-data-and-capture-source-counts). [Step 8](#step-8---verify-the-imported-data) uses this file for the count comparison.
+- If you use [Appendix A](#appendix-a---synthetic-data), also transfer `source-summary.tsv` and `source-values.tsv` from `$WORK_DIR/results`.
+
+Configure GCS access on the local TiDB server as explained in [Step 7](#step-7---import-csv-with-import-into). A credential file on the export VM is not available to local TiDB.
+
+### TiDB Target
+
+Use playground for this small functional test. It is a [quick-start environment](https://docs.pingcap.com/tidb/v8.5/quick-start-with-tidb/), not a production target or a large-import performance reference. For large imports, use a separately deployed and sized TiDB cluster. Place it near GCS where practical.
+
+Plan TiDB sorting space and TiKV storage separately. The 90 GiB minimum in [Step 6](#step-6---start-tidb-and-create-the-target-tables) applies to the TiDB server's `temp-dir`. TiDB uses this directory for import sorting. It is separate from the export work directory created in [Step 1](#step-1---set-connection-details). For larger imports, size this space for the data volume. For local sorting, PingCAP [recommends temporary space at least equal to the imported data volume](https://docs.pingcap.com/tidb/v8.5/sql-statement-import-into/).
+
+Adjust import `THREAD` in [Step 7](#step-7---import-csv-with-import-into) separately from Dumpling `--threads` in [Step 5](#step-5---export-multiple-csv-files-to-gcs). Remote clusters and large-scale performance were not tested in this lab.
+
+## Appendix F - Export Cost with a Local TiDB Target
+
+This comparison changes only the Dumpling host. TiDB stays on the local computer. The same-region VM avoids the Cloud SQL internet data-transfer charge. GCS must still send the CSV files to local TiDB.
+
+The table uses USD list rates. Cloud SQL, the export VM, and the regional GCS bucket are in `us-central1`. The local computer is in North America or Europe.
+
+| Transfer | Dumpling on local computer | Dumpling on same-region VM |
+| --- | --- | --- |
+| Cloud SQL to Dumpling | [$0.19/GiB](https://cloud.google.com/sql/pricing) | Free |
+| Dumpling to GCS | Free inbound transfer | [Free same-region transfer](https://cloud.google.com/vpc/network-pricing) |
+| GCS to local TiDB | [$0.12/GiB](https://cloud.google.com/storage/pricing) | [$0.12/GiB](https://cloud.google.com/storage/pricing) |
+| Total data transfer | $0.31/GiB | $0.12/GiB, plus VM costs |
+
+Assume one export and one import. Assume the same number of bytes on the Cloud SQL and GCS download paths. Actual volumes can differ because of row encoding, CSV format, and compression.
+
+| Data transferred on each download path | Local Dumpling: transfer cost | VM Dumpling: transfer cost | Transfer saving |
+| --- | ---: | ---: | ---: |
+| 100 GiB | $31.00 | $12.00 | $19.00 |
+| 1 TiB | $317.44 | $122.88 | $194.56 |
+| 10 TiB | $3,174.40 | $1,228.80 | $1,945.60 |
+
+Transfer cost is about 61% lower before VM costs. For example, a `c4-standard-4` VM costs about [$0.20/hour](https://cloud.google.com/products/compute/pricing/general-purpose). At the listed rate of $0.19767/hour, 24 hours adds $4.74.
+
+For 1 TiB, local Dumpling has an estimated transfer cost of $317.44. VM Dumpling has an estimated cost of $127.62 for transfer and 24 hours of VM compute. This is about 60% less. Other charges listed below are excluded.
+
+The 24-hour duration is an assumption, not a measured export time. The figures exclude discounts, free allowances, VM disks, NAT/IP charges, GCS storage and operations, and source/target compute. Extra exports, retries, and full-row checks can add transfer charges. Check the linked prices before estimating your run.
+
 ## Troubleshooting
 
 | Error | Check |
@@ -378,6 +440,7 @@ The fresh-source replay used a separate TiUP home and a configured `temp-dir` on
 ## References
 
 - [TiDB - TiUP Overview](https://docs.pingcap.com/tidb/v8.5/tiup-overview/)
+- [TiDB - Quick Start with TiDB Self-Managed](https://docs.pingcap.com/tidb/v8.5/quick-start-with-tidb/)
 - [TiDB - Dumpling Overview](https://docs.pingcap.com/tidb/v8.5/dumpling-overview/)
 - [TiDB - URI Formats of External Storage Services](https://docs.pingcap.com/tidb/v8.5/external-storage-uri/)
 - [TiDB - MySQL Compatibility](https://docs.pingcap.com/tidb/v8.5/mysql-compatibility/)
@@ -389,6 +452,11 @@ The fresh-source replay used a separate TiUP home and a configured `temp-dir` on
 - [Google Cloud - Cloud Storage IAM Permissions](https://cloud.google.com/storage/docs/access-control/iam-permissions)
 - [Google Cloud - gcloud auth login](https://cloud.google.com/sdk/gcloud/reference/auth/login)
 - [Google Cloud - How Application Default Credentials Works](https://cloud.google.com/docs/authentication/application-default-credentials)
+- [Google Cloud - Connect from Compute Engine](https://cloud.google.com/sql/docs/mysql/connect-compute-engine)
+- [Google Cloud - Cloud SQL Pricing](https://cloud.google.com/sql/pricing)
+- [Google Cloud - Cloud Storage Pricing](https://cloud.google.com/storage/pricing)
+- [Google Cloud - Network Pricing](https://cloud.google.com/vpc/network-pricing)
+- [Google Cloud - General-purpose VM Pricing](https://cloud.google.com/products/compute/pricing/general-purpose)
 - [MySQL 8.4 - WITH and Recursive Common Table Expressions](https://dev.mysql.com/doc/refman/8.4/en/with.html)
 - [MySQL 8.4 - UPDATE Statement](https://dev.mysql.com/doc/refman/8.4/en/update.html)
 - [MySQL 8.4 - ANALYZE TABLE Statement](https://dev.mysql.com/doc/refman/8.4/en/analyze-table.html)
