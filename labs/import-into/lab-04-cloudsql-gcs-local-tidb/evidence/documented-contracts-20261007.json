@@ -1,0 +1,117 @@
+{
+  "date": "2026-10-07",
+  "status": "documentation_and_offline_revision_only",
+  "current_document_sha256": "94e95ea4704cd5b9c9c6a87579d7fdf1d05810b6a8c4cbb3c45c2d8a14d99f53",
+  "current_bash_blocks_sha256": "ae1c7a84504ee5e1ef297be034be77d12ecfed9a3581081076f5f277d8a6a647",
+  "reviewed_baseline_document_sha256": "6cc014185334a9055fa6d1da68f437df742ed0e8839e19fcb9a36287b05508ce",
+  "historical_cloud_receipt_sha256": "835af8442dba96220a8425885376427fa4329d49becd778bc104a3c0aa224d5e",
+  "historical_cloud_tested_document_sha256": "1c687117f622d3454dcac0d844641a59b80206dc74c40cfe89c08eaea3a7822c",
+  "historical_cloud_tested_bash_blocks_sha256": "340d943a0ea2528003b8c235b7ac62185351f05f486aa0d0ea6968882c96ad17",
+  "current_cloud_replay_performed": false,
+  "current_database_replay_performed": false,
+  "historical_routes": {
+    "A": "passed",
+    "B": "blocked",
+    "C": "blocked",
+    "D": "passed"
+  },
+  "changed_bash_fences": [
+    {
+      "ordinal": 51,
+      "before_sha256": "d4f48283ee548af826d0b6771b607146ea3aaf727360d76edbdeeeaf9eea50aa",
+      "after_sha256": "23c7eaea797c8bbfdd3bfe1b058fd3198cbec867bba2f9e7bbab7d9826029638"
+    },
+    {
+      "ordinal": 53,
+      "before_sha256": "096b9a4207d627a5e0d77a6411bdd48d7cade917624ecc602dff71c5681dda27",
+      "after_sha256": "e63a215bdf1620307b5e5fddb6cb3446407b739e97ce184460f06639c718ce09"
+    },
+    {
+      "ordinal": 59,
+      "before_sha256": "41fd4bab6d5bde62dd6d0bc1d3f132401ab61eccef26d09bbb2aeb50f4594087",
+      "after_sha256": "b1756c1e8ec84bf3e682a3a8d20b37b0434d16a6ec6dacaf48162cf26c0f74f3"
+    },
+    {
+      "ordinal": 64,
+      "before_sha256": "8049ec5d7ae4e21c7b82965452f54f8c256a19d325e5b575fbaa985878728960",
+      "after_sha256": "732a91d325dbe3c8797dd5d88d13c7da0565d0ac40db5c50163658c830b1d18d"
+    },
+    {
+      "ordinal": 65,
+      "before_sha256": "9b3cfbfe02b0670bbf318dda707b62bda148e2d65899a19e0dd8e7c0d7a3a8a5",
+      "after_sha256": "8e6deb158143a57f1f6bb7adbd899ad535f6c7e29899d6fbd3459edd66b9c04e"
+    },
+    {
+      "ordinal": 66,
+      "before_sha256": "23fa6438e2400d12fc33aed1b481c3d62cae3d50d763db3ac07b6e2a6f5602cf",
+      "after_sha256": "ca60c7ecba4c11498ae5bdcb77c38edecb6e99e4f6fa30ab50dbd7743681c46c"
+    },
+    {
+      "ordinal": 67,
+      "before_sha256": "729daebc787670189edb08568c2f1455014e1fdac03346d54fbec0b3a31454ab",
+      "after_sha256": "e0f9eaa7a43e8177c2691e53f0a78dba40e2a20f1ce1392e6ab059297b7ca21f"
+    }
+  ],
+  "checks_completed": [
+    "13 new documented-contract tests, including explicit guard failures and extracted bootstrap, printed persistent session and transfers with offline call-recording fixtures",
+    "SDK 587.0.0 source review: plain bypasses OS Login/key provisioning; identity flag supplied separately",
+    "Historical provider denial and runtime receipt preserved",
+    "68 Bash syntax checks",
+    "Markdown lint with failing invalid negative control",
+    "Exact inline/reference URL-set equality and resolving local links",
+    "Historical broad authoring/offline suite: 103 checks; adapted new SSH inputs in copied fixtures, historical source untouched",
+    "Security/privacy scans: no detected matches",
+    "Parent reproduced and repaired Bash 3.2 compound-condition errexit gap and SDK SSH flag whitespace splitting; negative cases stop before cloud commands"
+  ],
+  "scope_limits": [
+    "Offline call recording is not cloud execution",
+    "Revised reuse SSH/SCP not cloud-replayed",
+    "B/C private networking and IAP successful transport remain runtime-blocked",
+    "Generated/invisible-column default mapping remains schema-specific and unvalidated",
+    "No small-data capacity exception established",
+    "No usable later-DM handoff established"
+  ],
+  "official_sources": [
+    {
+      "url": "https://docs.cloud.google.com/sql/docs/mysql/sql-proxy",
+      "contract": "Proxy needs existing source connectivity, outbound TCP 443 and 3307"
+    },
+    {
+      "url": "https://docs.cloud.google.com/sql/docs/mysql/configure-private-services-access",
+      "contract": "Private services access prerequisites are administrator-owned"
+    },
+    {
+      "url": "https://docs.cloud.google.com/sql/docs/mysql/configure-private-ip",
+      "contract": "Desktop hybrid route requires source/service prefixes and return paths"
+    },
+    {
+      "url": "https://docs.cloud.google.com/sdk/gcloud/reference/compute/ssh",
+      "contract": "Default SSH may provision project metadata keys; plain route requires explicit identity"
+    },
+    {
+      "url": "https://docs.cloud.google.com/sdk/gcloud/reference/compute/scp",
+      "contract": "SCP flags are separate from SSH flags"
+    },
+    {
+      "url": "https://docs.cloud.google.com/iap/docs/using-tcp-forwarding",
+      "contract": "Tunnel authorization, SSH authentication, TCP22 ingress and automatic IAP behavior"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pingcap/tidb/v8.5.6/dumpling/export/dump.go",
+      "contract": "Explicit specified-table path precedes discovery view filter"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pingcap/tidb/v8.5.6/dumpling/export/sql.go",
+      "contract": "Generated column selection and flush lock implementation"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pingcap/tidb/v8.5.7/pkg/executor/importer/import.go",
+      "contract": "Default positional import mapping begins from visible target columns"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pingcap/docs/49ed15df968aedb44b0290df53e124ef740c6a67/sql-statements/sql-statement-import-into.md",
+      "contract": "Published temporary-space prerequisites remain distinct from small-data observed success",
+      "excerpt": "has at least 90 GiB of available space"
+    }
+  ]
+}

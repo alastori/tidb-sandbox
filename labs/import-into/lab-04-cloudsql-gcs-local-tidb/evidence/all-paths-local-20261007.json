@@ -1,0 +1,274 @@
+{
+  "campaign": "Reduced branch validation, partial execution",
+  "status": "cloud-blocked; local supplemental checks passed",
+  "starting_commit": "8a7663d89e937046c12140771fc989ca0017a594",
+  "candidate_document_sha256": "1c687117f622d3454dcac0d844641a59b80206dc74c40cfe89c08eaea3a7822c",
+  "date_utc": "2026-10-07",
+  "cloud_routes": [
+    {
+      "id": "A",
+      "status": "blocked",
+      "reason": "Both CLI and ADC require interactive reauthentication; no provider replay"
+    },
+    {
+      "id": "B",
+      "status": "blocked",
+      "reason": "Both CLI and ADC require interactive reauthentication; no provider replay"
+    },
+    {
+      "id": "C",
+      "status": "blocked",
+      "reason": "Both CLI and ADC require interactive reauthentication; no provider replay"
+    },
+    {
+      "id": "D",
+      "status": "blocked",
+      "reason": "Both CLI and ADC require interactive reauthentication; no provider replay"
+    }
+  ],
+  "new_cloud_resources_created": 0,
+  "cloud_cleanup_validated": false,
+  "local_cases": [
+    {
+      "id": "L-full",
+      "source": "Local MySQL 8.4.9 synthetic fixture",
+      "storage": "local files, not GCS",
+      "csv_file_counts": {
+        "customers": 1,
+        "orders": 1,
+        "order_items": 1
+      },
+      "tables": [
+        "customers",
+        "order_items",
+        "orders"
+      ],
+      "jobs": [
+        {
+          "id": 1,
+          "table": "`cloudsql_csv_lab`.`customers`",
+          "status": "finished",
+          "imported_rows": 3000,
+          "warnings": ""
+        },
+        {
+          "id": 2,
+          "table": "`cloudsql_csv_lab`.`order_items`",
+          "status": "finished",
+          "imported_rows": 24000,
+          "warnings": ""
+        },
+        {
+          "id": 3,
+          "table": "`cloudsql_csv_lab`.`orders`",
+          "status": "finished",
+          "imported_rows": 12000,
+          "warnings": ""
+        }
+      ],
+      "counts_match": true,
+      "ordered_values_match": true,
+      "indexes_passed": true,
+      "current_empty_count_import_guard_executed": false
+    },
+    {
+      "id": "L-split",
+      "source": "Local MySQL 8.4.9 synthetic fixture",
+      "storage": "local files, not GCS",
+      "csv_file_counts": {
+        "customers": 3,
+        "orders": 11,
+        "order_items": 23
+      },
+      "tables": [
+        "customers",
+        "order_items",
+        "orders"
+      ],
+      "jobs": [
+        {
+          "id": 4,
+          "table": "`cloudsql_csv_lab`.`customers`",
+          "status": "finished",
+          "imported_rows": 3000,
+          "warnings": ""
+        },
+        {
+          "id": 5,
+          "table": "`cloudsql_csv_lab`.`order_items`",
+          "status": "finished",
+          "imported_rows": 24000,
+          "warnings": ""
+        },
+        {
+          "id": 6,
+          "table": "`cloudsql_csv_lab`.`orders`",
+          "status": "finished",
+          "imported_rows": 12000,
+          "warnings": ""
+        }
+      ],
+      "counts_match": true,
+      "ordered_values_match": true,
+      "indexes_passed": true,
+      "current_empty_count_import_guard_executed": false
+    },
+    {
+      "id": "L-file-split",
+      "source": "Local MySQL 8.4.9 synthetic fixture",
+      "storage": "local files, not GCS",
+      "csv_file_counts": {
+        "customers": 5,
+        "orders": 13,
+        "order_items": 17
+      },
+      "tables": [
+        "customers",
+        "order_items",
+        "orders"
+      ],
+      "jobs": [
+        {
+          "id": 7,
+          "table": "`cloudsql_csv_lab`.`customers`",
+          "status": "finished",
+          "imported_rows": 3000,
+          "warnings": ""
+        },
+        {
+          "id": 8,
+          "table": "`cloudsql_csv_lab`.`order_items`",
+          "status": "finished",
+          "imported_rows": 24000,
+          "warnings": ""
+        },
+        {
+          "id": 9,
+          "table": "`cloudsql_csv_lab`.`orders`",
+          "status": "finished",
+          "imported_rows": 12000,
+          "warnings": ""
+        }
+      ],
+      "counts_match": true,
+      "ordered_values_match": true,
+      "indexes_passed": true,
+      "current_empty_count_import_guard_executed": false
+    },
+    {
+      "id": "L-subset",
+      "source": "Local MySQL 8.4.9 synthetic fixture",
+      "storage": "local files, not GCS",
+      "csv_file_counts": {
+        "customers": 1,
+        "orders": 1,
+        "order_items": 0
+      },
+      "tables": [
+        "customers",
+        "orders"
+      ],
+      "jobs": [
+        {
+          "id": 13,
+          "table": "`cloudsql_csv_lab`.`customers`",
+          "status": "finished",
+          "imported_rows": 3000,
+          "warnings": ""
+        },
+        {
+          "id": 14,
+          "table": "`cloudsql_csv_lab`.`orders`",
+          "status": "finished",
+          "imported_rows": 12000,
+          "warnings": ""
+        }
+      ],
+      "counts_match": true,
+      "ordered_values_match": true,
+      "indexes_passed": true,
+      "current_empty_count_import_guard_executed": true
+    },
+    {
+      "id": "L-empty-hyphen",
+      "source": "Local MySQL 8.4.9 synthetic fixture",
+      "storage": "local files, not GCS",
+      "empty_table_rows": 0,
+      "jobs": [
+        {
+          "id": 12,
+          "table": "`sales-lab`.`inventory-table`",
+          "status": "finished",
+          "imported_rows": 4,
+          "warnings": ""
+        }
+      ],
+      "counts_match": true,
+      "ordered_values_match": true,
+      "indexes_passed": true,
+      "current_empty_count_import_guard_executed": true,
+      "all_empty_loop_passed": true
+    }
+  ],
+  "verified_finished_local_jobs": 12,
+  "local_import_rows_including_repeated_fixture_runs": 132004,
+  "additional_checks": {
+    "full_rows_0_export": "Actual export on reconstructed source; one file per table, CSV bytes identical to already-imported default files; no separate import",
+    "restricted_accounts": "Actual local no-SELECT and no-RELOAD flush errors; no Google permission claim",
+    "nonempty_target": "Actual IMPORT INTO rejections on three whole-database variants",
+    "relationship_sensitivity": "Zero/one/two/excess-child and wrong-total fixture on both actual engines",
+    "post_export_mutation": "One-row live source HEX-value mismatch against previously imported target, then exact source restore. Comparison sensitivity only; not a full documented pre-import/captured-baseline mutation replay.",
+    "metadata": "Native metadata retained; no VM transfer or usable DM handoff claim"
+  },
+  "adaptations": [
+    "Local Docker MySQL instead of Cloud SQL; no Auth Proxy",
+    "Empty test passwords on isolated loopback source; no interactive password-flow claim",
+    "Local filesystem URI instead of GCS; credentials-file query removed",
+    "Task-local TiUP home and external-volume temp-dir; no native default-temp-dir import",
+    "Same owned playground with fresh empty synthetic schemas per case",
+    "Whole-database native engine tests preceded the empty-table patch; corrected loop then exercised on subset and edge fixtures"
+  ],
+  "procedure_fixes": [
+    "Refresh CLI and ADC tokens without printing them",
+    "Skip CSV listing/import only for captured zero counts; reject missing/invalid counts",
+    "Keep empty-table DDL/count/index checks; skip nonexistent job IDs",
+    "Use the same rule in optional unsplit listing"
+  ],
+  "cleanup": {
+    "owned_containers_and_anonymous_volumes_removed_verified": true,
+    "owned_playground_stopped_verified": true,
+    "task_ports_closed_verified": true,
+    "source_reconstruction_restored_and_verified": true,
+    "local_csv_sql_archives_retained": true,
+    "external_target_data_retained": true,
+    "normal_cli_adc_files_unchanged": true,
+    "source_stream_retained_for_DM": false
+  },
+  "limits": [
+    "Not an all-paths pass",
+    "No current Cloud SQL/GCS/VM/private-IP/IAP/replica/reuse/provider-cleanup evidence",
+    "No current native default temp-dir import",
+    "No DM startup, remote deployment, large-data benchmark, customer data, or application acceptance",
+    "No commit, push, publication, or sharing"
+  ],
+  "offline_verification": {
+    "unit_document_guard_tests": 107,
+    "bash_syntax_checks": 68,
+    "local_anchor_uses": 159,
+    "relative_links": 5,
+    "markdown_lint": "Passed explicit canonical/plan file checks with ignore disabled; stdin negative control failed as expected",
+    "regressions": "Token freshness and empty-table guards failed first on the old blocks, then passed; call-recording is not provider validation"
+  },
+  "independent_delta_review": {
+    "verdict": "No blocker found",
+    "candidate_sha256": "1c687117f622d3454dcac0d844641a59b80206dc74c40cfe89c08eaea3a7822c",
+    "scope": "Read-only token freshness, captured-count provenance, empty-table loops, job-ID exception and VM-handoff reader order",
+    "parent_verification": "Current Markdown matches reviewed bytes; cited count capture/lookup/handoff and archived guard/auth results checked against primary files",
+    "limits": [
+      "Not a cloud replay or independent runtime reproduction",
+      "Reviewer did not rerun fixture-writing tests",
+      "Offline guards test one table at a time; mixed-table native import evidence is separately scoped",
+      "Appendix H guard test executes extracted listing loop, not its complete password/export group"
+    ]
+  }
+}

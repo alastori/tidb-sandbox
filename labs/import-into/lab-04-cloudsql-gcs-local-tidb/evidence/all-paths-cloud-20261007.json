@@ -1,0 +1,240 @@
+{
+  "date": "2026-10-07",
+  "status": "partial_campaign_A_D_passed_B_C_IAP_blocked",
+  "routes": {
+    "A": "passed",
+    "B": "blocked",
+    "C": "blocked",
+    "D": "passed"
+  },
+  "blocked_reasons": {
+    "B": "Provider denied servicenetworking.services.addPeering on isolated task VPC",
+    "C": "Same private-services prerequisite; no desktop private reachability validated",
+    "IAP": "Actual same-caller tunnel rejected with 4033 not authorized"
+  },
+  "tested_document_sha256": "1c687117f622d3454dcac0d844641a59b80206dc74c40cfe89c08eaea3a7822c",
+  "tested_bash_blocks_sha256": "340d943a0ea2528003b8c235b7ac62185351f05f486aa0d0ea6968882c96ad17",
+  "versions": {
+    "Cloud_SQL_MySQL": "8.4.11-google",
+    "Dumpling": "v8.5.6",
+    "Cloud_SQL_Auth_Proxy": "2.26.0",
+    "TiDB": "v8.5.7",
+    "TiUP_Playground": "v1.16.5",
+    "desktop": "macOS 26.6.2 arm64",
+    "desktop_Google_SDK": "587.0.0",
+    "VM": "Ubuntu 24.04 x86_64",
+    "VM_Google_SDK": "585.0.0",
+    "VM_MySQL_client": "8.0.46"
+  },
+  "cloud_finished_jobs": 12,
+  "cloud_cases": [
+    {
+      "id": "A",
+      "scope": "Fresh desktop/created bucket/public writer, default export",
+      "jobs": [
+        {
+          "id": 1,
+          "table": "customers",
+          "status": "finished",
+          "rows": 3000
+        },
+        {
+          "id": 2,
+          "table": "order_items",
+          "status": "finished",
+          "rows": 24000
+        },
+        {
+          "id": 3,
+          "table": "orders",
+          "status": "finished",
+          "rows": 12000
+        }
+      ],
+      "rows": 39000,
+      "values_counts_relationships_indexes_match": true
+    },
+    {
+      "id": "D",
+      "scope": "Task-owned fixtures treated as existing VM/bucket, public writer, rows=1000",
+      "jobs": [
+        {
+          "table": "customers",
+          "id": 1,
+          "status": "finished",
+          "rows": 3000
+        },
+        {
+          "table": "order_items",
+          "id": 2,
+          "status": "finished",
+          "rows": 24000
+        },
+        {
+          "table": "orders",
+          "id": 3,
+          "status": "finished",
+          "rows": 12000
+        }
+      ],
+      "rows": 39000,
+      "settings_packages_tools_IAM_unchanged": true,
+      "values_counts_relationships_indexes_match": true
+    },
+    {
+      "id": "public_subset_filesize_mutation",
+      "scope": "Desktop public-IP supplemental; not private route C",
+      "jobs": [
+        {
+          "table": "customers",
+          "id": 1,
+          "rows": 3000,
+          "status": "finished"
+        },
+        {
+          "table": "orders",
+          "id": 2,
+          "rows": 12000,
+          "status": "finished"
+        }
+      ],
+      "files": [
+        {
+          "table": "customers",
+          "files": 5,
+          "rows": 3000,
+          "header": [
+            "id",
+            "name",
+            "email",
+            "region",
+            "active",
+            "joined_at"
+          ],
+          "max_csv_bytes": 65603
+        },
+        {
+          "table": "orders",
+          "files": 13,
+          "rows": 12000,
+          "header": [
+            "id",
+            "customer_id",
+            "status",
+            "total_amount",
+            "note",
+            "ordered_at"
+          ],
+          "max_csv_bytes": 65619
+        }
+      ],
+      "excluded_table": "order_items",
+      "complete_source_mutation_oracle": {
+        "source_preimport_counts_equal": true,
+        "mutation_after_recorded_checks_before_import": true,
+        "import_finished": true,
+        "postimport_live_value_oracle_rejected": true,
+        "diff_exit": 1,
+        "source_exactly_restored": true
+      },
+      "mutation_replay_uses_the_listed_subset_jobs": true
+    },
+    {
+      "id": "cloud_edge",
+      "scope": "Real Cloud SQL/GCS empty table and hyphenated identifiers",
+      "jobs": [
+        {
+          "table": "inventory-table",
+          "id": 3,
+          "rows": 3,
+          "status": "finished"
+        }
+      ],
+      "empty_table": {
+        "source_count": 0,
+        "native_schema_retained": true,
+        "CSV_absent": true,
+        "import_skipped": true,
+        "no_job_id": true,
+        "target_count_and_index_checks": true
+      },
+      "NULL_empty_text_values_match": true
+    },
+    {
+      "id": "replica",
+      "scope": "Quiet primary/caught-up managed read replica/VM public route",
+      "jobs": [
+        {
+          "table": "customers",
+          "id": 1,
+          "rows": 3000,
+          "status": "finished"
+        },
+        {
+          "table": "order_items",
+          "id": 2,
+          "rows": 24000,
+          "status": "finished"
+        },
+        {
+          "table": "orders",
+          "id": 3,
+          "rows": 12000,
+          "status": "finished"
+        }
+      ],
+      "replication_threads_running": true,
+      "replication_lag_seconds": 0,
+      "counts_ordered_values_relationships_indexes_match": true,
+      "no_load_metrics_or_primary_coordinate_alignment_claim": true
+    }
+  ],
+  "real_failure_tests": [
+    "Scoped Cloud SQL exporter missing SELECT rejected native flush export",
+    "Scoped Cloud SQL exporter missing RELOAD rejected native flush export",
+    "Populated-target repeat IMPORT INTO rejected by TiDB precheck (Error 8173).",
+    "Post-check source mutation preserved counts; import completed but live ordered-value oracle rejected; exact source restoration verified"
+  ],
+  "cleanup": {
+    "all_owned_active_resources_absent": true,
+    "CloudSQL_primary_replica_and_VM_boot_disk_deleted": true,
+    "task_VPC_subnet_range_firewall_deleted": true,
+    "retained_owned_CloudSQL_backups": 0,
+    "all_79_remaining_bucket_object_generations_archived_and_provider_MD5_sizes_match": true,
+    "existing_source_VM_VPC_project_IAM_unchanged": true,
+    "normal_CLI_ADC_cache_hashes_unchanged": true,
+    "source_passwords_and_ephemeral_SSH_key_removed": true,
+    "GCS_soft_deleted_generations_verified": true,
+    "hard_delete_times": [
+      "2026-10-14T06:23:05.714Z",
+      "2026-10-14T07:25:53.201Z"
+    ],
+    "possible_GCS_soft_delete_storage_charges": true
+  },
+  "adaptations": [
+    "Fixture created and provisioned before reuse case",
+    "Existing sandbox Compute service account attached; no new project IAM permissions",
+    "Ephemeral per-instance SSH key; --plain with explicit SSH/SCP key flags avoids shared/project key writes",
+    "Noninteractive bounded SSH calls instead of human second-terminal paste",
+    "Generated source password used via private option file/noninteractive native argument; literal secret prompt is not validated",
+    "Fixture-owner cleanup occurs only after reuse-preservation receipt; it is not reused-VM cleanup",
+    "Protected synthetic passwords instead of literal interactive MySQL prompts",
+    "Separate fresh targets; existing export replay only for deliberate mutation fault injection",
+    "Bounded file-size tuning uses 64KiB/rows=0; byte limit can include whole-row/header overshoot",
+    "Source/replica controlled fixture setup is separate from lab-under-test; explicit enterprise edition for cheap read replica",
+    "Metadata retained as artifacts only; source/binlog stream cleaned up"
+  ],
+  "not_validated": [
+    "Private-IP end-to-end routes B/C",
+    "Successful IAP transport",
+    "Human literal two-terminal copy/paste and MySQL password prompts",
+    "Usable future DM source/binlog handoff and DM startup",
+    "Replica-to-primary coordinates/GTID migration alignment",
+    "Concurrent production writers, customer/application compatibility",
+    "Remote/distributed TiDB targets or large-data performance",
+    "Native desktop platforms other than macOS arm64"
+  ],
+  "publication": "Local uncommitted evidence only; no commit/push/customer sharing",
+  "job_count_scope": "12 listed finished jobs across five test cases, not an exhaustive count of every attempted import; mutation replay uses the subset case jobs.",
+  "reviewed_document_sha256": "6cc014185334a9055fa6d1da68f437df742ed0e8839e19fcb9a36287b05508ce"
+}

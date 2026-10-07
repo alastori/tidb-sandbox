@@ -30,9 +30,9 @@ products: [dumpling, import-into, tidb, mysql]
 | **Export source and window — read replica or writer** | Complete tables from one database, approved for export. For a source used by applications, prefer a dedicated [Cloud SQL read replica](https://cloud.google.com/sql/docs/mysql/replication). This moves export scans and locks away from the writer. An export can still increase [replication lag](https://cloud.google.com/sql/docs/mysql/replication/replication-lag).<br><br>Optionally, use the writer instance in [Step 2](#step-2---prepare-and-check-google-cloud-access) if no replica is available and the database owner approves the export window and load. Export scans add CPU and storage I/O load and can slow applications.<br><br>For either route, an agreed window in which selected-table writes and DDL can remain paused from before export through the source checks in [Step 6](#step-6---export-to-gcs-and-capture-source-checks). |
 | **GCS staging bucket — new or reused** | A private, single-region GCS bucket in the source region, approved for the selected data. For a new bucket, permission to create it, manage its IAM, and delete it and its objects. Optionally, reuse an existing bucket through [Step 3](#step-3---create-the-export-bucket) if its owner approves the lab and provides the required access. Reuse does not require bucket-creation or IAM-update permission. |
 | **Desktop computer** | Git, Bash, `curl`, [TiUP](https://docs.pingcap.com/tidb/v8.5/tiup-overview/), and a TiDB-compatible `mysql` client, already installed. Workspace: [Step 1](#step-1---prepare-the-desktop-workspace). Dumpling: [Step 4](#step-4---prepare-desktop-export-tools). Free disk space for TiDB data, indexes, and temporary sorting files. Target setup and storage guidance: [Step 7](#step-7---start-and-check-local-tidb). |
-| **Export host and network — desktop or VM** | For small datasets, export from your desktop through the Cloud SQL Auth Proxy over public IP. This is the default smoke-test path.<br><br>Optionally, export from a Compute Engine VM through [Step 4](#step-4---prepare-desktop-export-tools) if you have a larger export, your desktop cannot reach the source, or you need same-region export. The VM needs an approved source route and an approved exporter service account with Cloud SQL Client access. You also need approval and permission to create or reuse the VM and connect by SSH.<br><br>For either host, a private-IP source needs an approved network route. Do not change production network settings for this lab. |
+| **Export host and network — desktop or VM** | For small datasets, export from your desktop through the Cloud SQL Auth Proxy over public IP. This is the default smoke-test path.<br><br>Optionally, export from a Compute Engine VM through [Step 4](#step-4---prepare-desktop-export-tools) if you have a larger export, your desktop cannot reach the source, or you need same-region export. The VM needs an approved source route and an approved exporter service account with Cloud SQL Client access. You also need approval and permission to create or reuse the VM and connect by SSH.<br><br>For either host, a private-IP source needs an approved network route. Have the administrator prepare and verify it before the lab. Confirm the source VPC and host route in [Step 5b](#5b-set-the-source-connection). Do not change production network settings for this lab. |
 
-**Validation limits:** Bucket provisioning and the VM export path are untested. See [Appendix I](#appendix-i---tested-environment) for the tested environment and validation limits.
+**Validation limits:** Private-IP and IAP routes are not validated. See [Appendix I](#appendix-i---tested-environment) for the tested environment and validation limits.
 
 ## Step 1 - Prepare the Desktop Workspace
 
@@ -115,9 +115,11 @@ Run this block without changes to sign in to Google Cloud from the desktop:
 gcloud auth login --update-adc
 DESKTOP_GCS_CREDENTIALS="${CLOUDSDK_CONFIG:-$HOME/.config/gcloud}/application_default_credentials.json"
 test -r "$DESKTOP_GCS_CREDENTIALS"
+gcloud auth print-access-token >/dev/null
+gcloud auth application-default print-access-token >/dev/null
 ```
 
-**Check:** Sign-in completes and the ADC file is readable. This does not prove GCS object access. If either check fails, stop and follow [Troubleshooting](#troubleshooting). Local TiDB uses this file to read GCS. Do not copy it to the VM.
+**Check:** Sign-in completes, the ADC file is readable, and both token-refresh checks finish without an error. Tokens are not printed. This does not prove GCS object access. If a check fails, stop and follow [Troubleshooting](#troubleshooting). Local TiDB uses this file to read GCS. Do not copy it to the VM.
 
 ### 2c. Check Cloud SQL Instance Access
 
@@ -297,7 +299,13 @@ chmod 700 "$WORK_DIR/cloud-sql-proxy"
 
 **Existing/customer source:** set `SOURCE_USER` to an existing export user approved by the database owner. Obtain its password before continuing. **Customer environment:** edit `SOURCE_USER` before pasting.
 
-Keep `USE_PRIVATE_IP="false"` for the public-IP route. If the export host has an approved route to the source VPC, set `USE_PRIVATE_IP="true"`. If the desktop has no approved route, use the [VM export alternative](#appendix-f---export-from-a-compute-engine-vm). See [connecting from Compute Engine](https://cloud.google.com/sql/docs/mysql/connect-compute-engine).
+Keep `USE_PRIVATE_IP="false"` for the public-IP route. If the export host has an approved route to the source VPC, set `USE_PRIVATE_IP="true"`. For this optional route, the administrator must first confirm all of the following:
+
+- The source has a private IP, an approved VPC and allocated service range, and an established [private services access](https://docs.cloud.google.com/sql/docs/mysql/configure-private-services-access) connection. [Appendix D1 — Create a Test Cloud SQL Instance](#d1-create-a-test-cloud-sql-instance) creates a public-IP source. It does not prepare this route.
+- For [VM export connectivity](https://cloud.google.com/sql/docs/mysql/connect-compute-engine), the selected VPC/subnet has a working route to that source. Same project or region alone is insufficient. Ordinary [VPC peering is not transitive](https://docs.cloud.google.com/sql/docs/mysql/private-ip).
+- For desktop export, a separate [desktop route and return route](https://docs.cloud.google.com/sql/docs/mysql/configure-private-ip) reach the source private IP. For VPN/Interconnect, confirm the source prefix, custom-route exchange, and service-range advertisement. A connected VPN or successful VM SSH session is not enough.
+
+The [Auth Proxy](https://cloud.google.com/sql/docs/mysql/sql-proxy) does not create a network path. If the desktop route is unavailable, use the [VM export alternative](#appendix-f---export-from-a-compute-engine-vm) only after its route is confirmed. Do not configure networking in this lab.
 
 For the synthetic source and default public-IP route, copy/paste this block without changes:
 
@@ -324,7 +332,7 @@ SOURCE_PORT="13317"
 
 ### 5c. Start and Check the Cloud SQL Auth Proxy
 
-**Export terminal — desktop or VM.** Keep the same Bash session. The Google identity used by the proxy needs [Cloud SQL Client access](https://cloud.google.com/sql/docs/mysql/connect-auth-proxy#before_you_begin). Google Cloud access does not grant MySQL database access.
+**Export terminal — desktop or VM.** Keep the same Bash session. The Google identity used by the proxy needs [Cloud SQL Client access](https://cloud.google.com/sql/docs/mysql/connect-auth-proxy#before_you_begin). Google Cloud access does not grant MySQL database access. The host needs outbound TCP 443 for API access and TCP 3307 to the Cloud SQL address, as described in the [proxy network requirements](https://cloud.google.com/sql/docs/mysql/sql-proxy). Port 13317 is the local listener, not the remote destination port.
 
 Run this block without changes to start the [Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/mysql/sql-proxy) and wait up to 60 seconds for readiness:
 
@@ -369,7 +377,7 @@ Expected final line:
 Proxy ready on 127.0.0.1:13317
 ```
 
-**Check:** The proxy is running and ready. This does not prove MySQL authentication. If startup fails, stop and follow [Troubleshooting](#troubleshooting).
+**Check:** The proxy is running and ready. This does not prove MySQL authentication or remote SQL connectivity. [Step 5d](#5d-check-mysql-access-and-export-grants) checks both. If startup fails, stop and follow [Troubleshooting](#troubleshooting).
 
 **New synthetic source only:** run [Appendix D2 — Create the Synthetic Data](#d2-create-the-synthetic-data) now. Do not restart the proxy. For an existing sample or customer source, skip setup. Continue with [Step 5d](#5d-check-mysql-access-and-export-grants).
 
@@ -409,6 +417,8 @@ Compare the [MySQL export account](https://cloud.google.com/sql/docs/mysql/users
 - `SHOW GRANTS` covers the intended export scope from [Step 6a](#6a-set-the-export-options) and the privileges in the table.
 - If the account or grants are wrong or unclear, stop and ask the database owner. Do not change permissions to pass this check.
 
+Keep RELOAD for this pinned flush export. The [Dumpling v8.5.6 implementation](https://raw.githubusercontent.com/pingcap/tidb/v8.5.6/dumpling/export/sql.go) issues `FLUSH TABLES WITH READ LOCK`, despite the guide's managed-service privilege note. Stop on a lock denial. Do not bypass it.
+
 A successful connection does not prove table access or permission to acquire the export lock. For connection errors, follow [Troubleshooting](#troubleshooting). The command includes [public-key retrieval](https://cloud.google.com/sql/docs/mysql/connect-auth-proxy) for MySQL 8.4 through the proxy.
 
 ## Step 6 - Export to GCS and Capture Source Checks
@@ -432,7 +442,7 @@ EXPORT_THREADS="4"
 EXPORT_FILESIZE="64MiB"
 ```
 
-Dumpling also supports `--filter` patterns. This runbook uses an explicit database or table list so the export scope is clear. Do not combine `--filter` with `--tables-list`.
+Dumpling also supports `--filter` patterns. This runbook uses an explicit database or table list so the export scope is clear. Do not combine `--filter` with `--tables-list`. Use only approved base tables in `--tables-list`: [explicit table lists can include views](https://raw.githubusercontent.com/pingcap/tidb/v8.5.6/dumpling/export/dump.go), unlike normal database discovery. Confirm object types with the database owner before export.
 
 ### 6b. Export Schema and CSV to GCS
 
@@ -457,7 +467,7 @@ Run this block without changes to export to the [GCS storage URI](https://docs.p
 }
 ```
 
-**Check:** Dumpling finishes without an error. Schema SQL and metadata are included by default with the CSV export. Views are skipped by default. If export fails, stop and follow [Troubleshooting](#troubleshooting). Do not import partial output.
+**Check:** Dumpling finishes without an error. Schema SQL and metadata are included by default with the CSV export. Normal database discovery skips views. Explicit lists must contain only the approved base tables from [Step 6a](#6a-set-the-export-options). If export fails, stop and follow [Troubleshooting](#troubleshooting). Do not import partial output.
 
 ### 6c. Download and Review the Schema
 
@@ -520,6 +530,10 @@ Tables exported:
 
 Review the SQL files under `$WORK_DIR/schema` for [MySQL compatibility](https://docs.pingcap.com/tidb/v8.5/mysql-compatibility/). Resolve unsupported objects and foreign-key dependencies before applying the DDL. This lab keeps source and target database names the same and applies only database and table DDL. Review any other schema files separately. They are not applied by this procedure.
 
+Compare CSV field order with target column order. `SKIP_ROWS=1` skips the header. It does not map fields by column name.
+
+If a table has generated or invisible columns, stop before import. Obtain a separately reviewed and tested column mapping, or exclude the table with the owner's approval and restart export. [Dumpling column selection](https://raw.githubusercontent.com/pingcap/tidb/v8.5.6/dumpling/export/sql.go) and [TiDB import mapping](https://raw.githubusercontent.com/pingcap/tidb/v8.5.7/pkg/executor/importer/import.go) have different paths. This is an unresolved compatibility gate, not a reproduced failure.
+
 ### 6d. Capture and Check Source Results
 
 Run this block without changes to check table read access and capture exact counts. A failed query stops the procedure:
@@ -539,16 +553,34 @@ Also capture source values and relationship summaries with your source-specific 
 
 ### 6e. Check CSV Files
 
-Run this block without changes to list CSV files for each table:
+Run this block without changes to list CSV files for each non-empty table. It uses the counts captured in [Step 6d](#6d-capture-and-check-source-results):
 
 ```bash
 for table in "${TABLES[@]}"; do
+  SOURCE_ROW_COUNT=""
+  while IFS=$'\t' read -r count_table count_value; do
+    if [ "$count_table" = "$table" ]; then
+      SOURCE_ROW_COUNT="$count_value"
+      break
+    fi
+  done < "$WORK_DIR/results/source-count.tsv"
+  if ! [[ "$SOURCE_ROW_COUNT" =~ ^[0-9]+$ ]]; then
+    printf 'Missing or invalid source count for %s; stop\n' "$table"; exit 1
+  fi
+  if [ "$SOURCE_ROW_COUNT" = "0" ]; then
+    printf 'Empty table: %s; no CSV import needed\n' "$table"
+    continue
+  fi
   gcloud storage ls "${GCS_URI}/${SOURCE_DB}.${table}.*.csv" \
     --project "$GCP_PROJECT" | tee "$WORK_DIR/results/${table}-files.txt"
 done
 ```
 
-**Check:** Each selected table has CSV files. Exact file counts depend on data, primary-key ranges, and file size. Schema SQL and `metadata` are not data files. For later DM, preserve this export's metadata with [Appendix C](#appendix-c---preserve-the-export-for-later-dm) now.
+**Check:** Each non-empty table has CSV files. An empty table prints `Empty table: <name>; no CSV import needed`. Dumpling writes its schema but no CSV data. Empty tables still need target DDL, count comparison, and index checks. Missing or invalid source counts stop the procedure. Missing CSV for a non-empty table is an error.
+
+Exact file counts depend on data, primary-key ranges, and file size. Schema SQL and `metadata` are not data files.
+
+For later DM, preserve this export's metadata with [Appendix C](#appendix-c---preserve-the-export-for-later-dm) now.
 
 ## Step 7 - Start and Check Local TiDB
 
@@ -586,6 +618,8 @@ TARGET_MYSQL=(mysql --protocol=TCP --host "$TIDB_HOST" \
 
 **Check:** The SQL client connects and shows the requested TiDB version and effective `temp-dir`. Confirm that its filesystem has space for temporary sorting files and that TiKV storage has space for target data and indexes. Size both for the selected dataset. See [Appendix B](#appendix-b---larger-datasets) and the [import storage requirements](https://docs.pingcap.com/tidb/v8.5/sql-statement-import-into/#prerequisites-for-import). `TMPDIR` does not change TiDB's `temp-dir`.
 
+Small synthetic-data success does not establish an exception to the official capacity prerequisites. For a general deployment, satisfy the full published temporary-space prerequisite in the linked guide. See [Appendix B2 — TiDB Target](#b2-tidb-target).
+
 ## Step 8 - Create Target Tables and Import
 
 Create matching empty tables and import the GCS CSV files with `IMPORT INTO`. When this step is complete, the selected data is loaded into local TiDB and the import results are saved.
@@ -616,12 +650,26 @@ done
 
 > **Warning:** `IMPORT INTO` requires empty tables and does not support rollback. Do not use a target with application traffic.
 
-Run this block without changes to import from GCS with the desktop ADC file. The credential path is read by the TiDB server, not the SQL client. A credential file on the VM is not available to local TiDB:
+Run this block without changes to import non-empty tables from GCS with the desktop ADC file. It skips CSV import only when the captured source count is zero. The target table remains empty. The credential path is read by the TiDB server, not the SQL client. A credential file on the VM is not available to local TiDB:
 
 ```bash
 TIDB_GCS_CREDENTIALS="$DESKTOP_GCS_CREDENTIALS"
 test -r "$TIDB_GCS_CREDENTIALS"
 for table in "${TABLES[@]}"; do
+  SOURCE_ROW_COUNT=""
+  while IFS=$'\t' read -r count_table count_value; do
+    if [ "$count_table" = "$table" ]; then
+      SOURCE_ROW_COUNT="$count_value"
+      break
+    fi
+  done < "$WORK_DIR/results/source-count.tsv"
+  if ! [[ "$SOURCE_ROW_COUNT" =~ ^[0-9]+$ ]]; then
+    printf 'Missing or invalid source count for %s; stop\n' "$table"; exit 1
+  fi
+  if [ "$SOURCE_ROW_COUNT" = "0" ]; then
+    printf 'Empty table: %s; no CSV import needed\n' "$table"
+    continue
+  fi
   "${TARGET_MYSQL[@]}" --batch --raw --execute "
 IMPORT INTO \`${TARGET_DB}\`.\`${table}\`
 FROM '${GCS_URI}/${SOURCE_DB}.${table}.*.csv?credentials-file=${TIDB_GCS_CREDENTIALS}'
@@ -632,7 +680,7 @@ SHOW WARNINGS;
 done
 ```
 
-**Check:** Each import returns a result and saves it in `$WORK_DIR/results/${table}-import.tsv`. Keep the returned job IDs for [Step 9](#step-9---verify-the-imported-data). If an import fails, stop and follow [Troubleshooting](#troubleshooting).
+**Check:** Each non-empty table import returns a result and saves it in `$WORK_DIR/results/${table}-import.tsv`. Empty tables print the skip message and have no import job. Keep the returned job IDs for [Step 9](#step-9---verify-the-imported-data). If an import fails, stop and follow [Troubleshooting](#troubleshooting).
 
 [SKIP_ROWS=1](https://docs.pingcap.com/tidb/v8.5/sql-statement-import-into/#withoptions) skips the header in every matched file. Target columns must match CSV column order. The command keeps checksum checks enabled and uses local sorting. Do not enable `SPLIT_FILE` for CSV data with embedded newlines.
 
@@ -640,7 +688,7 @@ done
 
 Check import job status, compare source and target results, and check target indexes. When this step is complete, every import job is finished, counts and source-specific values match, and index checks pass.
 
-**Desktop.** For each table, put the job ID returned by its import between the quotes:
+**Desktop.** For each imported non-empty table, put the job ID returned by its import between the quotes. Empty tables have no job ID. If all selected tables are empty, skip the job-ID blocks and continue with count and index checks:
 
 ```bash
 IMPORT_JOB_ID=""
@@ -745,6 +793,7 @@ Keep passwords and credential files out of logs and shared artifacts. Preserve s
 | Bucket creation or read-back fails | Inspect the printed bucket name before retrying. The bucket may exist even if a later check failed. Do not overwrite an existing `bucket.env`. |
 | Source count or value query fails | Check the selected tables, MySQL read grants, and query error with the source owner. Keep selected-table writes and DDL paused until all source checks finish. Do not import without source comparison results. |
 | TiDB startup or connection check fails | Inspect the playground output, selected ports, and client compatibility. Keep the playground terminal open. Check the effective sorting directory and free space before import. |
+| Google sign-in or token refresh fails | A readable ADC file can still have expired credentials. Reauthenticate the CLI and ADC using [Step 2b](#2b-sign-in-and-configure-adc). If Google requires a verification code or device approval, complete it yourself. Do not switch identities or bypass authentication. |
 | Cloud SQL instance-description check fails | Check `GCP_PROJECT`, `INSTANCE`, and the active account shown by `gcloud auth list`. For a permission error or disabled API, ask an administrator to resolve the reported error. |
 | VM creation or read-back fails | Inspect the exact printed VM name in `VM_PROJECT` and `ZONE` before retrying. Check creation/attachment/network permissions, approved network/subnet, quota, and API errors with your administrator. The VM may exist after a later check failed. Do not rerun settings or overwrite `vm.env`. |
 | Existing VM state, region, or attached-account check fails | Check `VM`, `VM_PROJECT`, `ZONE`, and `EXPORT_SERVICE_ACCOUNT` with the owner. Do not change its service account, access scopes, or firewall rules to pass the check. |
@@ -769,7 +818,7 @@ Keep passwords and credential files out of logs and shared artifacts. Preserve s
 
 ## Appendix A - Consistent Export and Production Sources
 
-This appendix gives planning guidance. Read-replica exports and concurrent writes were not tested.
+This appendix gives planning guidance. A quiet-primary, caught-up-replica export passed with synthetic data. Concurrent production writes remain untested. See [Appendix I](#appendix-i---tested-environment).
 
 ### A1. Consistent MySQL Export
 
@@ -822,7 +871,7 @@ Use [playground](https://docs.pingcap.com/tidb/v8.5/quick-start-with-tidb/) only
 
 For a multi-machine proof of concept, consider a separate TiDB deployment near your application or [TiDB Cloud](https://docs.pingcap.com/tidbcloud/). For self-managed deployment, use the [TiUP deployment guide](https://docs.pingcap.com/tidb/stable/production-deployment-using-tiup/) or [TiDB Operator deployment guide](https://docs.pingcap.com/tidb-in-kubernetes/stable/deploy-on-general-kubernetes/).
 
-Plan TiKV space for data and indexes, plus [TiDB temporary sorting space at least equal to the imported data volume](https://docs.pingcap.com/tidb/v8.5/sql-statement-import-into/), with room for logs and growth. Check the effective `temp-dir` and relevant filesystems in [Step 7](#step-7---start-and-check-local-tidb). The export host’s `$WORK_DIR` is not TiDB’s sorting directory. Tune import `THREAD` separately from `EXPORT_THREADS`.
+Plan TiKV space for data and indexes, plus [TiDB temporary sorting space](https://docs.pingcap.com/tidb/v8.5/sql-statement-import-into/), with room for logs and growth. For a general deployment, satisfy both the guide's minimum temporary free-space prerequisite and its dataset-based sizing requirement. The small playground replay does not validate reduced capacity requirements. Check the effective `temp-dir` and relevant filesystems in [Step 7](#step-7---start-and-check-local-tidb). The export host’s `$WORK_DIR` is not TiDB’s sorting directory. Tune import `THREAD` separately from `EXPORT_THREADS`.
 
 Review the [import requirements](https://docs.pingcap.com/tidb/v8.5/sql-statement-import-into/#prerequisites-for-import). Use matching empty tables without application traffic. Schema setup needs CREATE. Import needs SELECT, UPDATE, INSERT, DELETE, and ALTER. Configure credentials and network access on the TiDB servers. Exporter credentials do not automatically apply there.
 
@@ -865,6 +914,8 @@ gcloud storage cp "${GCS_URI}/metadata" \
   printf 'selected_table: %s\n' "${TABLES[@]}"
 } > "$DM_NOTES_DIR/export-scope.txt"
 ```
+
+Metadata preservation is not a DM-readiness check. A successful export or copied file can still have missing or empty coordinates: [the pinned metadata path can warn and continue](https://raw.githubusercontent.com/pingcap/tidb/v8.5.6/dumpling/export/metadata.go). Before any later DM setup, separately verify nonempty coordinates, their source stream, retention, and checkpoint alignment.
 
 Keep these files with the reviewed SQL files under `$WORK_DIR/schema`, export log, and import results. Record the export server's UUID and the planned DM source. Keep this information private. Do not add passwords.
 
@@ -1119,7 +1170,7 @@ Do not change IAM, public access prevention, uniform access, retention, or lifec
 
 Use this alternative when a regional VM is preferred for export or your desktop cannot reach the source. Dumpling runs on the VM and writes CSV files directly to a private GCS bucket in the source region. This keeps the export inside Google Cloud and avoids [Cloud SQL internet data-transfer charges](https://cloud.google.com/sql/pricing) during export. TiDB still runs on your desktop, so GCS outbound transfer charges remain. See [Appendix B3 — Cost Comparison with TiDB Kept Local](#b3-cost-comparison-with-tidb-kept-local).
 
-The size guidance is not a tested limit, and the sorting-space checks in [Step 7](#step-7---start-and-check-local-tidb) still apply. The VM path is untested.
+The size guidance is not a tested limit, and the sorting-space checks in [Step 7](#step-7---start-and-check-local-tidb) still apply. A synthetic public-IP VM export passed. Private-IP and IAP coverage remain unvalidated. See [Appendix I](#appendix-i---tested-environment).
 
 **VM prerequisites:** approval and permission to create/delete the VM, attach an approved exporter service account (`iam.serviceAccounts.actAs`), use the approved network/subnet, and connect by SSH/SCP with `sudo` on the new VM. Compute Engine and Cloud SQL Admin APIs must be enabled where required. The exporter account needs Cloud SQL Client access to the source. For reuse, follow [Appendix G](#appendix-g---reuse-an-existing-export-vm). Do not change its packages, credentials, or settings.
 
@@ -1142,11 +1193,13 @@ Use [Appendix G](#appendix-g---reuse-an-existing-export-vm) instead of [Appendix
 
 **First desktop terminal.** Continue in the original Bash session. Confirm the VM prerequisites above and approval for VM, disk, and external-IP charges. This step does not create a service account or change project IAM or firewall rules.
 
-**Defaults:** source project, an existing approved `default` network, its subnet named after `REGION`, an available zone in that region, and direct SSH.
+**Defaults:** source project, an existing approved `default` network, its subnet named after `REGION`, an available zone in that region, and an external IP for direct SSH by default. For a private-IP source, the administrator must approve a network/subnet with the prepared route from [Step 5b](#5b-set-the-source-connection). Do not assume `default` reaches it.
 
 **Customer environment:** edit `VM_PROJECT`, `ZONE`, `VM_NETWORK`, or `VM_SUBNET` only if the approved settings differ. If the network or subnet is absent, ask your administrator for approved settings. Do not create or change network resources to follow this lab.
 
-**SSH route:** for configured [IAP](https://cloud.google.com/iap/docs/using-tcp-forwarding), set `USE_IAP="true"`. An external IP does not grant SSH access. IAP must already be configured. The new VM still has an external IP. If external IPs are not approved, use [Appendix G](#appendix-g---reuse-an-existing-export-vm). This lab does not configure NAT.
+**SSH route:** for configured [IAP](https://cloud.google.com/iap/docs/using-tcp-forwarding), set `USE_IAP="true"`. An external IP does not grant SSH access. IAP must already be configured with tunnel authorization (such as `roles/iap.tunnelResourceAccessor`), applicable IAM conditions, VM-discovery permission, SSH authentication, and approved TCP 22 ingress from `35.235.240.0/20`. IAP transport does not provide a desktop-to-Cloud-SQL route. `USE_IAP=false` only omits the explicit tunnel flag. [gcloud can automatically use IAP](https://cloud.google.com/iap/docs/using-tcp-forwarding) when a VM has no external IP.
+
+The new VM still has an external IP. If external IPs are not approved, use [Appendix G](#appendix-g---reuse-an-existing-export-vm). This lab does not configure NAT.
 
 Edit the service-account email. Change the other settings only if the approved values differ:
 
@@ -1186,6 +1239,8 @@ case "$USE_IAP" in
   false) ;;
   *) printf '%s\n' 'USE_IAP must be true or false'; exit 1 ;;
 esac
+VM_SCP_ARGS=("${VM_SSH_ARGS[@]}")
+VM_LOGIN="$VM"
 printf 'Creating disposable VM: %s, project: %s, zone: %s\n' "$VM" "$VM_PROJECT" "$ZONE"
 gcloud compute instances create "$VM" --project "$VM_PROJECT" --zone "$ZONE" \
   --machine-type e2-small --image-family ubuntu-2404-lts-amd64 \
@@ -1202,6 +1257,8 @@ test "$VM_STATUS" = "RUNNING"
 VM_SERVICE_ACCOUNT="$(gcloud compute instances describe "$VM" \
   --project "$VM_PROJECT" --zone "$ZONE" --format='value(serviceAccounts[0].email)')"
 test "$VM_SERVICE_ACCOUNT" = "$EXPORT_SERVICE_ACCOUNT"
+gcloud compute instances describe "$VM" --project "$VM_PROJECT" --zone "$ZONE" \
+  --format='yaml(networkInterfaces.network,networkInterfaces.subnetwork)'
 {
   for name in VM_MODE VM VM_PROJECT ZONE EXPORT_SERVICE_ACCOUNT VM_ID USE_IAP; do
     printf '%s=%q\n' "$name" "${!name}"
@@ -1220,7 +1277,7 @@ Zone: us-central1-a
 Service account: exporter@example-project.iam.gserviceaccount.com
 ```
 
-**Check:** The VM is running in `REGION` with the approved account. Keep `vm.env` for [Appendix F10 — Delete Only the Created VM](#f10-delete-only-the-created-vm). The [attached service account](https://cloud.google.com/compute/docs/access/service-accounts#scopes_best_practices) supplies ADC. `cloud-platform` is an access scope, not an IAM grant.
+**Check:** The VM is running in `REGION` with the approved account. The network/subnet read-back must match the administrator-approved source route from [Step 5b](#5b-set-the-source-connection). It does not prove source reachability. Keep `vm.env` for [Appendix F10 — Delete Only the Created VM](#f10-delete-only-the-created-vm). The [attached service account](https://cloud.google.com/compute/docs/access/service-accounts#scopes_best_practices) supplies ADC. `cloud-platform` is an access scope, not an IAM grant.
 
 If creation or a read-back fails, stop and follow [Troubleshooting](#troubleshooting). Inspect the printed VM name before retrying. Do not rerun the settings block to create another VM or overwrite an existing receipt.
 
@@ -1281,14 +1338,14 @@ For a reused bucket, expect `Reused bucket: IAM unchanged.` and continue to the 
     printf '%s=%q\n' "$name" "${!name}"
   done
 } > "$WORK_DIR/control.env"
-gcloud compute ssh "$VM" "${VM_SSH_ARGS[@]}" \
+gcloud compute ssh "$VM_LOGIN" "${VM_SSH_ARGS[@]}" \
   --command="umask 077; mkdir -p '${VM_DIR}/schema' '${VM_DIR}/results' '${VM_DIR}/sql'"
-gcloud compute scp "$WORK_DIR/control.env" "${VM}:~/${VM_DIR}/control.env" \
-  "${VM_SSH_ARGS[@]}"
+gcloud compute scp "$WORK_DIR/control.env" "${VM_LOGIN}:~/${VM_DIR}/control.env" \
+  "${VM_SCP_ARGS[@]}"
 gcloud compute scp sql/multifile-source.sql sql/multifile-verify.sql sql/multifile-rows.sql \
-  "${VM}:~/${VM_DIR}/sql/" "${VM_SSH_ARGS[@]}"
+  "${VM_LOGIN}:~/${VM_DIR}/sql/" "${VM_SCP_ARGS[@]}"
 printf 'In a second desktop terminal, run:\n'
-printf 'gcloud compute ssh %q' "$VM"
+printf 'gcloud compute ssh %q' "$VM_LOGIN"
 printf ' %q' "${VM_SSH_ARGS[@]}"
 printf '\nThen on the VM, run: cd "$HOME/%s"\n' "$VM_DIR"
 ```
@@ -1473,9 +1530,9 @@ Run this block without changes to save non-secret settings for the desktop hando
 **First desktop terminal.** Return to the [Step 1](#step-1---prepare-the-desktop-workspace) terminal. Do not copy credentials. Run this block without changes to transfer the files with [gcloud compute scp](https://cloud.google.com/sdk/gcloud/reference/compute/scp):
 
 ```bash
-gcloud compute scp "${VM}:~/${VM_DIR}/run.env" "$WORK_DIR/" "${VM_SSH_ARGS[@]}"
-gcloud compute scp --recurse "${VM}:~/${VM_DIR}/schema" \
-  "${VM}:~/${VM_DIR}/results" "$WORK_DIR/" "${VM_SSH_ARGS[@]}"
+gcloud compute scp "${VM_LOGIN}:~/${VM_DIR}/run.env" "$WORK_DIR/" "${VM_SCP_ARGS[@]}"
+gcloud compute scp --recurse "${VM_LOGIN}:~/${VM_DIR}/schema" \
+  "${VM_LOGIN}:~/${VM_DIR}/results" "$WORK_DIR/" "${VM_SCP_ARGS[@]}"
 ```
 
 Review `run.env` before loading it. It contains generated settings, not passwords. Keep all transferred files private. After review, run this block without changes:
@@ -1560,7 +1617,15 @@ fi
 VM_DIR="cloudsql-gcs-lab-${RUN_ID}"
 ```
 
-Edit the VM name, zone, and approved service-account email. **Customer environment:** change `VM_PROJECT` for another project. If the owner's confirmed route uses configured IAP, set `USE_IAP="true"`:
+Edit the VM name, zone, approved service-account email, and owner-provided SSH login/key path. Use an existing authorized key. Load it into your SSH agent first if it is encrypted. The owner must also provide a verified host-key entry for the resolved SSH destination (external IP, or `compute.INSTANCE_ID` for IAP). Do not disable host-key checking or provision keys for this lab.
+
+This route does not cover an owner-required certificate, hardware-key, or interactive OS Login flow. Stop and arrange a separate authorized transport if needed.
+
+The [plain SSH invocation](https://docs.cloud.google.com/sdk/gcloud/reference/compute/ssh) suppresses gcloud key provisioning. The blocks pass the login and key explicitly for SSH and [SCP](https://cloud.google.com/sdk/gcloud/reference/compute/scp). Default gcloud SSH can add keys to shared project metadata, so do not remove these reuse options.
+
+**Customer environment:** change `VM_PROJECT` for another project. If the owner's confirmed route uses IAP, confirm the prerequisites in [Appendix F1 — Create the Disposable VM](#f1-create-the-disposable-vm) and set `USE_IAP="true"`. With `USE_IAP="false"`, this route needs an approved external-IP SSH path. A VM without an external IP can automatically use IAP. This lab does not set up an internal-IP SSH route.
+
+Edit the approved VM, service-account, SSH login, and key-path values. Use an absolute key path with no whitespace. gcloud splits SSH flags at whitespace:
 
 ```bash
 VM_PROJECT="$GCP_PROJECT"
@@ -1568,6 +1633,8 @@ USE_IAP="false"
 VM="your-existing-vm"
 ZONE="your-vm-zone"
 EXPORT_SERVICE_ACCOUNT="your-exporter@your-project-id.iam.gserviceaccount.com"
+VM_SSH_USER="your-ssh-user"
+VM_SSH_KEY="$HOME/.ssh/owner-provided-key"
 ```
 
 Run this block without changes to check the settings and select VM reuse:
@@ -1579,6 +1646,18 @@ test -n "$EXPORT_SERVICE_ACCOUNT"
 test "$VM" != "your-existing-vm"
 test "$ZONE" != "your-vm-zone"
 test "$EXPORT_SERVICE_ACCOUNT" != "your-exporter@your-project-id.iam.gserviceaccount.com"
+test -n "$VM_SSH_USER"
+test "$VM_SSH_USER" != "your-ssh-user"
+if ! [[ "$VM_SSH_USER" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]]; then
+  printf '%s\n' 'Unsupported SSH username'; exit 1
+fi
+if ! [[ "$VM_SSH_KEY" = /* ]]; then
+  printf '%s\n' 'VM_SSH_KEY must be an absolute path'; exit 1
+fi
+if [[ "$VM_SSH_KEY" =~ [[:space:]] ]]; then
+  printf '%s\n' 'VM_SSH_KEY must not contain whitespace'; exit 1
+fi
+test -r "$VM_SSH_KEY"
 VM_MODE="reused"
 ```
 
@@ -1593,9 +1672,20 @@ test "$VM_STATUS" = "RUNNING"
 VM_SERVICE_ACCOUNT="$(gcloud compute instances describe "$VM" \
   --project "$VM_PROJECT" --zone "$ZONE" --format='value(serviceAccounts[0].email)')"
 test "$VM_SERVICE_ACCOUNT" = "$EXPORT_SERVICE_ACCOUNT"
-VM_SSH_ARGS=(--project "$VM_PROJECT" --zone "$ZONE")
+gcloud compute instances describe "$VM" --project "$VM_PROJECT" --zone "$ZONE" \
+  --format='yaml(networkInterfaces.network,networkInterfaces.subnetwork)'
+VM_LOGIN="${VM_SSH_USER}@${VM}"
+VM_SSH_ARGS=(--project "$VM_PROJECT" --zone "$ZONE" --plain
+  --ssh-key-file "$VM_SSH_KEY" --ssh-flag="-i${VM_SSH_KEY}"
+  --ssh-flag=-oBatchMode=yes --ssh-flag=-oStrictHostKeyChecking=yes)
+VM_SCP_ARGS=(--project "$VM_PROJECT" --zone "$ZONE" --plain
+  --ssh-key-file "$VM_SSH_KEY" --scp-flag="-i${VM_SSH_KEY}"
+  --scp-flag=-oBatchMode=yes --scp-flag=-oStrictHostKeyChecking=yes)
 case "$USE_IAP" in
-  true) VM_SSH_ARGS+=(--tunnel-through-iap) ;;
+  true)
+    VM_SSH_ARGS+=(--tunnel-through-iap)
+    VM_SCP_ARGS+=(--tunnel-through-iap)
+    ;;
   false) ;;
   *) printf '%s\n' 'USE_IAP must be true or false'; exit 1 ;;
 esac
@@ -1620,14 +1710,16 @@ Region: us-central1
 Service account: exporter@example-project.iam.gserviceaccount.com
 ```
 
-**Check:** The region and attached account match `REGION` and `EXPORT_SERVICE_ACCOUNT`. `vm.env` records `VM_MODE="reused"`. Cleanup must leave this VM unchanged. If a check fails, stop and follow [Troubleshooting](#troubleshooting).
+**Check:** The region and attached account match `REGION` and `EXPORT_SERVICE_ACCOUNT`. Compare the network/subnet read-back with the approved route from [Step 5b](#5b-set-the-source-connection). It does not prove source reachability. `vm.env` records `VM_MODE="reused"`. Cleanup skips this VM.
+
+Retain the selected login and separate SSH/SCP argument arrays in this desktop session through [Appendix F9 — Transfer Schema and Check Files](#f9-transfer-schema-and-check-files). If a check fails, stop and follow [Troubleshooting](#troubleshooting).
 
 ### G2. Check Existing Tools and Credentials
 
 **First desktop terminal.** Run this block without changes to check the existing VM through a noninteractive SSH command. It does not install tools, sign in, or clear credentials:
 
 ```bash
-gcloud compute ssh "$VM" "${VM_SSH_ARGS[@]}" --command='bash -se' <<'VM_CHECKS'
+gcloud compute ssh "$VM_LOGIN" "${VM_SSH_ARGS[@]}" --command='bash -se' <<'VM_CHECKS'
 set -euo pipefail
 export PATH="$HOME/.tiup/bin:$PATH"
 test "$(uname -s)" = "Linux"
@@ -1673,6 +1765,20 @@ Run this block without changes. Enter the source password again. The main export
     --logfile "$WORK_DIR/results/baseline-export.log"
   unset SOURCE_PASSWORD
   for table in "${TABLES[@]}"; do
+    SOURCE_ROW_COUNT=""
+    while IFS=$'\t' read -r count_table count_value; do
+      if [ "$count_table" = "$table" ]; then
+        SOURCE_ROW_COUNT="$count_value"
+        break
+      fi
+    done < "$WORK_DIR/results/source-count.tsv"
+    if ! [[ "$SOURCE_ROW_COUNT" =~ ^[0-9]+$ ]]; then
+      printf 'Missing or invalid source count for %s; stop\n' "$table"; exit 1
+    fi
+    if [ "$SOURCE_ROW_COUNT" = "0" ]; then
+      printf 'Empty table: %s; no CSV import needed\n' "$table"
+      continue
+    fi
     gcloud storage ls "${BASELINE_URI}/${SOURCE_DB}.${table}.*.csv" --project "$GCP_PROJECT"
   done
 }
@@ -1680,7 +1786,7 @@ Run this block without changes. Enter the source password again. The main export
 
 **For synthetic data:** Expect one CSV per table.
 
-**For existing data:** A larger table can still produce multiple files with `--rows 0` because `--filesize` also splits output.
+**For existing data:** A larger table can still produce multiple files with `--rows 0` because `--filesize` also splits output. Tables with captured zero counts have schema but no CSV and print the skip message.
 
 ### H1. Observed CSV File Counts
 
@@ -1707,9 +1813,25 @@ See [Appendix I](#appendix-i---tested-environment) for the tested environment, v
 
 That replay used a separate TiUP home, an external-volume `temp-dir`, existing Google credentials, and protected MySQL option files. It did not use interactive sign-in or password entry.
 
-**Revised draft checks:** local shell and document checks passed. A local Dumpling CSV export produced schema SQL and metadata. Those schema files created empty tables in fresh TiDB. This used a TiDB source with `snapshot` consistency and local storage, not Cloud SQL or GCS. The revised procedure has not had a fresh Cloud SQL export/import replay.
+**Earlier draft checks:** local shell and document checks passed. A TiDB-source Dumpling export with `snapshot` consistency produced native schema and metadata in local storage. Those files created empty tables in fresh TiDB. These checks were not Cloud SQL or GCS evidence.
 
-**Untested paths:** VM provisioning/export, existing-resource reuse, read replicas, remote targets, concurrent source writes, DM, and application compatibility. These versions do not validate those paths.
+**Supplemental local branch tests (2026-10-07):** Local MySQL `8.4.9` → Dumpling `v8.5.6` with `flush` → local CSV → TiDB `v8.5.7` passed for the default export, row splitting, file-size splitting, and selected tables. Counts, ordered values, and indexes matched. An empty-table and hyphenated-name case also passed after correcting the missing-CSV handling. See the [local branch-test receipt](evidence/all-paths-local-20261007.json).
+
+These local tests used the scoped `lab_export` account, test-only empty passwords on a loopback source, local storage, and an external-volume sorting directory. They do not validate Cloud SQL, GCS credentials, VM identity, or private routing.
+
+**Fresh cloud branch tests (2026-10-07):** five synthetic cases completed 12 `IMPORT INTO` jobs. The desktop/new-bucket/public-IP and reused-VM/reused-bucket/public-IP routes passed. The three-table runs imported 39,000 rows each. Counts, ordered values, relationship checks, and indexes matched. See the [cloud branch-test receipt](evidence/all-paths-cloud-20261007.json).
+
+Supplemental public-IP cases verified selected tables, actual file-size splitting, empty tables, hyphenated names, and a caught-up Cloud SQL read replica. Missing `SELECT` or `RELOAD` stopped native export. A source change after recorded checks kept counts equal but failed the post-import value comparison. The synthetic source was restored exactly.
+
+The cloud source was MySQL `8.4.11-google`. The VM used Ubuntu `24.04` x86_64, MySQL client `8.0.46`, Google Cloud SDK `585.0.0`, and attached-account ADC. Tools and other component versions are listed above. Source provisioning, VM tools, and bucket access were prepared before the reuse test. VM settings, shared tools, packages, and bucket IAM stayed unchanged during reuse.
+
+The operator completed real Google sign-in. MySQL secrets and SSH sessions used recorded noninteractive adaptations. Default and custom TiDB sorting directories were checked. Created resources were archived and deleted after verification. Exact active-resource absence, retained backups, and GCS soft deletion were checked separately. Soft-deleted storage can still incur charges.
+
+**Documentation review and offline revision checks (2026-10-07):** Official guides and pinned source support the contracts above. Local checks cover syntax, settings, SSH/SCP arguments, and fail-closed guards. These are not cloud connectivity tests.
+
+The revised SSH/SCP commands were not replayed against a cloud VM. The earlier reuse pass used a recorded adaptation. See the [documented-contract review receipt](evidence/documented-contracts-20261007.json). Historical runtime receipts retain their original tested-code hashes.
+
+**Remaining limits:** private-IP routes and successful IAP transport were blocked by provider permissions. Remote targets, human two-terminal/password-prompt entry, sustained concurrent writers, customer application compatibility, and DM startup remain unvalidated. Artifact preservation does not validate a usable later-DM handoff. The source stream was deleted. No replica-to-primary coordinate alignment is claimed.
 
 ## References
 
@@ -1762,3 +1884,11 @@ That replay used a separate TiUP home, an external-volume `temp-dir`, existing G
 - [Google Cloud - Cloud SQL Instance Resource](https://cloud.google.com/sql/docs/mysql/admin-api/rest/v1beta4/instances)
 - [Google Cloud - Delete a Cloud SQL Instance](https://cloud.google.com/sdk/gcloud/reference/sql/instances/delete)
 - [Google Cloud - List Cloud SQL Backups](https://cloud.google.com/sdk/gcloud/reference/sql/backups/list)
+- [Google Cloud - Configure Private Services Access](https://docs.cloud.google.com/sql/docs/mysql/configure-private-services-access)
+- [Google Cloud - Cloud SQL Private IP](https://docs.cloud.google.com/sql/docs/mysql/private-ip)
+- [Google Cloud - Configure Private IP and External Routes](https://docs.cloud.google.com/sql/docs/mysql/configure-private-ip)
+- [Google Cloud - gcloud compute ssh](https://docs.cloud.google.com/sdk/gcloud/reference/compute/ssh)
+- [Dumpling v8.5.6 - Dump Orchestration](https://raw.githubusercontent.com/pingcap/tidb/v8.5.6/dumpling/export/dump.go)
+- [Dumpling v8.5.6 - SQL Operations](https://raw.githubusercontent.com/pingcap/tidb/v8.5.6/dumpling/export/sql.go)
+- [Dumpling v8.5.6 - Metadata](https://raw.githubusercontent.com/pingcap/tidb/v8.5.6/dumpling/export/metadata.go)
+- [TiDB v8.5.7 - Import Mapping](https://raw.githubusercontent.com/pingcap/tidb/v8.5.7/pkg/executor/importer/import.go)
