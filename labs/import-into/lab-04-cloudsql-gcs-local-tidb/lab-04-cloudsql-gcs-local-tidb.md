@@ -84,16 +84,24 @@ GCP_PROJECT="your-project-id"
 INSTANCE="your-cloud-sql-instance"
 ```
 
-Run this block without changes to check the settings:
+Run this block without changes to check and display the source settings:
 
 ```bash
 test -n "$GCP_PROJECT"
 test -n "$INSTANCE"
 test "$GCP_PROJECT" != "your-project-id"
 test "$INSTANCE" != "your-cloud-sql-instance"
+printf 'Project: %s\nCloud SQL instance: %s\n' "$GCP_PROJECT" "$INSTANCE"
 ```
 
-**Check:** The validation block finishes without output or an error. Required settings are non-empty and contain no placeholders. Cloud access is not checked yet. If it fails, correct the settings before continuing.
+**Expected output** — your values will differ:
+
+```text
+Project: example-project
+Cloud SQL instance: example-instance
+```
+
+Confirm that both values identify your approved source. This checks settings only, not Google Cloud access. If validation fails, correct the settings before continuing.
 
 ### 2b. Sign In and Configure ADC
 
